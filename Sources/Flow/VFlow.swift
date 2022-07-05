@@ -20,7 +20,7 @@ import SwiftUI
 ///
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct VFlow<Content: View>: View {
-    private let layout: _FlowLayout
+    private let layout: FlowLayout
     private let content: Content
 
     /// Creates an instance with the given spacing and horizontal alignment.
@@ -39,10 +39,10 @@ public struct VFlow<Content: View>: View {
                 @ViewBuilder content contentBuilder: () -> Content) {
         content = contentBuilder()
         let isRTL = Environment(\.layoutDirection).wrappedValue == .rightToLeft
-        layout = _FlowLayout(axis: .vertical,
-                             itemSpacing: itemSpacing,
-                             lineSpacing: columnSpacing,
-                             reversedDepth: isRTL) { dimensions in
+        layout = FlowLayout(axis: .vertical,
+                            itemSpacing: itemSpacing,
+                            lineSpacing: columnSpacing,
+                            reversedDepth: isRTL) { dimensions in
             dimensions[alignment]
         }
     }

@@ -1,7 +1,7 @@
 import CoreFoundation
 import SwiftUI
 
-struct _FlowLayout: Layout {
+struct FlowLayout: Layout {
     let axis: Axis
     var itemSpacing: CGFloat?
     var lineSpacing: CGFloat?

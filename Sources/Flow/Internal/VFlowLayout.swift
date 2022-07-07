@@ -6,11 +6,9 @@ struct VFlowLayout {
     init(alignment: HorizontalAlignment,
          itemSpacing: CGFloat?,
          columnSpacing: CGFloat?) {
-        let isRTL = Environment(\.layoutDirection).wrappedValue == .rightToLeft
         layout = FlowLayout(axis: .vertical,
                             itemSpacing: itemSpacing,
-                            lineSpacing: columnSpacing,
-                            reversedDepth: isRTL) {
+                            lineSpacing: columnSpacing) {
             $0[alignment]
         }
     }

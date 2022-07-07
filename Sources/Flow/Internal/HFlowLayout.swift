@@ -6,11 +6,9 @@ struct HFlowLayout {
     init(alignment: VerticalAlignment,
          itemSpacing: CGFloat?,
          rowSpacing: CGFloat?) {
-        let isRTL = Environment(\.layoutDirection).wrappedValue == .rightToLeft
         layout = FlowLayout(axis: .horizontal,
                             itemSpacing: itemSpacing,
-                            lineSpacing: rowSpacing,
-                            reversedBreadth: isRTL) {
+                            lineSpacing: rowSpacing) {
             $0[alignment]
         }
     }

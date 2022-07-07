@@ -118,4 +118,8 @@ extension HFlow: Layout where Content == EmptyView {
                              subviews: subviews,
                              cache: &cache)
     }
+
+    public static var layoutProperties: LayoutProperties {
+        HFlowLayout.layoutProperties
+    }
 }

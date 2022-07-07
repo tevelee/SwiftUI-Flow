@@ -22,4 +22,10 @@ extension VFlowLayout: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         layout.placeSubviews(in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
+
+    static var layoutProperties: LayoutProperties {
+        var properties = LayoutProperties()
+        properties.stackOrientation = .vertical
+        return properties
+    }
 }

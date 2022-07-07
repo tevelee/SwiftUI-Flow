@@ -118,4 +118,8 @@ extension VFlow: Layout where Content == EmptyView {
                              subviews: subviews,
                              cache: &cache)
     }
+
+    public static var layoutProperties: LayoutProperties {
+        VFlowLayout.layoutProperties
+    }
 }

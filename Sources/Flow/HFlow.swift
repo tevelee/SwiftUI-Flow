@@ -20,7 +20,7 @@ import SwiftUI
 ///
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct HFlow<Content: View>: View {
-    private let layout: FlowLayout
+    private let layout: HFlowLayout
     private let content: Content
 
     /// Creates a horizontal flow with the give spacing and vertical alignment.
@@ -38,13 +38,9 @@ public struct HFlow<Content: View>: View {
                 rowSpacing: CGFloat? = nil,
                 @ViewBuilder content contentBuilder: () -> Content) {
         content = contentBuilder()
-        let isRTL = Environment(\.layoutDirection).wrappedValue == .rightToLeft
-        layout = FlowLayout(axis: .horizontal,
-                            itemSpacing: itemSpacing,
-                            lineSpacing: rowSpacing,
-                            reversedBreadth: isRTL) { dimensions in
-            dimensions[alignment]
-        }
+        layout = HFlowLayout(alignment: alignment,
+                             itemSpacing: itemSpacing,
+                             rowSpacing: rowSpacing)
     }
 
     /// Creates a horizontal flow with the give spacing and vertical alignment.

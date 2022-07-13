@@ -106,13 +106,13 @@ extension VFlow: Layout where Content == EmptyView {
         }
     }
 
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
         layout.sizeThatFits(proposal: proposal,
                             subviews: subviews,
                             cache: &cache)
     }
 
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
         layout.placeSubviews(in: bounds,
                              proposal: proposal,
                              subviews: subviews,

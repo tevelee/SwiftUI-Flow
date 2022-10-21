@@ -13,23 +13,25 @@ Arranges views in lines and cuts new lines accordingly (if elements don't fit th
 
 ```swift
 struct Colors: View {
-    let colors = [
-        Color.blue,
-        Color.orange,
-        Color.green,
-        Color.yellow,
-        Color.brown,
-        Color.mint,
-        Color.indigo,
-        Color.cyan
+    let colors: [Color] = [
+        .blue,
+        .orange,
+        .green,
+        .yellow,
+        .brown,
+        .mint,
+        .indigo,
+        .cyan,
+        .gray,
+        .pink
     ]
 
     var body: some View {
         HFlow {
-            ForEach(colors, id: \.description) { color in
+            ForEach(colors + colors, id: \.description) { color in
                 RoundedRectangle(cornerRadius: 10)
                     .fill(color.gradient)
-                    .frame(width: 50, height: 50)
+                    .frame(width: Double.random(in: 40...60), height: 50)
             }
         }
         .frame(maxWidth: 300)
@@ -46,7 +48,7 @@ VFlow {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: 50, height: 50)
+            .frame(width: 50, height: Double.random(in: 40...60))
     }
 }
 .frame(maxHeight: 300)
@@ -61,8 +63,7 @@ HFlow(alignment: .top) {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: CGFloat.random(in: 50...80),
-                   height: CGFloat.random(in: 50...80))
+            .frame(width: 50, height: Double.random(in: 40...60))
     }
 }
 .frame(maxWidth: 300)
@@ -92,7 +93,7 @@ HFlow {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: 50, height: 50)
+            .frame(width: Double.random(in: 40...60), height: 50)
     }
 }
 .frame(maxWidth: 300)

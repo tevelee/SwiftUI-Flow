@@ -4,26 +4,16 @@ on:
   push:
     branches:
       - main
-
-env:
-  SWIFT_VERSION: 5.7
+      - render-images-for-docs
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-13
     steps:
       - name: Checkout Package
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Download Swift
-        run: wget -q https://download.swift.org/swift-$SWIFT_VERSION-release/ubuntu2004/swift-$SWIFT_VERSION-RELEASE/swift-$SWIFT_VERSION-RELEASE-ubuntu20.04.tar.gz
-      - name: Extract Swift
-        run: tar xzf swift-$SWIFT_VERSION-RELEASE-ubuntu20.04.tar.gz
-      - name: Add Swift toolchain to PATH
-        run: |
-          echo "$GITHUB_WORKSPACE/swift-$SWIFT_VERSION-RELEASE-ubuntu20.04/usr/bin" >> $GITHUB_PATH
 
       - name: Build documentation
         run: >
@@ -34,6 +24,14 @@ jobs:
             --transform-for-static-hosting \
             --hosting-base-path /Flow \
             --output-path docs
+
+      - name: Render examples
+        run: |
+          swift run Renderer --width 350 --fixed-height > Resources/hflow.png
+          swift run Renderer --width 350 --layout-direction right-to-left --fixed-height > Resources/hflow-rtl.png
+          swift run Renderer --height 350 --axis vertical --fixed-width > Resources/vflow.png
+          swift run Renderer --width 350 --item-spacing 2 --line-spacing 20 --fixed-width --fixed-height > Resources/hflow-spacing.png
+          swift run Renderer --width 350 --alignment top --fixed-width > Resources/hflow-top.png
       
       - name: Publish documentation to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.7
@@ -42,4 +40,3 @@ jobs:
           folder: docs
           git-config-name: László Teveli
           git-config-email: tevelee@gmail.com
-

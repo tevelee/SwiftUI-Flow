@@ -3,6 +3,7 @@ import XCTest
 @testable import Flow
 
 final class FlowTests: XCTestCase {
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func test_HFlow_size_singleElement() throws {
         // Given
         let views = [
@@ -17,6 +18,7 @@ final class FlowTests: XCTestCase {
         XCTAssertEqual(size, CGSize(width: 50, height: 50))
     }
 
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func test_HFlow_size_multipleElements() throws {
         // Given
         let views = [
@@ -33,6 +35,7 @@ final class FlowTests: XCTestCase {
         XCTAssertEqual(size, CGSize(width: 110, height: 120))
     }
 
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func test_HFlow_placement_centerAlignment() throws {
         // Given
         let views = [
@@ -52,7 +55,8 @@ final class FlowTests: XCTestCase {
         XCTAssertEqual(views[1].placement, CGPoint(x: 60, y: 15))
         XCTAssertEqual(views[2].placement, CGPoint(x: 0, y: 80))
     }
-
+    
+    @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
     func test_HFlow_placement_topAlignment() throws {
         // Given
         let views = [
@@ -76,6 +80,7 @@ final class FlowTests: XCTestCase {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private final class TestSubview: Subview {
     var spacing = ViewSpacing()
     var placement: CGPoint?
@@ -98,6 +103,7 @@ private final class TestSubview: Subview {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension Array: Subviews where Element == TestSubview {}
 
 private struct TestDimensions: Dimensions {

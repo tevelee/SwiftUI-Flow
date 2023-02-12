@@ -1,6 +1,7 @@
 import CoreFoundation
 import SwiftUI
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct FlowLayout {
     let axis: Axis
     var itemSpacing: CGFloat?
@@ -136,6 +137,7 @@ struct FlowLayout {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout {
     static func vertical(alignment: HorizontalAlignment,
                          itemSpacing: CGFloat?,
@@ -158,15 +160,21 @@ extension FlowLayout {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 protocol Subviews: RandomAccessCollection where Element: Subview, Index == Int {}
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension LayoutSubviews: Subviews {}
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 protocol Subview {
     var spacing: ViewSpacing { get }
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
     func dimensions(_ proposal: ProposedViewSize) -> Dimensions
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize)
 }
+
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension LayoutSubview: Subview {
     func dimensions(_ proposal: ProposedViewSize) -> Dimensions {
         dimensions(in: proposal)
@@ -179,6 +187,7 @@ protocol Dimensions {
 }
 extension ViewDimensions: Dimensions {}
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout: Layout {
     func sizeThatFits(proposal proposedSize: ProposedViewSize,
                       subviews: LayoutSubviews,

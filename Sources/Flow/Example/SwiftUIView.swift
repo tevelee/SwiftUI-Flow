@@ -1,5 +1,6 @@
 import SwiftUI
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct SwiftUIView: View {
     @State private var axis: Axis = .horizontal
     @State private var width: CGFloat = 400
@@ -117,6 +118,7 @@ struct SwiftUIView: View {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct SwiftUIView_Previews: PreviewProvider {
     static var previews: some View {
         SwiftUIView()

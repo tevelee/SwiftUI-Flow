@@ -1,5 +1,6 @@
 import SwiftUI
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 struct VFlowLayout {
     private let layout: FlowLayout
 
@@ -12,6 +13,7 @@ struct VFlowLayout {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension VFlowLayout: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
         layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)

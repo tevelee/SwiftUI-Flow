@@ -67,10 +67,12 @@ public struct VFlow<Content: View>: View {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension VFlow: Animatable where Content == EmptyView {
     public typealias AnimatableData = EmptyAnimatableData
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension VFlow: Layout where Content == EmptyView {
     /// Creates an instance with the given spacing and horizontal alignment.
     ///

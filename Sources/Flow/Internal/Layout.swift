@@ -220,7 +220,7 @@ private extension Array where Element == Size {
                 depth: (CGFloat, CGFloat) -> CGFloat) -> Size {
         reduce(initial) { result, size in
             Size(breadth: breadth(result.breadth, size.breadth),
-                 depth: depth(result.depth,  size.depth))
+                 depth: depth(result.depth, size.depth))
         }
     }
 }

@@ -1,3 +1,4 @@
+#if os(macOS)
 import ArgumentParser
 import Flow
 import SwiftUI
@@ -201,3 +202,11 @@ struct Colors: View {
         }
     }
 }
+#else
+@main
+struct Render {
+    static func main() {
+        fatalError("Unsupported Platform")
+    }
+}
+#endif

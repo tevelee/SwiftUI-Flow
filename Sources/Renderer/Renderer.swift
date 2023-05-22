@@ -1,8 +1,10 @@
+#if os(macOS)
 import ArgumentParser
 import Flow
 import SwiftUI
 
 @main
+@available(macOS 13, *)
 struct Render: ParsableCommand {
     @Option(name: .long, help: "Axis")
     var axis: Axis = .horizontal
@@ -167,6 +169,7 @@ enum VerticalAlignment: String, CaseIterable {
     }
 }
 
+@available(macOS 13, *)
 struct Colors: View {
     let colors: [Color] = [
         .blue,
@@ -199,3 +202,11 @@ struct Colors: View {
         }
     }
 }
+#else
+@main
+struct Render {
+    static func main() {
+        fatalError("Unsupported Platform")
+    }
+}
+#endif

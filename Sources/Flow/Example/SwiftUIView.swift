@@ -101,7 +101,9 @@ struct SwiftUIView: View {
                 Text(value.description).tag(value)
             }
         }
+        #if !os(watchOS)
         .pickerStyle(.segmented)
+        #endif
     }
 
     private var layout: AnyLayout {

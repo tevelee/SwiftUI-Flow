@@ -7,8 +7,8 @@ let package = Package(
     platforms: [
         .iOS(.v15),
         .macOS(.v12),
-        .tvOS(.v16),
-        .watchOS(.v9),
+        .tvOS(.v15),
+        .watchOS(.v8),
     ],
     products: [
         .library(name: "Flow", targets: ["Flow"]),
@@ -19,7 +19,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.0.0"),
     ],
     targets: [
-        .target(name: "Flow", dependencies: []),
+        .target(
+            name: "Flow",
+            exclude: ["Example"]
+        ),
         .testTarget(name: "FlowTests", dependencies: ["Flow"]),
         .executableTarget(name: "Renderer", dependencies: [
             .product(name: "ArgumentParser", package: "swift-argument-parser"),

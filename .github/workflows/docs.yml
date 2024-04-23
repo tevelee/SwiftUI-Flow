@@ -25,14 +25,6 @@ jobs:
             --hosting-base-path /Flow \
             --output-path docs
 
-      - name: Render examples
-        run: |
-          swift run Renderer --width 350 --fixed-height > Resources/hflow.png
-          swift run Renderer --width 350 --layout-direction right-to-left --fixed-height > Resources/hflow-rtl.png
-          swift run Renderer --height 350 --axis vertical --fixed-width > Resources/vflow.png
-          swift run Renderer --width 350 --item-spacing 2 --line-spacing 20 --fixed-width --fixed-height > Resources/hflow-spacing.png
-          swift run Renderer --width 350 --alignment top --fixed-width > Resources/hflow-top.png
-      
       - name: Publish documentation to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.7
         with:

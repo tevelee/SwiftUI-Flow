@@ -1,7 +1,7 @@
 import SwiftUI
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-struct SwiftUIView: View {
+@available(macOS 13.0, *)
+struct ContentView: View {
     @State private var axis: Axis = .horizontal
     @State private var width: CGFloat = 400
     @State private var height: CGFloat = 400
@@ -38,7 +38,7 @@ struct SwiftUIView: View {
 
     var body: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
-            Form {
+            List {
                 Section(header: Text("Layout")) {
                     picker($axis)
                 }
@@ -58,10 +58,10 @@ struct SwiftUIView: View {
                 }
                 Section(header: Text("Alignment")) {
                     switch axis {
-                        case .horizontal:
-                            picker($verticalAlignment)
-                        case .vertical:
-                            picker($horizontalAlignment)
+                    case .horizontal:
+                        picker($verticalAlignment)
+                    case .vertical:
+                        picker($horizontalAlignment)
                     }
                 }
                 Section(header: Text("Spacing")) {
@@ -69,6 +69,8 @@ struct SwiftUIView: View {
                     stepper("Line", $lineSpacing)
                 }
             }
+            .listStyle(.sidebar)
+            .frame(minWidth: 250)
             .navigationTitle("Flow Layout")
             .padding()
         } detail: {
@@ -109,20 +111,28 @@ struct SwiftUIView: View {
     private var layout: AnyLayout {
         switch axis {
             case .horizontal:
-                return AnyLayout(HFlow(alignment: verticalAlignment.value,
-                                       itemSpacing: itemSpacing,
-                                       rowSpacing: lineSpacing))
+            return AnyLayout(
+                HFlow(
+                    alignment: verticalAlignment.value,
+                    itemSpacing: itemSpacing,
+                    rowSpacing: lineSpacing
+                )
+            )
             case .vertical:
-                return AnyLayout(VFlow(alignment: horizontalAlignment.value,
-                                       itemSpacing: itemSpacing,
-                                       columnSpacing: lineSpacing))
+            return AnyLayout(
+                VFlow(
+                    alignment: horizontalAlignment.value,
+                    itemSpacing: itemSpacing,
+                    columnSpacing: lineSpacing
+                )
+            )
         }
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@available(macOS 13.0, *)
 struct SwiftUIView_Previews: PreviewProvider {
     static var previews: some View {
-        SwiftUIView()
+        ContentView()
     }
 }

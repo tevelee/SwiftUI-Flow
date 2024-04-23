@@ -201,6 +201,11 @@ extension FlowLayout: Layout {
                        cache: inout ()) {
         placeSubviews(in: bounds, proposal: proposal, subviews: subviews)
     }
+
+    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
+    var layoutDirectionBehavior: LayoutDirectionBehavior {
+        .mirrors(in: .rightToLeft)
+    }
 }
 
 private extension CGRect {

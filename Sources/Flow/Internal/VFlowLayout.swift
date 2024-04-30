@@ -30,9 +30,4 @@ extension VFlowLayout: Layout {
         properties.stackOrientation = .vertical
         return properties
     }
-
-    @available(iOS 17.0, macOS 14.0, tvOS 17.0, watchOS 10.0, *)
-    public var layoutDirectionBehavior: LayoutDirectionBehavior {
-        layout.layoutDirectionBehavior
-    }
 }

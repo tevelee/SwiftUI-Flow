@@ -185,6 +185,7 @@ final class FlowTests: XCTestCase {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private extension FlowLayout {
     func layout(_ views: [CGSize], in bounds: CGSize) -> (subviews: [TestSubview], size: CGSize) {
         let subviews = views.map { TestSubview(width: $0.width, height: $0.height) }
@@ -201,6 +202,7 @@ private extension FlowLayout {
     }
 }
 
+@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private func render(_ layout: (subviews: [TestSubview], size: CGSize), border: Bool = true) -> String {
     struct Point: Hashable {
         let x, y: Int

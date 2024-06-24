@@ -319,17 +319,17 @@ private struct TestDimensions: Dimensions {
 
     subscript(guide: HorizontalAlignment) -> CGFloat {
         switch guide {
-            case .center: return 0.5 * width
-            case .trailing: return width
-            default: return 0
+            case .center: 0.5 * width
+            case .trailing: width
+            default: 0
         }
     }
 
     subscript(guide: VerticalAlignment) -> CGFloat {
         switch guide {
-            case .center: return 0.5 * height
-            case .bottom: return height
-            default: return 0
+            case .center: 0.5 * height
+            case .bottom: height
+            default: 0
         }
     }
 }

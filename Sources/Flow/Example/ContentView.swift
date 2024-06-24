@@ -23,9 +23,9 @@ struct ContentView: View {
         var description: String { rawValue }
         var value: HorizontalAlignment {
             switch self {
-                case .leading: return .leading
-                case .center: return .center
-                case .trailing: return .trailing
+                case .leading: .leading
+                case .center: .center
+                case .trailing: .trailing
             }
         }
     }
@@ -35,10 +35,10 @@ struct ContentView: View {
         var description: String { rawValue }
         var value: VerticalAlignment {
             switch self {
-                case .top: return .top
-                case .baseline: return .firstTextBaseline
-                case .center: return .center
-                case .bottom: return .bottom
+                case .top: .top
+                case .baseline: .firstTextBaseline
+                case .center: .center
+                case .bottom: .bottom
             }
         }
     }

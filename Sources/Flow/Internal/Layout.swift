@@ -235,11 +235,16 @@ extension ViewDimensions: Dimensions {}
 
 extension Dimensions {
     func size(on axis: Axis) -> Size {
+        Size(
+            breadth: value(on: axis),
+            depth: value(on: axis.perpendicular)
+        )
+    }
+
+    func value(on axis: Axis) -> CGFloat {
         switch axis {
-        case .horizontal:
-            return Size(breadth: width, depth: height)
-        case .vertical:
-            return Size(breadth: height, depth: width)
+        case .horizontal: width
+        case .vertical: height
         }
     }
 }

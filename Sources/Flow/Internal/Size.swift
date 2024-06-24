@@ -24,10 +24,8 @@ struct Size {
 
     private func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
         switch axis {
-            case .horizontal:
-                return \.breadth
-            case .vertical:
-                return \.depth
+            case .horizontal: \.breadth
+            case .vertical: \.depth
         }
     }
 }
@@ -35,10 +33,8 @@ struct Size {
 extension Axis {
     var perpendicular: Axis {
         switch self {
-            case .horizontal:
-                return .vertical
-            case .vertical:
-                return .horizontal
+            case .horizontal: .vertical
+            case .vertical: .horizontal
         }
     }
 }
@@ -63,10 +59,8 @@ extension CGPoint: FixedOrientation2DCoordinate {
 
     func value(on axis: Axis) -> CGFloat {
         switch axis {
-            case .horizontal:
-                return x
-            case .vertical:
-                return y
+            case .horizontal: x
+            case .vertical: y
         }
     }
 }
@@ -78,10 +72,8 @@ extension CGSize: FixedOrientation2DCoordinate {
 
     func value(on axis: Axis) -> CGFloat {
         switch axis {
-            case .horizontal:
-                return width
-            case .vertical:
-                return height
+            case .horizontal: width
+            case .vertical: height
         }
     }
 }
@@ -94,10 +86,8 @@ extension ProposedViewSize: FixedOrientation2DCoordinate {
 
     func value(on axis: Axis) -> CGFloat {
         switch axis {
-            case .horizontal:
-                return width ?? .infinity
-            case .vertical:
-                return height ?? .infinity
+            case .horizontal: width ?? .infinity
+            case .vertical: height ?? .infinity
         }
     }
 }

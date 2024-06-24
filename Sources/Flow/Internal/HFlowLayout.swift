@@ -10,10 +10,12 @@ public struct HFlowLayout {
         rowSpacing: CGFloat? = nil,
         justification: Justification? = nil
     ) {
-        layout = .horizontal(alignment: alignment,
-                             itemSpacing: itemSpacing,
-                             lineSpacing: rowSpacing,
-                             justification: justification)
+        layout = .horizontal(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            lineSpacing: rowSpacing,
+            justification: justification
+        )
     }
 }
 

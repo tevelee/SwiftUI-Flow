@@ -35,16 +35,20 @@ public struct VFlow<Content: View>: View {
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
-    public init(alignment: HorizontalAlignment = .center,
-                itemSpacing: CGFloat? = nil,
-                columnSpacing: CGFloat? = nil,
-                justification: Justification? = nil,
-                @ViewBuilder content contentBuilder: () -> Content) {
+    public init(
+        alignment: HorizontalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        columnSpacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        @ViewBuilder content contentBuilder: () -> Content
+    ) {
         content = contentBuilder()
-        layout = VFlowLayout(alignment: alignment,
-                             itemSpacing: itemSpacing,
-                             columnSpacing: columnSpacing,
-                             justification: justification)
+        layout = VFlowLayout(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            columnSpacing: columnSpacing,
+            justification: justification
+        )
     }
 
     /// Creates an instance with the given spacing and horizontal alignment.
@@ -57,15 +61,19 @@ public struct VFlow<Content: View>: View {
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
-    public init(alignment: HorizontalAlignment = .center,
-                spacing: CGFloat? = nil,
-                justification: Justification? = nil,
-                @ViewBuilder content contentBuilder: () -> Content) {
-        self.init(alignment: alignment,
-                  itemSpacing: spacing,
-                  columnSpacing: spacing,
-                  justification: justification,
-                  content: contentBuilder)
+    public init(
+        alignment: HorizontalAlignment = .center,
+        spacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        @ViewBuilder content contentBuilder: () -> Content
+    ) {
+        self.init(
+            alignment: alignment,
+            itemSpacing: spacing,
+            columnSpacing: spacing,
+            justification: justification,
+            content: contentBuilder
+        )
     }
 
     public var body: some View {
@@ -93,14 +101,18 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of columns.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
-    public init(alignment: HorizontalAlignment = .center,
-                itemSpacing: CGFloat? = nil,
-                columnSpacing: CGFloat? = nil,
-                justification: Justification? = nil) {
-        self.init(alignment: alignment,
-                  itemSpacing: itemSpacing,
-                  columnSpacing: columnSpacing,
-                  justification: justification) {
+    public init(
+        alignment: HorizontalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        columnSpacing: CGFloat? = nil,
+        justification: Justification? = nil
+    ) {
+        self.init(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            columnSpacing: columnSpacing,
+            justification: justification
+        ) {
             EmptyView()
         }
     }
@@ -114,27 +126,35 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
-    public init(alignment: HorizontalAlignment = .center,
-                spacing: CGFloat? = nil,
-                justification: Justification? = nil) {
-        self.init(alignment: alignment,
-                  spacing: spacing,
-                  justification: justification) {
+    public init(
+        alignment: HorizontalAlignment = .center,
+        spacing: CGFloat? = nil,
+        justification: Justification? = nil
+    ) {
+        self.init(
+            alignment: alignment,
+            spacing: spacing,
+            justification: justification
+        ) {
             EmptyView()
         }
     }
 
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
-        layout.sizeThatFits(proposal: proposal,
-                            subviews: subviews,
-                            cache: &cache)
+        layout.sizeThatFits(
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
     }
 
     public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
-        layout.placeSubviews(in: bounds,
-                             proposal: proposal,
-                             subviews: subviews,
-                             cache: &cache)
+        layout.placeSubviews(
+            in: bounds,
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
     }
 
     public static var layoutProperties: LayoutProperties {

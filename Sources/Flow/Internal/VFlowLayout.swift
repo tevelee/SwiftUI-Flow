@@ -10,10 +10,12 @@ public struct VFlowLayout {
         columnSpacing: CGFloat? = nil,
         justification: Justification? = nil
     ) {
-        layout = .vertical(alignment: alignment,
-                           itemSpacing: itemSpacing,
-                           lineSpacing: columnSpacing,
-                           justification: justification)
+        layout = .vertical(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            lineSpacing: columnSpacing,
+            justification: justification
+        )
     }
 }
 

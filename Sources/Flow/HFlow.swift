@@ -32,15 +32,23 @@ public struct HFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - rowSpacing: The distance between rows of subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of rows.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each row by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
-    public init(alignment: VerticalAlignment = .center,
-                itemSpacing: CGFloat? = nil,
-                rowSpacing: CGFloat? = nil,
-                @ViewBuilder content contentBuilder: () -> Content) {
+    public init(
+        alignment: VerticalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        rowSpacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        @ViewBuilder content contentBuilder: () -> Content
+    ) {
         content = contentBuilder()
-        layout = HFlowLayout(alignment: alignment,
-                             itemSpacing: itemSpacing,
-                             rowSpacing: rowSpacing)
+        layout = HFlowLayout(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            rowSpacing: rowSpacing,
+            justification: justification
+        )
     }
 
     /// Creates a horizontal flow with the give spacing and vertical alignment.
@@ -50,14 +58,22 @@ public struct HFlow<Content: View>: View {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each row by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
-    public init(alignment: VerticalAlignment = .center,
-                spacing: CGFloat? = nil,
-                @ViewBuilder content contentBuilder: () -> Content) {
-        self.init(alignment: alignment,
-                  itemSpacing: spacing,
-                  rowSpacing: spacing,
-                  content: contentBuilder)
+    public init(
+        alignment: VerticalAlignment = .center,
+        spacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        @ViewBuilder content contentBuilder: () -> Content
+    ) {
+        self.init(
+            alignment: alignment,
+            itemSpacing: spacing,
+            rowSpacing: spacing,
+            justification: justification,
+            content: contentBuilder
+        )
     }
 
     public var body: some View {
@@ -83,12 +99,20 @@ extension HFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - rowSpacing: The distance between rows of subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of rows.
-    public init(alignment: VerticalAlignment = .center,
-                itemSpacing: CGFloat? = nil,
-                rowSpacing: CGFloat? = nil) {
-        self.init(alignment: alignment,
-                  itemSpacing: itemSpacing,
-                  rowSpacing: rowSpacing) {
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each row by stretching either items or spaces.
+    public init(
+        alignment: VerticalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        rowSpacing: CGFloat? = nil,
+        justification: Justification? = nil
+    ) {
+        self.init(
+            alignment: alignment,
+            itemSpacing: itemSpacing,
+            rowSpacing: rowSpacing,
+            justification: justification
+        ) {
             EmptyView()
         }
     }
@@ -100,25 +124,33 @@ extension HFlow: Layout where Content == EmptyView {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    public init(alignment: VerticalAlignment = .center,
-                spacing: CGFloat? = nil) {
-        self.init(alignment: alignment,
-                  spacing: spacing) {
+    public init(
+        alignment: VerticalAlignment = .center,
+        spacing: CGFloat? = nil
+    ) {
+        self.init(
+            alignment: alignment,
+            spacing: spacing
+        ) {
             EmptyView()
         }
     }
 
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
-        layout.sizeThatFits(proposal: proposal,
-                            subviews: subviews,
-                            cache: &cache)
+        layout.sizeThatFits(
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
     }
 
     public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
-        layout.placeSubviews(in: bounds,
-                             proposal: proposal,
-                             subviews: subviews,
-                             cache: &cache)
+        layout.placeSubviews(
+            in: bounds,
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
     }
 
     public static var layoutProperties: LayoutProperties {

@@ -134,10 +134,15 @@ struct FlowLayout {
         var lines: Lines = []
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
         for (index, subview) in subviews.enumerated() {
-            let min = subview.dimensions(.zero).size(on: axis)
-            let ideal = subview.dimensions(.unspecified).size(on: axis)
-            let max = subview.dimensions(.infinity).size(on: axis)
-            let size = min.breadth == 0 ? ideal.breadth == 0 ? max : ideal : min
+            var size = subview.sizeThatFits(proposedSize).size(on: axis)
+            if case .stretchItems = justification {
+                let ideal = subview.dimensions(.unspecified).size(on: axis).breadth
+                let max = subview.dimensions(.infinity).size(on: axis).breadth
+                let isFlexible = max - ideal > 0
+                if isFlexible {
+                    size.breadth = ideal
+                }
+            }
             if let lastIndex = lines.indices.last {
                 let spacing = self.itemSpacing(toPrevious: index, subviews: subviews)
                 let additionalBreadth = spacing + size.breadth

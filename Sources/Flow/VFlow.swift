@@ -32,15 +32,19 @@ public struct VFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - columnSpacing: The distance between adjacent columns, or `nil` if you
     ///     want the flow to choose a default distance for each pair of columns.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each column by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
     public init(alignment: HorizontalAlignment = .center,
                 itemSpacing: CGFloat? = nil,
                 columnSpacing: CGFloat? = nil,
+                justification: Justification? = nil,
                 @ViewBuilder content contentBuilder: () -> Content) {
         content = contentBuilder()
         layout = VFlowLayout(alignment: alignment,
                              itemSpacing: itemSpacing,
-                             columnSpacing: columnSpacing)
+                             columnSpacing: columnSpacing,
+                             justification: justification)
     }
 
     /// Creates an instance with the given spacing and horizontal alignment.
@@ -50,13 +54,17 @@ public struct VFlow<Content: View>: View {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each column by stretching either items or spaces.
     ///   - content: A view builder that creates the content of this flow.
     public init(alignment: HorizontalAlignment = .center,
                 spacing: CGFloat? = nil,
+                justification: Justification? = nil,
                 @ViewBuilder content contentBuilder: () -> Content) {
         self.init(alignment: alignment,
                   itemSpacing: spacing,
                   columnSpacing: spacing,
+                  justification: justification,
                   content: contentBuilder)
     }
 
@@ -83,12 +91,16 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - columnSpacing: The distance between adjacent columns, or `nil` if you
     ///     want the flow to choose a default distance for each pair of columns.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each column by stretching either items or spaces.
     public init(alignment: HorizontalAlignment = .center,
                 itemSpacing: CGFloat? = nil,
-                columnSpacing: CGFloat? = nil) {
+                columnSpacing: CGFloat? = nil,
+                justification: Justification? = nil) {
         self.init(alignment: alignment,
                   itemSpacing: itemSpacing,
-                  columnSpacing: columnSpacing) {
+                  columnSpacing: columnSpacing,
+                  justification: justification) {
             EmptyView()
         }
     }
@@ -100,10 +112,14 @@ extension VFlow: Layout where Content == EmptyView {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each column by stretching either items or spaces.
     public init(alignment: HorizontalAlignment = .center,
-                spacing: CGFloat? = nil) {
+                spacing: CGFloat? = nil,
+                justification: Justification? = nil) {
         self.init(alignment: alignment,
-                  spacing: spacing) {
+                  spacing: spacing,
+                  justification: justification) {
             EmptyView()
         }
     }

@@ -5,13 +5,15 @@ public struct VFlowLayout {
     private let layout: FlowLayout
 
     public init(
-        alignment: HorizontalAlignment,
-        itemSpacing: CGFloat?,
-        columnSpacing: CGFloat?
+        alignment: HorizontalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        columnSpacing: CGFloat? = nil,
+        justification: Justification? = nil
     ) {
         layout = .vertical(alignment: alignment,
                            itemSpacing: itemSpacing,
-                           lineSpacing: columnSpacing)
+                           lineSpacing: columnSpacing,
+                           justification: justification)
     }
 }
 

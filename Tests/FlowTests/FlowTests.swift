@@ -183,12 +183,44 @@ final class FlowTests: XCTestCase {
         +------+
         """)
     }
+
+    func test_HFlow_justifiedItems() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
+
+        // When
+        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2, flexible: true)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXXX XXXX|
+        |XXXXXXXXX|
+        +---------+
+        """)
+    }
+
+    func test_HFlow_justifiedSpaces() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
+
+        // When
+        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2, flexible: true)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXX   XXX|
+        |XX       |
+        +---------+
+        """)
+    }
 }
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private extension FlowLayout {
-    func layout(_ views: [CGSize], in bounds: CGSize) -> (subviews: [TestSubview], size: CGSize) {
-        let subviews = views.map { TestSubview(width: $0.width, height: $0.height) }
+    func layout(_ views: [CGSize], in bounds: CGSize, flexible: Bool = false) -> (subviews: [TestSubview], size: CGSize) {
+        let subviews = views.map { TestSubview(width: $0.width, height: $0.height, flexible: flexible) }
         let size = sizeThatFits(
             proposal: ProposedViewSize(width: bounds.width, height: bounds.height),
             subviews: subviews
@@ -248,10 +280,12 @@ private func render(_ layout: (subviews: [TestSubview], size: CGSize), border: B
 private final class TestSubview: Subview, CustomStringConvertible {
     var spacing = ViewSpacing()
     var placement: CGPoint?
-    let size: CGSize
+    var size: CGSize
+    var flexible: Bool
 
-    init(width: CGFloat, height: CGFloat) {
+    init(width: CGFloat, height: CGFloat, flexible: Bool = false) {
         size = .init(width: width, height: height)
+        self.flexible = flexible
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
@@ -259,11 +293,17 @@ private final class TestSubview: Subview, CustomStringConvertible {
     }
 
     func dimensions(_ proposal: ProposedViewSize) -> Dimensions {
-        TestDimensions(size: size)
+        TestDimensions(width: size.width, height: size.height)
     }
 
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize) {
         placement = position
+        if flexible, let width = proposal.width {
+            size.width = width
+        }
+        if flexible, let height = proposal.height {
+            size.height = height
+        }
     }
 
     var description: String {
@@ -275,20 +315,20 @@ private final class TestSubview: Subview, CustomStringConvertible {
 extension [TestSubview]: Subviews {}
 
 private struct TestDimensions: Dimensions {
-    let size: CGSize
+    let width, height: CGFloat
 
     subscript(guide: HorizontalAlignment) -> CGFloat {
         switch guide {
-            case .center: return 0.5 * size.width
-            case .trailing: return size.width
+            case .center: return 0.5 * width
+            case .trailing: return width
             default: return 0
         }
     }
 
     subscript(guide: VerticalAlignment) -> CGFloat {
         switch guide {
-            case .center: return 0.5 * size.height
-            case .bottom: return size.height
+            case .center: return 0.5 * height
+            case .bottom: return height
             default: return 0
         }
     }

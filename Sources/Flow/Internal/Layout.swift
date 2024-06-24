@@ -8,6 +8,7 @@ struct FlowLayout {
     var lineSpacing: CGFloat?
     var reversedBreadth: Bool = false
     var reversedDepth: Bool = false
+    var justification: Justification?
     let align: (Dimensions) -> CGFloat
 
     private struct ItemWithSpacing<T> {
@@ -67,18 +68,31 @@ struct FlowLayout {
         var target = bounds.origin.size(on: axis)
         let originalBreadth = target.breadth
         let lines = calculateLayout(in: proposal, of: subviews)
-        for line in lines {
-            if reversedDepth {
-                target.depth -= line.size.depth + line.spacing
-            } else {
-                target.depth += line.spacing
+        for var line in lines {
+            if let justification {
+                let remainingSpace = bounds.size.value(on: axis) - line.size.breadth
+                switch justification {
+                case .stretchItems:
+                    let distributedSpace = remainingSpace / CGFloat(line.item.count)
+                    for index in line.item.indices {
+                        line.item[index].size.breadth += distributedSpace
+                    }
+                case .stretchSpaces:
+                    let distributedSpace = remainingSpace / CGFloat(line.item.count - 1)
+                    for index in line.item.indices.dropFirst() {
+                        line.item[index].spacing += distributedSpace
+                    }
+                }
             }
+            if reversedDepth {
+                target.depth -= line.size.depth
+            }
+            target.depth += line.spacing
             for item in line.item {
                 if reversedBreadth {
-                    target.breadth -= item.size.breadth + item.spacing
-                } else {
-                    target.breadth += item.spacing
+                    target.breadth -= item.size.breadth
                 }
+                target.breadth += item.spacing
                 alignAndPlace(item, in: line, at: target)
                 if !reversedBreadth {
                     target.breadth += item.size.breadth
@@ -108,7 +122,10 @@ struct FlowLayout {
         var lines: Lines = []
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
         for (index, subview) in subviews.enumerated() {
-            let size = subview.sizeThatFits(proposedSize).size(on: axis)
+            let min = subview.dimensions(.zero).size(on: axis)
+            let ideal = subview.dimensions(.unspecified).size(on: axis)
+            let max = subview.dimensions(.infinity).size(on: axis)
+            let size = min.breadth == 0 ? ideal.breadth == 0 ? max : ideal : min
             if let lastIndex = lines.indices.last {
                 let spacing = self.itemSpacing(toPrevious: index, subviews: subviews)
                 let additionalBreadth = spacing + size.breadth
@@ -141,20 +158,24 @@ struct FlowLayout {
 extension FlowLayout {
     static func vertical(alignment: HorizontalAlignment,
                          itemSpacing: CGFloat?,
-                         lineSpacing: CGFloat?) -> FlowLayout {
+                         lineSpacing: CGFloat?,
+                         justification: Justification? = nil) -> FlowLayout {
         .init(axis: .vertical,
               itemSpacing: itemSpacing,
-              lineSpacing: lineSpacing) {
+              lineSpacing: lineSpacing,
+              justification: justification) {
             $0[alignment]
         }
     }
 
     static func horizontal(alignment: VerticalAlignment,
                            itemSpacing: CGFloat?,
-                           lineSpacing: CGFloat?) -> FlowLayout {
+                           lineSpacing: CGFloat?,
+                           justification: Justification? = nil) -> FlowLayout {
         .init(axis: .horizontal,
               itemSpacing: itemSpacing,
-              lineSpacing: lineSpacing) {
+              lineSpacing: lineSpacing,
+              justification: justification) {
             $0[alignment]
         }
     }
@@ -182,23 +203,42 @@ extension LayoutSubview: Subview {
 }
 
 protocol Dimensions {
+    var width: CGFloat { get }
+    var height: CGFloat { get }
+
     subscript(guide: HorizontalAlignment) -> CGFloat { get }
     subscript(guide: VerticalAlignment) -> CGFloat { get }
 }
 extension ViewDimensions: Dimensions {}
 
+extension Dimensions {
+    func size(on axis: Axis) -> Size {
+        switch axis {
+        case .horizontal:
+            return Size(breadth: width, depth: height)
+        case .vertical:
+            return Size(breadth: height, depth: width)
+        }
+    }
+}
+
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout: Layout {
-    func sizeThatFits(proposal proposedSize: ProposedViewSize,
-                      subviews: LayoutSubviews,
-                      cache: inout ()) -> CGSize {
+    typealias Cache = Void
+    func sizeThatFits(
+        proposal proposedSize: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout Cache
+    ) -> CGSize {
         sizeThatFits(proposal: proposedSize, subviews: subviews)
     }
 
-    func placeSubviews(in bounds: CGRect,
-                       proposal: ProposedViewSize,
-                       subviews: LayoutSubviews,
-                       cache: inout ()) {
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout Cache
+    ) {
         placeSubviews(in: bounds, proposal: proposal, subviews: subviews)
     }
 }
@@ -223,4 +263,9 @@ private extension Array where Element == Size {
                  depth: depth(result.depth, size.depth))
         }
     }
+}
+
+public enum Justification {
+    case stretchItems
+    case stretchSpaces
 }

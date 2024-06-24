@@ -5,13 +5,15 @@ public struct HFlowLayout {
     private let layout: FlowLayout
 
     public init(
-        alignment: VerticalAlignment,
-        itemSpacing: CGFloat?,
-        rowSpacing: CGFloat?
+        alignment: VerticalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        rowSpacing: CGFloat? = nil,
+        justification: Justification? = nil
     ) {
         layout = .horizontal(alignment: alignment,
                              itemSpacing: itemSpacing,
-                             lineSpacing: rowSpacing)
+                             lineSpacing: rowSpacing,
+                             justification: justification)
     }
 }
 

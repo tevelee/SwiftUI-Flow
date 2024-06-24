@@ -1,15 +1,22 @@
 import SwiftUI
 
-@available(macOS 13.0, *)
+@available(macOS 14.0, *)
 struct ContentView: View {
     @State private var axis: Axis = .horizontal
+    @State private var contents: Contents = .boxes
     @State private var width: CGFloat = 400
     @State private var height: CGFloat = 400
     @State private var itemSpacing: CGFloat? = nil
     @State private var lineSpacing: CGFloat? = nil
+    @State private var justified: Justified = .none
     @State private var horizontalAlignment: HAlignment = .center
     @State private var verticalAlignment: VAlignment = .center
-    private let items: [String] = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ")
+    private let texts = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ").map { string in
+        AnyView(Text(string))
+    }
+    private let colors = [Color.red, .orange, .yellow, .mint, .green, .teal, .blue, .purple, .indigo].map { color in
+        AnyView(color.frame(height: 30).frame(minWidth: 30))
+    }
 
     enum HAlignment: String, Hashable, CaseIterable, CustomStringConvertible {
         case leading, center, trailing
@@ -39,6 +46,9 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
             List {
+                Section(header: Text("Content")) {
+                    picker($contents)
+                }
                 Section(header: Text("Layout")) {
                     picker($axis)
                 }
@@ -68,19 +78,27 @@ struct ContentView: View {
                     stepper("Item", $itemSpacing)
                     stepper("Line", $lineSpacing)
                 }
+                Section(header: Text("Justification")) {
+                    picker($justified)
+                }
             }
             .listStyle(.sidebar)
-            .frame(minWidth: 250)
+            .frame(minWidth: 280)
             .navigationTitle("Flow Layout")
             .padding()
         } detail: {
             layout {
-                ForEach(items, id: \.self, content: Text.init)
+                let views: [AnyView] = switch contents {
+                    case .texts: texts
+                    case .boxes: colors
+                }
+                ForEach(Array(views.enumerated()), id: \.offset) { $0.element.border(.blue) }
             }
             .border(.red.opacity(0.2))
             .frame(maxWidth: width, maxHeight: height)
             .border(.red)
         }
+        .frame(minWidth: 600, minHeight: 500)
     }
 
     private func stepper(_ title: String, _ selection: Binding<CGFloat?>) -> some View {
@@ -115,7 +133,8 @@ struct ContentView: View {
                 HFlow(
                     alignment: verticalAlignment.value,
                     itemSpacing: itemSpacing,
-                    rowSpacing: lineSpacing
+                    rowSpacing: lineSpacing,
+                    justification: justified.justification
                 )
             )
             case .vertical:
@@ -123,14 +142,38 @@ struct ContentView: View {
                 VFlow(
                     alignment: horizontalAlignment.value,
                     itemSpacing: itemSpacing,
-                    columnSpacing: lineSpacing
+                    columnSpacing: lineSpacing,
+                    justification: justified.justification
                 )
             )
         }
     }
 }
 
-@available(macOS 13.0, *)
+enum Contents: String, CustomStringConvertible, CaseIterable {
+    case texts
+    case boxes
+
+    var description: String { rawValue }
+}
+
+enum Justified: String, CustomStringConvertible, CaseIterable {
+    case none
+    case stretchItems
+    case stretchSpaces
+
+    var description: String { rawValue }
+
+    var justification: Justification? {
+        switch self {
+        case .none: nil
+        case .stretchItems: .stretchItems
+        case .stretchSpaces: .stretchSpaces
+        }
+    }
+}
+
+@available(macOS 14.0, *)
 struct SwiftUIView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()

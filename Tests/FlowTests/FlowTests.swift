@@ -6,32 +6,46 @@ import XCTest
 final class FlowTests: XCTestCase {
     func test_HFlow_size_singleElement() throws {
         // Given
-        let views = [
-            TestSubview(width: 50, height: 50)
-        ]
         let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 10, lineSpacing: 20)
 
         // When
-        let size = sut.sizeThatFits(proposal: ProposedViewSize(width: 100, height: 100), subviews: views)
+        let size = sut.sizeThatFits(proposal: 100×100, subviews: [50×50])
 
         // Then
-        XCTAssertEqual(size, CGSize(width: 50, height: 50))
+        XCTAssertEqual(size, 50×50)
     }
 
     func test_HFlow_size_multipleElements() throws {
         // Given
-        let views = [
-            TestSubview(width: 50, height: 50),
-            TestSubview(width: 50, height: 50),
-            TestSubview(width: 50, height: 50)
-        ]
         let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 10, lineSpacing: 20)
 
         // When
-        let size = sut.sizeThatFits(proposal: ProposedViewSize(width: 130, height: 130), subviews: views)
+        let size = sut.sizeThatFits(proposal: 130×130, subviews: repeated(50×50, times: 3))
 
         // Then
-        XCTAssertEqual(size, CGSize(width: 110, height: 120))
+        XCTAssertEqual(size, 110×120)
+    }
+
+    func test_HFlow_size_justifiedSpaces() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 0, lineSpacing: 0, justification: .stretchSpaces)
+
+        // When
+        let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×50, 50×50])
+
+        // Then
+        XCTAssertEqual(size, 1000×50)
+    }
+
+    func test_HFlow_size_justifiedItems() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 0, lineSpacing: 0, justification: .stretchItems)
+
+        // When
+        let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×1...100×1])
+
+        // Then
+        XCTAssertEqual(size, 100×1)
     }
 
     func test_HFlow_layout_top() {
@@ -94,12 +108,12 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_layout() {
+    func test_HFlow_default() {
         // Given
         let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0)
 
         // When
-        let result = sut.layout(Array(repeating: 1×1, count: 15), in: 11×3)
+        let result = sut.layout(repeated(1×1, times: 15), in: 11×3)
 
         // Then
         XCTAssertEqual(render(result), """
@@ -108,6 +122,135 @@ final class FlowTests: XCTestCase {
         |X X X X X X|
         |X X X      |
         +-----------+
+        """)
+    }
+
+    func test_HFlow_distibuted() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, distibuteItemsEvenly: true)
+
+        // When
+        let result = sut.layout(repeated(1×1, times: 13), in: 11×3)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +-----------+
+        |X X X X X  |
+        |X X X X    |
+        |X X X X    |
+        +-----------+
+        """)
+    }
+
+    func test_HFlow_justifiedSpaces_rigid() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
+
+        // When
+        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXX   XXX|
+        |XX       |
+        +---------+
+        """)
+    }
+
+    func test_HFlow_justifiedSpaces_flexible() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
+
+        // When
+        let result = sut.layout([3×1, 3×1...inf×1, 2×1], in: 9×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXX   XXX|
+        |XX       |
+        +---------+
+        """)
+    }
+
+    func test_HFlow_justifiedItems_rigid() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
+
+        // When
+        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXX XXX  |
+        |XX       |
+        +---------+
+        """)
+    }
+
+    func test_HFlow_justifiedItems_flexible() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
+
+        // When
+        let result = sut.layout([3×1...4×1, 3×1...inf×1, 2×1...5×1], in: 9×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------+
+        |XXXX XXXX|
+        |XXXXX    |
+        +---------+
+        """)
+    }
+
+    func test_HFlow_justifiedItemsAndSpaces_rigid() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+
+        // When
+        let result = sut.layout([1×1, 4×1, 3×1, 2×1, 2×1, 3×1], in: 12×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +------------+
+        |X  XXXX  XXX|
+        |XX  XX   XXX|
+        +------------+
+        """)
+    }
+
+    func test_HFlow_justifiedItemsAndSpaces_flexible() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+
+        // When
+        let result = sut.layout([1×1, 2×1...5×1, 1×1...inf×1, 2×1, 5×1...inf×1, 5×1...inf×1], in: 13×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +-------------+
+        |X XXXX XXX XX|
+        |XXXXXX XXXXXX|
+        +-------------+
+        """)
+    }
+
+    func test_HFlow_justifiedItemsAndSpaces_strethBoth() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+
+        // When
+        let result = sut.layout([4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1], in: 15×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +---------------+
+        |XXXX XXXX XXXXX|
+        |XXXXX     XXXXX|
+        +---------------+
         """)
     }
 
@@ -167,174 +310,20 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_VFlow_layout() {
+    func test_VFlow_default() {
         // Given
         let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 0, lineSpacing: 0)
 
         // When
-        let result = sut.layout(Array(repeating: 1×1, count: 17), in: 6×3)
+        let result = sut.layout(repeated(1×1, times: 16), in: 6×3)
 
         // Then
         XCTAssertEqual(render(result), """
         +------+
         |XXXXXX|
-        |XXXXXX|
+        |XXXXX |
         |XXXXX |
         +------+
         """)
     }
-
-    func test_HFlow_justifiedItems() {
-        // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
-
-        // When
-        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2, flexible: true)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +---------+
-        |XXXX XXXX|
-        |XXXXXXXXX|
-        +---------+
-        """)
-    }
-
-    func test_HFlow_justifiedSpaces() {
-        // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
-
-        // When
-        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2, flexible: true)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +---------+
-        |XXX   XXX|
-        |XX       |
-        +---------+
-        """)
-    }
-}
-
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-private extension FlowLayout {
-    func layout(_ views: [CGSize], in bounds: CGSize, flexible: Bool = false) -> (subviews: [TestSubview], size: CGSize) {
-        let subviews = views.map { TestSubview(width: $0.width, height: $0.height, flexible: flexible) }
-        let size = sizeThatFits(
-            proposal: ProposedViewSize(width: bounds.width, height: bounds.height),
-            subviews: subviews
-        )
-        placeSubviews(
-            in: CGRect(origin: .zero, size: bounds),
-            proposal: ProposedViewSize(width: size.width, height: size.height),
-            subviews: subviews
-        )
-        return (subviews, bounds)
-    }
-}
-
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-private func render(_ layout: (subviews: [TestSubview], size: CGSize), border: Bool = true) -> String {
-    struct Point: Hashable {
-        let x, y: Int
-    }
-
-    var positions: Set<Point> = []
-    for view in layout.subviews {
-        if let point = view.placement {
-            for y in Int(point.y) ..< Int(point.y + view.size.height) {
-                for x in Int(point.x) ..< Int(point.x + view.size.width) {
-                    positions.insert(Point(x: x, y: y))
-                }
-            }
-        }
-    }
-    let width = Int(layout.size.width)
-    let height = Int(layout.size.height)
-    var result = ""
-    if border {
-        result += "+" + String(repeating: "-", count: width) + "+\n"
-    }
-    for y in 0 ... height - 1 {
-        if border {
-            result += "|"
-        }
-        for x in 0 ... width - 1 {
-            result += positions.contains(Point(x: x, y: y)) ? "X" : " "
-        }
-        if border {
-            result += "|"
-        } else {
-            result = result.trimmingCharacters(in: .whitespaces)
-        }
-        result += "\n"
-    }
-    if border {
-        result += "+" + String(repeating: "-", count: width) + "+\n"
-    }
-    return result.trimmingCharacters(in: .newlines)
-}
-
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-private final class TestSubview: Subview, CustomStringConvertible {
-    var spacing = ViewSpacing()
-    var placement: CGPoint?
-    var size: CGSize
-    var flexible: Bool
-
-    init(width: CGFloat, height: CGFloat, flexible: Bool = false) {
-        size = .init(width: width, height: height)
-        self.flexible = flexible
-    }
-
-    func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
-        size
-    }
-
-    func dimensions(_ proposal: ProposedViewSize) -> Dimensions {
-        TestDimensions(width: size.width, height: size.height)
-    }
-
-    func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize) {
-        placement = position
-        if flexible, let width = proposal.width {
-            size.width = width
-        }
-        if flexible, let height = proposal.height {
-            size.height = height
-        }
-    }
-
-    var description: String {
-        "origin: \((placement?.x).map { "\($0)" } ?? "nil")×\((placement?.y).map { "\($0)" } ?? "nil"), size: \(size.width)×\(size.height)"
-    }
-}
-
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
-extension [TestSubview]: Subviews {}
-
-private struct TestDimensions: Dimensions {
-    let width, height: CGFloat
-
-    subscript(guide: HorizontalAlignment) -> CGFloat {
-        switch guide {
-            case .center: 0.5 * width
-            case .trailing: width
-            default: 0
-        }
-    }
-
-    subscript(guide: VerticalAlignment) -> CGFloat {
-        switch guide {
-            case .center: 0.5 * height
-            case .bottom: height
-            default: 0
-        }
-    }
-}
-
-infix operator ×: MultiplicationPrecedence
-private func × (lhs: CGFloat, rhs: CGFloat) -> CGSize {
-    CGSize(width: lhs, height: rhs)
 }

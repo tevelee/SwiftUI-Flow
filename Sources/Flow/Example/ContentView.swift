@@ -1,6 +1,6 @@
 import SwiftUI
 
-@available(macOS 14.0, *)
+@available(macOS 13.0, *)
 struct ContentView: View {
     @State private var axis: Axis = .horizontal
     @State private var contents: Contents = .boxes
@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var justified: Justified = .none
     @State private var horizontalAlignment: HAlignment = .center
     @State private var verticalAlignment: VAlignment = .center
+    @State private var distibuteItemsEvenly: Bool = false
     private let texts = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ").map { string in
         AnyView(Text(string))
     }
@@ -68,22 +69,21 @@ struct ContentView: View {
                 }
                 Section(header: Text("Alignment")) {
                     switch axis {
-                    case .horizontal:
-                        picker($verticalAlignment)
-                    case .vertical:
-                        picker($horizontalAlignment)
+                        case .horizontal: picker($verticalAlignment)
+                        case .vertical: picker($horizontalAlignment)
                     }
                 }
                 Section(header: Text("Spacing")) {
                     stepper("Item", $itemSpacing)
                     stepper("Line", $lineSpacing)
                 }
-                Section(header: Text("Justification")) {
-                    picker($justified)
+                Section(header: Text("Extras")) {
+                    picker($justified, style: .radioGroup)
+                    Toggle("Distibute evenly", isOn: $distibuteItemsEvenly.animation())
                 }
             }
             .listStyle(.sidebar)
-            .frame(minWidth: 280)
+            .frame(minWidth: 250)
             .navigationTitle("Flow Layout")
             .padding()
         } detail: {
@@ -98,32 +98,34 @@ struct ContentView: View {
             .frame(maxWidth: width, maxHeight: height)
             .border(.red)
         }
-        .frame(minWidth: 600, minHeight: 500)
+        .frame(minWidth: 600, minHeight: 600)
     }
 
     private func stepper(_ title: String, _ selection: Binding<CGFloat?>) -> some View {
         HStack {
-            Toggle(isOn: Binding(get: { selection.wrappedValue != nil },
-                                 set: { selection.wrappedValue = $0 ? 8 : nil }).animation()) {
+            Toggle(isOn: Binding(
+                get: { selection.wrappedValue != nil },
+                set: { selection.wrappedValue = $0 ? 8 : nil }).animation()
+            ) {
                 Text(title)
             }
             if let value = selection.wrappedValue {
                 Text("\(value.formatted())")
-                Stepper("", value: Binding(get: { value },
-                                           set: { selection.wrappedValue = $0 }).animation(), step: 4)
+                Stepper("", value: Binding(
+                    get: { value },
+                    set: { selection.wrappedValue = $0 }
+                ).animation(), step: 4)
             }
         }.fixedSize()
     }
 
-    private func picker<Value>(_ selection: Binding<Value>) -> some View where Value: Hashable & CaseIterable & CustomStringConvertible, Value.AllCases: RandomAccessCollection {
+    private func picker<Value>(_ selection: Binding<Value>, style: some PickerStyle = .segmented) -> some View where Value: Hashable & CaseIterable & CustomStringConvertible, Value.AllCases: RandomAccessCollection {
         Picker("", selection: selection.animation()) {
             ForEach(Value.allCases, id: \.self) { value in
                 Text(value.description).tag(value)
             }
         }
-        #if !os(watchOS)
-        .pickerStyle(.segmented)
-        #endif
+        .pickerStyle(style)
     }
 
     private var layout: AnyLayout {
@@ -134,7 +136,8 @@ struct ContentView: View {
                     alignment: verticalAlignment.value,
                     itemSpacing: itemSpacing,
                     rowSpacing: lineSpacing,
-                    justification: justified.justification
+                    justification: justified.justification,
+                    distibuteItemsEvenly: distibuteItemsEvenly
                 )
             )
             case .vertical:
@@ -143,7 +146,8 @@ struct ContentView: View {
                     alignment: horizontalAlignment.value,
                     itemSpacing: itemSpacing,
                     columnSpacing: lineSpacing,
-                    justification: justified.justification
+                    justification: justified.justification,
+                    distibuteItemsEvenly: distibuteItemsEvenly
                 )
             )
         }
@@ -157,25 +161,26 @@ enum Contents: String, CustomStringConvertible, CaseIterable {
     var description: String { rawValue }
 }
 
+@available(macOS 13.0, *)
 enum Justified: String, CustomStringConvertible, CaseIterable {
-    case none
-    case stretchItems
-    case stretchSpaces
+    case none = "no justification"
+    case stretchItems = "stretch items"
+    case stretchSpaces = "stretch spaces"
+    case stretchItemsAndSpaces = "stretch both"
 
     var description: String { rawValue }
 
     var justification: Justification? {
         switch self {
-        case .none: nil
-        case .stretchItems: .stretchItems
-        case .stretchSpaces: .stretchSpaces
+            case .none: nil
+            case .stretchItems: .stretchItems
+            case .stretchSpaces: .stretchSpaces
+            case .stretchItemsAndSpaces: .stretchItemsAndSpaces
         }
     }
 }
 
-@available(macOS 14.0, *)
-struct SwiftUIView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
-    }
+@available(macOS 13.0, *)
+#Preview {
+    ContentView()
 }

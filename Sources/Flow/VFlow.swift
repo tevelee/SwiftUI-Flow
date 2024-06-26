@@ -40,6 +40,7 @@ public struct VFlow<Content: View>: View {
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -47,7 +48,8 @@ public struct VFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         )
     }
 
@@ -65,6 +67,7 @@ public struct VFlow<Content: View>: View {
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         self.init(
@@ -72,6 +75,7 @@ public struct VFlow<Content: View>: View {
             itemSpacing: spacing,
             columnSpacing: spacing,
             justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly,
             content: contentBuilder
         )
     }
@@ -105,13 +109,15 @@ extension VFlow: Layout where Content == EmptyView {
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             EmptyView()
         }
@@ -129,18 +135,20 @@ extension VFlow: Layout where Content == EmptyView {
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             EmptyView()
         }
     }
 
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+    public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {
         layout.sizeThatFits(
             proposal: proposal,
             subviews: subviews,
@@ -148,13 +156,17 @@ extension VFlow: Layout where Content == EmptyView {
         )
     }
 
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) {
+    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) {
         layout.placeSubviews(
             in: bounds,
             proposal: proposal,
             subviews: subviews,
             cache: &cache
         )
+    }
+
+    public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
+        FlowLayoutCache(subviews, axis: .vertical)
     }
 
     public static var layoutProperties: LayoutProperties {

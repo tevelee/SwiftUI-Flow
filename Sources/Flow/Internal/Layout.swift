@@ -76,22 +76,7 @@ struct FlowLayout {
         var target = bounds.origin.size(on: axis)
         let originalBreadth = target.breadth
         let lines = calculateLayout(in: proposal, of: subviews)
-        for var line in lines {
-            if let justification {
-                let remainingSpace = bounds.size.value(on: axis) - line.size.breadth
-                switch justification {
-                case .stretchItems:
-                    let distributedSpace = remainingSpace / CGFloat(line.item.count)
-                    for index in line.item.indices {
-                        line.item[index].size.breadth += distributedSpace
-                    }
-                case .stretchSpaces:
-                    let distributedSpace = remainingSpace / CGFloat(line.item.count - 1)
-                    for index in line.item.indices.dropFirst() {
-                        line.item[index].spacing += distributedSpace
-                    }
-                }
-            }
+        for line in lines {
             if reversedDepth {
                 target.depth -= line.size.depth
             }
@@ -134,15 +119,7 @@ struct FlowLayout {
         var lines: Lines = []
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
         for (index, subview) in subviews.enumerated() {
-            var size = subview.sizeThatFits(proposedSize).size(on: axis)
-            if case .stretchItems = justification {
-                let ideal = subview.dimensions(.unspecified).size(on: axis).breadth
-                let max = subview.dimensions(.infinity).size(on: axis).breadth
-                let isFlexible = max - ideal > 0
-                if isFlexible {
-                    size.breadth = ideal
-                }
-            }
+            let size = subview.dimensions(.unspecified).size(on: axis)
             if let lastIndex = lines.indices.last {
                 let spacing = self.itemSpacing(toPrevious: index, subviews: subviews)
                 let additionalBreadth = spacing + size.breadth
@@ -152,6 +129,10 @@ struct FlowLayout {
                 }
             }
             lines.append(.init(subview, size: size))
+        }
+        // update flexible items in each line to stretch
+        for index in lines.indices {
+            updateFlexibleItems(in: &lines[index], proposedSize: proposedSize)
         }
         // adjust spacings on the perpendicular axis
         let lineSpacings = lines.map { line in
@@ -170,6 +151,58 @@ struct FlowLayout {
     ) -> CGFloat {
         guard index != subviews.startIndex else { return 0 }
         return self.itemSpacing ?? subviews[index.advanced(by: -1)].spacing.distance(to: subviews[index].spacing, along: axis)
+    }
+
+    private func updateFlexibleItems(in line: inout ItemWithSpacing<Line>, proposedSize: ProposedViewSize) {
+        guard let justification else { return }
+        // TODO: cache these (ordered) properties
+        let subviewsInPriorityOrder = line.item.enumerated().map { offset, subview in
+            SubviewProperties(
+                indexInLine: offset,
+                priority: subview.item.priority,
+                spacing: subview.spacing,
+                min: subview.item.dimensions(.unspecified).value(on: axis),
+                max: subview.item.dimensions(.infinity).value(on: axis)
+            )
+        }.sorted(using: [KeyPathComparator(\.priority), KeyPathComparator(\.flexibility), KeyPathComparator(\.min)])
+
+        let sumOfMin = subviewsInPriorityOrder.map { $0.spacing + $0.min }.reduce(into: 0, +=)
+        var remainingSpace = proposedSize.value(on: axis) - sumOfMin
+        let count = line.item.count
+
+        if case .stretchSpaces = justification {
+            let distributedSpace = remainingSpace / Double(count - 1)
+            for index in line.item.indices.dropFirst() {
+                line.item[index].spacing += distributedSpace
+                remainingSpace -= distributedSpace
+            }
+        } else {
+            let sumOfMax = subviewsInPriorityOrder.map { $0.spacing + $0.max }.reduce(into: 0, +=)
+            let potentialGrowth = sumOfMax - sumOfMin
+            if potentialGrowth <= remainingSpace {
+                for subview in subviewsInPriorityOrder {
+                    line.item[subview.indexInLine].size.breadth = subview.max
+                    remainingSpace -= subview.flexibility
+                }
+            } else {
+                var remainingItemCount = count
+                for subview in subviewsInPriorityOrder {
+                    let offer = remainingSpace / Double(remainingItemCount)
+                    let actual = min(subview.flexibility, offer)
+                    remainingSpace -= actual
+                    remainingItemCount -= 1
+                    line.item[subview.indexInLine].size.breadth += actual
+                }
+            }
+            if case .stretchItemsAndSpaces = justification {
+                let distributedSpace = remainingSpace / Double(count - 1)
+                for index in line.item.indices.dropFirst() {
+                    line.item[index].spacing += distributedSpace
+                    remainingSpace -= distributedSpace
+                }
+            }
+        }
+        line.size.breadth = proposedSize.value(on: axis) - remainingSpace
     }
 }
 
@@ -217,6 +250,7 @@ extension LayoutSubviews: Subviews {}
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 protocol Subview {
     var spacing: ViewSpacing { get }
+    var priority: Double { get }
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
     func dimensions(_ proposal: ProposedViewSize) -> Dimensions
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize)
@@ -248,8 +282,8 @@ extension Dimensions {
 
     func value(on axis: Axis) -> CGFloat {
         switch axis {
-        case .horizontal: width
-        case .vertical: height
+            case .horizontal: width
+            case .vertical: height
         }
     }
 }
@@ -302,4 +336,14 @@ private extension Array where Element == Size {
 public enum Justification {
     case stretchItems
     case stretchSpaces
+    case stretchItemsAndSpaces
+}
+
+struct SubviewProperties {
+    var indexInLine: Int
+    var priority: Double
+    var spacing: Double
+    var min: Double
+    var max: Double
+    var flexibility: Double { max - min }
 }

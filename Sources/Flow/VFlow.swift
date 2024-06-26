@@ -40,7 +40,7 @@ public struct VFlow<Content: View>: View {
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false,
+        distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -49,7 +49,7 @@ public struct VFlow<Content: View>: View {
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         )
     }
 
@@ -67,7 +67,7 @@ public struct VFlow<Content: View>: View {
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false,
+        distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         self.init(
@@ -75,7 +75,7 @@ public struct VFlow<Content: View>: View {
             itemSpacing: spacing,
             columnSpacing: spacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly,
+            distributeItemsEvenly: distributeItemsEvenly,
             content: contentBuilder
         )
     }
@@ -110,14 +110,14 @@ extension VFlow: Layout where Content == EmptyView {
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
         }
@@ -136,13 +136,13 @@ extension VFlow: Layout where Content == EmptyView {
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
         }

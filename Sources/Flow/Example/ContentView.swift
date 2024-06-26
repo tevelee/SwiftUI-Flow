@@ -11,7 +11,7 @@ struct ContentView: View {
     @State private var justified: Justified = .none
     @State private var horizontalAlignment: HAlignment = .center
     @State private var verticalAlignment: VAlignment = .center
-    @State private var distibuteItemsEvenly: Bool = false
+    @State private var distributeItemsEvenly: Bool = false
     private let texts = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ").map { string in
         AnyView(Text(string))
     }
@@ -79,7 +79,7 @@ struct ContentView: View {
                 }
                 Section(header: Text("Extras")) {
                     picker($justified, style: .radioGroup)
-                    Toggle("Distibute evenly", isOn: $distibuteItemsEvenly.animation())
+                    Toggle("Distibute evenly", isOn: $distributeItemsEvenly.animation())
                 }
             }
             .listStyle(.sidebar)
@@ -137,7 +137,7 @@ struct ContentView: View {
                     itemSpacing: itemSpacing,
                     rowSpacing: lineSpacing,
                     justification: justified.justification,
-                    distibuteItemsEvenly: distibuteItemsEvenly
+                    distributeItemsEvenly: distributeItemsEvenly
                 )
             )
             case .vertical:
@@ -147,7 +147,7 @@ struct ContentView: View {
                     itemSpacing: itemSpacing,
                     columnSpacing: lineSpacing,
                     justification: justified.justification,
-                    distibuteItemsEvenly: distibuteItemsEvenly
+                    distributeItemsEvenly: distributeItemsEvenly
                 )
             )
         }

@@ -10,7 +10,7 @@ struct FlowLayout {
     var alternatingReversedBreadth: Bool = false
     var reversedDepth: Bool = false
     var justification: Justification?
-    var distibuteItemsEvenly: Bool
+    var distributeItemsEvenly: Bool
     let align: (Dimensions) -> CGFloat
 
     private struct ItemWithSpacing<T> {
@@ -152,7 +152,7 @@ struct FlowLayout {
         spacings: [CGFloat],
         cache: FlowLayoutCache
     ) {
-        guard distibuteItemsEvenly else { return }
+        guard distributeItemsEvenly else { return }
 
         // Knuth-Plass Line Breaking Algorithm
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
@@ -284,14 +284,14 @@ extension FlowLayout: Layout {
         itemSpacing: CGFloat?,
         lineSpacing: CGFloat?,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         .init(
             axis: .vertical,
             itemSpacing: itemSpacing,
             lineSpacing: lineSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         ) {
             $0[alignment]
         }
@@ -302,14 +302,14 @@ extension FlowLayout: Layout {
         itemSpacing: CGFloat?,
         lineSpacing: CGFloat?,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         .init(
             axis: .horizontal,
             itemSpacing: itemSpacing,
             lineSpacing: lineSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         ) {
             $0[alignment]
         }

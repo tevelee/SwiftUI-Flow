@@ -9,14 +9,14 @@ public struct HFlowLayout {
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) {
         layout = .horizontal(
             alignment: alignment,
             itemSpacing: itemSpacing,
             lineSpacing: rowSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         )
     }
 }

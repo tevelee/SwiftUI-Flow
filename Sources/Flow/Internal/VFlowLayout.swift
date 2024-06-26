@@ -9,14 +9,14 @@ public struct VFlowLayout {
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justification: Justification? = nil,
-        distibuteItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false
     ) {
         layout = .vertical(
             alignment: alignment,
             itemSpacing: itemSpacing,
             lineSpacing: columnSpacing,
             justification: justification,
-            distibuteItemsEvenly: distibuteItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly
         )
     }
 }

@@ -127,7 +127,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_distibuted() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, distibuteItemsEvenly: true)
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, distributeItemsEvenly: true)
 
         // When
         let result = sut.layout(repeated(1×1, times: 13), in: 11×3)

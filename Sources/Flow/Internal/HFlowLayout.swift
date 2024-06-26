@@ -8,13 +8,15 @@ public struct HFlowLayout {
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) {
         layout = .horizontal(
             alignment: alignment,
             itemSpacing: itemSpacing,
             lineSpacing: rowSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         )
     }
 }

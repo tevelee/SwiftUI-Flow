@@ -9,29 +9,16 @@ struct FlowLayout {
     var reversedBreadth: Bool = false
     var reversedDepth: Bool = false
     var justification: Justification?
+    var distibuteItemsEvenly: Bool
     let align: (Dimensions) -> CGFloat
 
     private struct ItemWithSpacing<T> {
         var item: T
         var size: Size
-        var spacing: CGFloat
-
-        private init(
-            _ item: T,
-            size: Size,
-            spacing: CGFloat = 0
-        ) {
-            self.item = item
-            self.size = size
-            self.spacing = spacing
-        }
-
-        init(_ item: Item, size: Size) where T == [ItemWithSpacing<Item>] {
-            self.init([.init(item, size: size)], size: size)
-        }
+        var spacing: CGFloat = 0
 
         mutating func append(_ item: Item, size: Size, spacing: CGFloat) where Self == ItemWithSpacing<Line> {
-            self.item.append(.init(item, size: size, spacing: spacing))
+            self.item.append(.init(item: item, size: size, spacing: spacing))
             self.size = Size(breadth: self.size.breadth + spacing + size.breadth, depth: max(self.size.depth, size.depth))
         }
     }
@@ -47,7 +34,7 @@ struct FlowLayout {
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
-        let lines = calculateLayout(in: proposedSize, of: subviews, cache: &cache)
+        let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
         let spacings = lines.map(\.spacing).reduce(into: 0, +=)
         let size = lines
             .map(\.size)
@@ -73,7 +60,7 @@ struct FlowLayout {
         }
         var target = bounds.origin.size(on: axis)
         let originalBreadth = target.breadth
-        let lines = calculateLayout(in: proposal, of: subviews, cache: &cache)
+        let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
         for line in lines {
             if reversedDepth {
                 target.depth -= line.size.depth
@@ -117,32 +104,104 @@ struct FlowLayout {
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
-        cache: inout FlowLayoutCache
+        cache: FlowLayoutCache
     ) -> Lines {
         var lines: Lines = []
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
-        for (index, subview) in subviews.enumerated() {
-            let size = subview.dimensions(.unspecified).size(on: axis)
-            let cached = if cache.subviewsCache.indices.contains(index) {
-                cache.subviewsCache[index]
-            } else {
-                FlowLayoutCache.SubviewCache(subview, axis: axis)
+
+        let sizes = cache.subviewsCache.map(\.ideal)
+        let spacings = if let itemSpacing {
+            [0] + Array(repeating: itemSpacing, count: subviews.count - 1)
+        } else {
+            [0] + zip(cache.subviewsCache, cache.subviewsCache.dropFirst()).map { lhs, rhs in
+                lhs.spacing.distance(to: rhs.spacing, along: axis)
             }
+        }
+
+        for index in subviews.indices {
+            let (subview, size, spacing, cache) = (subviews[index], sizes[index], spacings[index], cache.subviewsCache[index])
             if let lastIndex = lines.indices.last {
-                let spacing = self.itemSpacing(toPrevious: index, subviews: subviews)
                 let additionalBreadth = spacing + size.breadth
                 if lines[lastIndex].size.breadth + additionalBreadth <= proposedBreadth {
-                    lines[lastIndex].append((subview, cached), size: size, spacing: spacing)
+                    lines[lastIndex].append((subview, cache), size: size, spacing: spacing)
                     continue
                 }
             }
-            lines.append(.init((subview: subview, cache: cached), size: size))
+            lines.append(.init(item: [.init(item: (subview: subview, cache: cache), size: size)], size: size))
         }
-        // update flexible items in each line to stretch
+        distributeItems(in: &lines, proposedSize: proposedSize, subviews: subviews, sizes: sizes, spacings: spacings, cache: cache)
+        updateFlexibleItems(in: &lines, proposedSize: proposedSize)
+        updateLineSpacings(in: &lines)
+        return lines
+    }
+
+    private func distributeItems(
+        in lines: inout Lines,
+        proposedSize: ProposedViewSize,
+        subviews: some Subviews,
+        sizes: [Size],
+        spacings: [CGFloat],
+        cache: FlowLayoutCache
+    ) {
+        guard distibuteItemsEvenly else { return }
+
+        // Knuth-Plass Line Breaking Algorithm
+        let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
+        let count = sizes.count
+        var costs: [CGFloat] = Array(repeating: CGFloat.infinity, count: count + 1)
+        var breaks: [Int?] = Array(repeating: nil, count: count + 1)
+
+        costs[0] = 0
+
+        for end in 0 ..< count {
+            var totalBreadth: CGFloat = 0
+            for start in stride(from: end, through: 0, by: -1) {
+                let size = sizes[start].breadth
+                let spacing = start > 0 && start < end ? spacings[start] : 0
+                totalBreadth += size + spacing
+                if totalBreadth > proposedBreadth {
+                    break
+                }
+                let penalty = abs(totalBreadth - (proposedBreadth / CGFloat(end - start + 1)))
+                let cost = costs[start] + pow(proposedBreadth - totalBreadth, 2) + penalty
+                if cost < costs[end + 1] {
+                    costs[end + 1] = cost
+                    breaks[end + 1] = start
+                }
+            }
+        }
+
+        var breakpoints: [Int] = []
+        var i = count
+        while let breakPoint = breaks[i], breakPoint >= 0 {
+            breakpoints.insert(i, at: 0)
+            i = breakPoint
+        }
+        breakpoints.insert(0, at: 0)
+
+        var newLines: Lines = []
+        for (start, end) in zip(breakpoints, breakpoints.dropFirst()) {
+            var line: ItemWithSpacing<Line> = .init(item: [], size: .zero)
+            for index in start..<end {
+                let subview = subviews[index]
+                let size = sizes[index]
+                let spacing = index == start ? 0 : spacings[index] // Reset spacing for the first item in each line
+                line.append((subview, cache.subviewsCache[index]), size: size, spacing: spacing)
+            }
+            newLines.append(line)
+        }
+
+        lines = newLines
+    }
+
+    private func updateFlexibleItems(in lines: inout Lines, proposedSize: ProposedViewSize) {
+        guard let justification else { return }
         for index in lines.indices {
-            updateFlexibleItems(in: &lines[index], proposedSize: proposedSize)
+            updateFlexibleItems(in: &lines[index], proposedSize: proposedSize, justification: justification)
         }
-        // adjust spacings on the perpendicular axis
+    }
+
+    private func updateLineSpacings(in lines: inout Lines) {
         let lineSpacings = lines.map { line in
             line.item.reduce(into: ViewSpacing()) { $0.formUnion($1.item.cache.spacing) }
         }
@@ -150,7 +209,6 @@ struct FlowLayout {
             let spacing = self.lineSpacing ?? lineSpacings[index].distance(to: lineSpacings[index.advanced(by: -1)], along: axis.perpendicular)
             lines[index].spacing = spacing
         }
-        return lines
     }
 
     private func itemSpacing<S: Subviews>(
@@ -161,13 +219,12 @@ struct FlowLayout {
         return self.itemSpacing ?? subviews[index.advanced(by: -1)].spacing.distance(to: subviews[index].spacing, along: axis)
     }
 
-    private func updateFlexibleItems(in line: inout ItemWithSpacing<Line>, proposedSize: ProposedViewSize) {
-        guard let justification else { return }
+    private func updateFlexibleItems(in line: inout ItemWithSpacing<Line>, proposedSize: ProposedViewSize, justification: Justification) {
         let subviewsInPriorityOrder = line.item.enumerated().map { offset, subview in
             SubviewProperties(indexInLine: offset, spacing: subview.spacing, cache: subview.item.cache)
-        }.sorted(using: [KeyPathComparator(\.cache.priority), KeyPathComparator(\.flexibility), KeyPathComparator(\.cache.ideal)])
+        }.sorted(using: [KeyPathComparator(\.cache.priority), KeyPathComparator(\.flexibility), KeyPathComparator(\.cache.ideal.breadth)])
 
-        let sumOfIdeal = subviewsInPriorityOrder.map { $0.spacing + $0.cache.ideal }.reduce(into: 0, +=)
+        let sumOfIdeal = subviewsInPriorityOrder.map { $0.spacing + $0.cache.ideal.breadth }.reduce(into: 0, +=)
         var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
         let count = line.item.count
 
@@ -178,11 +235,11 @@ struct FlowLayout {
                 remainingSpace -= distributedSpace
             }
         } else {
-            let sumOfMax = subviewsInPriorityOrder.map { $0.spacing + $0.cache.max }.reduce(into: 0, +=)
+            let sumOfMax = subviewsInPriorityOrder.map { $0.spacing + $0.cache.max.breadth }.reduce(into: 0, +=)
             let potentialGrowth = sumOfMax - sumOfIdeal
             if potentialGrowth <= remainingSpace {
                 for subview in subviewsInPriorityOrder {
-                    line.item[subview.indexInLine].size.breadth = subview.cache.max
+                    line.item[subview.indexInLine].size.breadth = subview.cache.max.breadth
                     remainingSpace -= subview.flexibility
                 }
             } else {
@@ -217,13 +274,15 @@ extension FlowLayout: Layout {
         alignment: HorizontalAlignment,
         itemSpacing: CGFloat?,
         lineSpacing: CGFloat?,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) -> FlowLayout {
         .init(
             axis: .vertical,
             itemSpacing: itemSpacing,
             lineSpacing: lineSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             $0[alignment]
         }
@@ -233,13 +292,15 @@ extension FlowLayout: Layout {
         alignment: VerticalAlignment,
         itemSpacing: CGFloat?,
         lineSpacing: CGFloat?,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) -> FlowLayout {
         .init(
             axis: .horizontal,
             itemSpacing: itemSpacing,
             lineSpacing: lineSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             $0[alignment]
         }
@@ -277,5 +338,5 @@ private struct SubviewProperties {
     var indexInLine: Int
     var spacing: Double
     var cache: FlowLayoutCache.SubviewCache
-    var flexibility: Double { cache.max - cache.ideal }
+    var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
 }

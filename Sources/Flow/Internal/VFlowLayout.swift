@@ -8,13 +8,15 @@ public struct VFlowLayout {
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) {
         layout = .vertical(
             alignment: alignment,
             itemSpacing: itemSpacing,
             lineSpacing: columnSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         )
     }
 }

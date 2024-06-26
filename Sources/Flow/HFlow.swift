@@ -40,6 +40,7 @@ public struct HFlow<Content: View>: View {
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
         justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -47,7 +48,8 @@ public struct HFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         )
     }
 
@@ -65,6 +67,7 @@ public struct HFlow<Content: View>: View {
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
         justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         self.init(
@@ -72,6 +75,7 @@ public struct HFlow<Content: View>: View {
             itemSpacing: spacing,
             rowSpacing: spacing,
             justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly,
             content: contentBuilder
         )
     }
@@ -105,13 +109,15 @@ extension HFlow: Layout where Content == EmptyView {
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
-        justification: Justification? = nil
+        justification: Justification? = nil,
+        distibuteItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
-            justification: justification
+            justification: justification,
+            distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             EmptyView()
         }

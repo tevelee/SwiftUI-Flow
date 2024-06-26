@@ -12,16 +12,16 @@ public struct FlowLayoutCache {
     struct SubviewCache {
         var priority: Double
         var spacing: ViewSpacing
-        var min: Double
-        var ideal: Double
-        var max: Double
+        var min: Size
+        var ideal: Size
+        var max: Size
 
         init(_ subview: some Subview, axis: Axis) {
             priority = subview.priority
             spacing = subview.spacing
-            min = subview.dimensions(.zero).value(on: axis)
-            ideal = subview.dimensions(.unspecified).value(on: axis)
-            max = subview.dimensions(.infinity).value(on: axis)
+            min = subview.dimensions(.zero).size(on: axis)
+            ideal = subview.dimensions(.unspecified).size(on: axis)
+            max = subview.dimensions(.infinity).size(on: axis)
         }
     }
 

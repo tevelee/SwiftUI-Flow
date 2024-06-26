@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var justified: Justified = .none
     @State private var horizontalAlignment: HAlignment = .center
     @State private var verticalAlignment: VAlignment = .center
+    @State private var distibuteItemsEvenly: Bool = false
     private let texts = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ").map { string in
         AnyView(Text(string))
     }
@@ -76,12 +77,13 @@ struct ContentView: View {
                     stepper("Item", $itemSpacing)
                     stepper("Line", $lineSpacing)
                 }
-                Section(header: Text("Justification")) {
+                Section(header: Text("Extras")) {
                     picker($justified, style: .radioGroup)
+                    Toggle("Distibute evenly", isOn: $distibuteItemsEvenly.animation())
                 }
             }
             .listStyle(.sidebar)
-            .frame(minWidth: 280)
+            .frame(minWidth: 250)
             .navigationTitle("Flow Layout")
             .padding()
         } detail: {
@@ -96,7 +98,7 @@ struct ContentView: View {
             .frame(maxWidth: width, maxHeight: height)
             .border(.red)
         }
-        .frame(minWidth: 600, minHeight: 500)
+        .frame(minWidth: 600, minHeight: 600)
     }
 
     private func stepper(_ title: String, _ selection: Binding<CGFloat?>) -> some View {
@@ -134,7 +136,8 @@ struct ContentView: View {
                     alignment: verticalAlignment.value,
                     itemSpacing: itemSpacing,
                     rowSpacing: lineSpacing,
-                    justification: justified.justification
+                    justification: justified.justification,
+                    distibuteItemsEvenly: distibuteItemsEvenly
                 )
             )
             case .vertical:
@@ -143,7 +146,8 @@ struct ContentView: View {
                     alignment: horizontalAlignment.value,
                     itemSpacing: itemSpacing,
                     columnSpacing: lineSpacing,
-                    justification: justified.justification
+                    justification: justified.justification,
+                    distibuteItemsEvenly: distibuteItemsEvenly
                 )
             )
         }
@@ -159,10 +163,10 @@ enum Contents: String, CustomStringConvertible, CaseIterable {
 
 @available(macOS 13.0, *)
 enum Justified: String, CustomStringConvertible, CaseIterable {
-    case none
-    case stretchItems
-    case stretchSpaces
-    case stretchItemsAndSpaces
+    case none = "no justification"
+    case stretchItems = "stretch items"
+    case stretchSpaces = "stretch spaces"
+    case stretchItemsAndSpaces = "stretch both"
 
     var description: String { rawValue }
 

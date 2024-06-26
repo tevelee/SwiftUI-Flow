@@ -108,7 +108,7 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_layout() {
+    func test_HFlow_default() {
         // Given
         let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0)
 
@@ -121,6 +121,23 @@ final class FlowTests: XCTestCase {
         |X X X X X X|
         |X X X X X X|
         |X X X      |
+        +-----------+
+        """)
+    }
+
+    func test_HFlow_distibuted() throws {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, distibuteItemsEvenly: true)
+
+        // When
+        let result = sut.layout(repeated(1×1, times: 13), in: 11×3)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +-----------+
+        |X X X X X  |
+        |X X X X    |
+        |X X X X    |
         +-----------+
         """)
     }
@@ -293,18 +310,18 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_VFlow_layout() {
+    func test_VFlow_default() {
         // Given
         let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 0, lineSpacing: 0)
 
         // When
-        let result = sut.layout(repeated(1×1, times: 17), in: 6×3)
+        let result = sut.layout(repeated(1×1, times: 16), in: 6×3)
 
         // Then
         XCTAssertEqual(render(result), """
         +------+
         |XXXXXX|
-        |XXXXXX|
+        |XXXXX |
         |XXXXX |
         +------+
         """)

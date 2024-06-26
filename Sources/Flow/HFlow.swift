@@ -23,7 +23,7 @@ public struct HFlow<Content: View>: View {
     private let layout: HFlowLayout
     private let content: Content
 
-    /// Creates a horizontal flow with the give spacing and vertical alignment.
+    /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -34,6 +34,9 @@ public struct HFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of rows.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each row by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each row, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
     public init(
         alignment: VerticalAlignment = .center,
@@ -53,7 +56,7 @@ public struct HFlow<Content: View>: View {
         )
     }
 
-    /// Creates a horizontal flow with the give spacing and vertical alignment.
+    /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -62,6 +65,9 @@ public struct HFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each row by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each row, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
     public init(
         alignment: VerticalAlignment = .center,
@@ -94,7 +100,7 @@ extension HFlow: Animatable where Content == EmptyView {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension HFlow: Layout where Content == EmptyView {
-    /// Creates a horizontal flow with the give spacing and vertical alignment.
+    /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -105,6 +111,9 @@ extension HFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of rows.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each row by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each row, while respecting their order.
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -123,20 +132,29 @@ extension HFlow: Layout where Content == EmptyView {
         }
     }
 
-    /// Creates a horizontal flow with the give spacing and vertical alignment.
+    /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each row by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each row, while respecting their order.
     public init(
         alignment: VerticalAlignment = .center,
-        spacing: CGFloat? = nil
+        spacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
-            spacing: spacing
+            spacing: spacing,
+            justification: justification,
+            distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
         }

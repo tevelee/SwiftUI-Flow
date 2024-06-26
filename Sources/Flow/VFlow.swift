@@ -23,7 +23,7 @@ public struct VFlow<Content: View>: View {
     private let layout: VFlowLayout
     private let content: Content
 
-    /// Creates an instance with the given spacing and horizontal alignment.
+    /// Creates a vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -34,6 +34,9 @@ public struct VFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of columns.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each column, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
     public init(
         alignment: HorizontalAlignment = .center,
@@ -53,7 +56,7 @@ public struct VFlow<Content: View>: View {
         )
     }
 
-    /// Creates an instance with the given spacing and horizontal alignment.
+    /// Creates a vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -62,6 +65,9 @@ public struct VFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each column, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
     public init(
         alignment: HorizontalAlignment = .center,
@@ -94,7 +100,7 @@ extension VFlow: Animatable where Content == EmptyView {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension VFlow: Layout where Content == EmptyView {
-    /// Creates an instance with the given spacing and horizontal alignment.
+    /// Creates a vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -105,6 +111,9 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of columns.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each column, while respecting their order.
     public init(
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -123,7 +132,7 @@ extension VFlow: Layout where Content == EmptyView {
         }
     }
 
-    /// Creates an instance with the given spacing and horizontal alignment.
+    /// Creates a vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
@@ -132,6 +141,9 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - justification: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each column, while respecting their order.
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,

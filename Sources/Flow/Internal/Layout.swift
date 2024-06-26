@@ -7,6 +7,7 @@ struct FlowLayout {
     var itemSpacing: CGFloat?
     var lineSpacing: CGFloat?
     var reversedBreadth: Bool = false
+    var alternatingReversedBreadth: Bool = false
     var reversedDepth: Bool = false
     var justification: Justification?
     var distibuteItemsEvenly: Bool
@@ -51,35 +52,43 @@ struct FlowLayout {
     ) {
         guard !subviews.isEmpty else { return }
 
-        var bounds = bounds
-        if reversedBreadth {
-            bounds.reverseOrigin(along: axis)
-        }
-        if reversedDepth {
-            bounds.reverseOrigin(along: axis.perpendicular)
-        }
+        var reversedBreadth = self.reversedBreadth
         var target = bounds.origin.size(on: axis)
-        let originalBreadth = target.breadth
         let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
         for line in lines {
             if reversedDepth {
-                target.depth -= line.size.depth
+                target.depth -= line.size.depth + line.spacing
+            } else {
+                target.depth += line.spacing
             }
-            target.depth += line.spacing
+            if reversedBreadth {
+                target.breadth = switch axis {
+                    case .horizontal: bounds.maxX
+                    case .vertical: bounds.maxY
+                }
+            } else {
+                target.breadth = switch axis {
+                    case .horizontal: bounds.minX
+                    case .vertical: bounds.minY
+                }
+            }
             for item in line.item {
                 if reversedBreadth {
-                    target.breadth -= item.size.breadth
+                    target.breadth -= item.size.breadth + item.spacing
+                } else {
+                    target.breadth += item.spacing
                 }
-                target.breadth += item.spacing
                 alignAndPlace(item, in: line, at: target)
                 if !reversedBreadth {
                     target.breadth += item.size.breadth
                 }
             }
+            if alternatingReversedBreadth {
+                reversedBreadth.toggle()
+            }
             if !reversedDepth {
                 target.depth += line.size.depth
             }
-            target.breadth = originalBreadth
         }
     }
 
@@ -303,17 +312,6 @@ extension FlowLayout: Layout {
             distibuteItemsEvenly: distibuteItemsEvenly
         ) {
             $0[alignment]
-        }
-    }
-}
-
-private extension CGRect {
-    mutating func reverseOrigin(along axis: Axis) {
-        switch axis {
-            case .horizontal:
-                origin.x = maxX
-            case .vertical:
-                origin.y = maxY
         }
     }
 }

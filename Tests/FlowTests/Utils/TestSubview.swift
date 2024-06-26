@@ -67,16 +67,24 @@ typealias LayoutDescription = (subviews: [TestSubview], reportedSize: CGSize)
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout {
     func layout(_ subviews: [TestSubview], in bounds: CGSize) -> LayoutDescription {
+        var cache = makeCache(subviews)
         let size = sizeThatFits(
             proposal: ProposedViewSize(width: bounds.width, height: bounds.height),
-            subviews: subviews
+            subviews: subviews,
+            cache: &cache
         )
         placeSubviews(
             in: CGRect(origin: .zero, size: bounds),
             proposal: ProposedViewSize(width: size.width, height: size.height),
-            subviews: subviews
+            subviews: subviews,
+            cache: &cache
         )
         return (subviews, bounds)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: [TestSubview]) -> CGSize {
+        var cache = makeCache(subviews)
+        return sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 }
 

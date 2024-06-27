@@ -1,19 +1,31 @@
 import CoreFoundation
 import SwiftUI
 
+@usableFromInline
 struct Size {
+    @usableFromInline
     var breadth: CGFloat
+    @usableFromInline
     var depth: CGFloat
 
+    @usableFromInline
+    init(breadth: CGFloat, depth: CGFloat) {
+        self.breadth = breadth
+        self.depth = depth
+    }
+
+    @usableFromInline
     static let zero = Size(breadth: 0, depth: 0)
 
+    @usableFromInline
     func adding(_ value: CGFloat, on axis: Axis) -> Size {
         var size = self
         size[axis] += value
         return size
     }
 
-    fileprivate subscript(axis: Axis) -> CGFloat {
+    @usableFromInline
+    subscript(axis: Axis) -> CGFloat {
         get {
             self[keyPath: keyPath(on: axis)]
         }
@@ -31,6 +43,7 @@ struct Size {
 }
 
 extension Axis {
+    @usableFromInline
     var perpendicular: Axis {
         switch self {
             case .horizontal: .vertical
@@ -47,16 +60,19 @@ protocol FixedOrientation2DCoordinate {
 }
 
 extension FixedOrientation2DCoordinate {
+    @inlinable
     func size(on axis: Axis) -> Size {
         Size(breadth: value(on: axis), depth: value(on: axis.perpendicular))
     }
 }
 
 extension CGPoint: FixedOrientation2DCoordinate {
+    @inlinable
     init(size: Size, axis: Axis) {
         self.init(x: size[axis], y: size[axis.perpendicular])
     }
 
+    @inlinable
     func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: x
@@ -66,10 +82,12 @@ extension CGPoint: FixedOrientation2DCoordinate {
 }
 
 extension CGSize: FixedOrientation2DCoordinate {
+    @inlinable
     init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 
+    @inlinable
     func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: width
@@ -80,10 +98,12 @@ extension CGSize: FixedOrientation2DCoordinate {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension ProposedViewSize: FixedOrientation2DCoordinate {
+    @inlinable
     init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 
+    @inlinable
     func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: width ?? .infinity

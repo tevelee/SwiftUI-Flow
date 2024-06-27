@@ -1,5 +1,6 @@
 import CoreFoundation
 
+@inlinable
 func knuthPlassLineBreakingAlgorithm(
     proposedBreadth: CGFloat,
     sizes: [Size],
@@ -21,7 +22,8 @@ func knuthPlassLineBreakingAlgorithm(
     return breakpoints
 }
 
-private func calculateOptimalBreaks(
+@usableFromInline
+func calculateOptimalBreaks(
     proposedBreadth: CGFloat,
     sizes: [Size],
     spacings: [CGFloat]

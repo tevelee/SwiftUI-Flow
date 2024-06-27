@@ -30,6 +30,7 @@ public enum Justification {
 /// it's considered an internal implementation detail.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct FlowLayoutCache {
+    @usableFromInline
     struct SubviewCache {
         var priority: Double
         var spacing: ViewSpacing
@@ -37,6 +38,7 @@ public struct FlowLayoutCache {
         var ideal: Size
         var max: Size
 
+        @usableFromInline
         init(_ subview: some Subview, axis: Axis) {
             priority = subview.priority
             spacing = subview.spacing
@@ -46,8 +48,10 @@ public struct FlowLayoutCache {
         }
     }
 
+    @usableFromInline 
     let subviewsCache: [SubviewCache]
 
+    @inlinable 
     init(_ subviews: some Subviews, axis: Axis) {
         subviewsCache = subviews.map {
             SubviewCache($0, axis: axis)

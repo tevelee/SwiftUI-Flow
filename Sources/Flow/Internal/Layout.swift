@@ -2,6 +2,7 @@ import CoreFoundation
 import SwiftUI
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@usableFromInline
 struct FlowLayout {
     let axis: Axis
     var itemSpacing: CGFloat?
@@ -28,6 +29,7 @@ struct FlowLayout {
     private typealias Line = [ItemWithSpacing<Item>]
     private typealias Lines = [ItemWithSpacing<Line>]
 
+    @usableFromInline
     func sizeThatFits(
         proposal proposedSize: ProposedViewSize,
         subviews: some Subviews,
@@ -44,6 +46,7 @@ struct FlowLayout {
         return CGSize(size: size, axis: axis)
     }
 
+    @usableFromInline
     func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -257,10 +260,12 @@ struct FlowLayout {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout: Layout {
+    @usableFromInline
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)
     }
 
+    @usableFromInline
     static func vertical(
         alignment: HorizontalAlignment,
         itemSpacing: CGFloat?,
@@ -279,6 +284,7 @@ extension FlowLayout: Layout {
         }
     }
 
+    @usableFromInline
     static func horizontal(
         alignment: VerticalAlignment,
         itemSpacing: CGFloat?,
@@ -298,7 +304,8 @@ extension FlowLayout: Layout {
     }
 }
 
-private extension Array where Element == Size {
+extension Array where Element == Size {
+    @inlinable
     func reduce(
         _ initial: Size,
         breadth: (CGFloat, CGFloat) -> CGFloat,

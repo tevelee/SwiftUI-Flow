@@ -2,8 +2,10 @@ import SwiftUI
 
 /// A layout that arranges its children in a horizontally flowing manner.
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@frozen
 public struct HFlowLayout {
-    private let layout: FlowLayout
+    @usableFromInline
+    let layout: FlowLayout
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
@@ -17,6 +19,7 @@ public struct HFlowLayout {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -36,18 +39,22 @@ public struct HFlowLayout {
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension HFlowLayout: Layout {
+    @inlinable
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {
         layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 
+    @inlinable
     public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) {
         layout.placeSubviews(in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
+    @inlinable
     public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
+    @inlinable
     public static var layoutProperties: LayoutProperties {
         var properties = LayoutProperties()
         properties.stackOrientation = .horizontal

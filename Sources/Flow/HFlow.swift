@@ -19,9 +19,12 @@ import SwiftUI
 ///     }
 ///
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
+@frozen
 public struct HFlow<Content: View>: View {
-    private let layout: HFlowLayout
-    private let content: Content
+    @usableFromInline 
+    let layout: HFlowLayout
+    @usableFromInline
+    let content: Content
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///
@@ -38,6 +41,7 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
+    @inlinable 
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -69,6 +73,7 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - content: A view builder that creates the content of this flow.
+    @inlinable 
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -86,6 +91,7 @@ public struct HFlow<Content: View>: View {
         )
     }
 
+    @inlinable 
     public var body: some View {
         layout {
             content
@@ -114,6 +120,7 @@ extension HFlow: Layout where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    @inlinable 
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -144,6 +151,7 @@ extension HFlow: Layout where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    @inlinable 
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -160,7 +168,12 @@ extension HFlow: Layout where Content == EmptyView {
         }
     }
 
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {
+    @inlinable 
+    public func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) -> CGSize {
         layout.sizeThatFits(
             proposal: proposal,
             subviews: subviews,
@@ -168,7 +181,13 @@ extension HFlow: Layout where Content == EmptyView {
         )
     }
 
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) {
+    @inlinable 
+    public func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) {
         layout.placeSubviews(
             in: bounds,
             proposal: proposal,
@@ -177,10 +196,12 @@ extension HFlow: Layout where Content == EmptyView {
         )
     }
 
+    @inlinable
     public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
+    @inlinable 
     public static var layoutProperties: LayoutProperties {
         HFlowLayout.layoutProperties
     }

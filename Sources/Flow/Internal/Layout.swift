@@ -122,7 +122,7 @@ struct FlowLayout {
         let spacings = if let itemSpacing {
             [0] + Array(repeating: itemSpacing, count: subviews.count - 1)
         } else {
-            [0] + zip(cache.subviewsCache, cache.subviewsCache.dropFirst()).map { lhs, rhs in
+            [0] + cache.subviewsCache.adjacentPairs().map { lhs, rhs in
                 lhs.spacing.distance(to: rhs.spacing, along: axis)
             }
         }
@@ -157,7 +157,7 @@ struct FlowLayout {
         // Knuth-Plass Line Breaking Algorithm
         let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
         let count = sizes.count
-        var costs: [CGFloat] = Array(repeating: CGFloat.infinity, count: count + 1)
+        var costs: [CGFloat] = Array(repeating: .infinity, count: count + 1)
         var breaks: [Int?] = Array(repeating: nil, count: count + 1)
 
         costs[0] = 0
@@ -171,8 +171,9 @@ struct FlowLayout {
                 if totalBreadth > proposedBreadth {
                     break
                 }
-                let penalty = abs(totalBreadth - (proposedBreadth / CGFloat(end - start + 1)))
-                let cost = costs[start] + pow(proposedBreadth - totalBreadth, 2) + penalty
+                let remainingSpace = proposedBreadth - totalBreadth
+                let penalty = abs(totalBreadth - (proposedBreadth / CGFloat(end - start + 1))) * 2
+                let cost = costs[start] + remainingSpace * remainingSpace + penalty
                 if cost < costs[end + 1] {
                     costs[end + 1] = cost
                     breaks[end + 1] = start
@@ -189,7 +190,7 @@ struct FlowLayout {
         breakpoints.insert(0, at: 0)
 
         var newLines: Lines = []
-        for (start, end) in zip(breakpoints, breakpoints.dropFirst()) {
+        for (start, end) in breakpoints.adjacentPairs() {
             var line: ItemWithSpacing<Line> = .init(item: [], size: .zero)
             for index in start..<end {
                 let subview = subviews[index]
@@ -337,4 +338,10 @@ private struct SubviewProperties {
     var spacing: Double
     var cache: FlowLayoutCache.SubviewCache
     var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
+}
+
+private extension Sequence {
+    func adjacentPairs() -> some Sequence<(Element, Element)> {
+        zip(self, self.dropFirst())
+    }
 }

@@ -36,7 +36,7 @@ struct FlowLayout {
         guard !subviews.isEmpty else { return .zero }
 
         let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
-        let spacings = lines.map(\.spacing).reduce(into: 0, +=)
+        let spacings = lines.sum(of: \.spacing)
         let size = lines
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
@@ -154,44 +154,15 @@ struct FlowLayout {
     ) {
         guard distributeItemsEvenly else { return }
 
-        // Knuth-Plass Line Breaking Algorithm
-        let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
-        let count = sizes.count
-        var costs: [CGFloat] = Array(repeating: .infinity, count: count + 1)
-        var breaks: [Int?] = Array(repeating: nil, count: count + 1)
-
-        costs[0] = 0
-
-        for end in 1 ... count {
-            var totalBreadth: CGFloat = 0
-            for start in (0 ..< end).reversed() {
-                let size = sizes[start].breadth
-                let spacing = (end - start) == 1 ? 0 : spacings[start + 1]
-                totalBreadth += size + spacing
-                if totalBreadth > proposedBreadth {
-                    break
-                }
-                let remainingSpace = proposedBreadth - totalBreadth
-                let bias = CGFloat(count - end) * 0.5 // Introduce a small bias to prefer breaks that fill earlier lines more
-                let cost = costs[start] + remainingSpace * remainingSpace + bias
-                if cost < costs[end] {
-                    costs[end] = cost
-                    breaks[end] = start
-                }
-            }
-        }
-
-        var breakpoints: [Int] = []
-        var i = count
-        while let breakPoint = breaks[i] {
-            breakpoints.insert(i, at: 0)
-            i = breakPoint
-        }
-        breakpoints.insert(0, at: 0)
+        let breakpoints = knuthPlassLineBreakingAlgorithm(
+            proposedBreadth: proposedSize.replacingUnspecifiedDimensions().value(on: axis),
+            sizes: sizes,
+            spacings: spacings
+        )
 
         var newLines: Lines = []
         for (start, end) in breakpoints.adjacentPairs() {
-            var line: ItemWithSpacing<Line> = .init(item: [], size: .zero)
+            var line = ItemWithSpacing<Line>(item: [], size: .zero)
             for index in start ..< end {
                 let subview = subviews[index]
                 let size = sizes[index]
@@ -229,23 +200,31 @@ struct FlowLayout {
         return self.itemSpacing ?? subviews[index.advanced(by: -1)].spacing.distance(to: subviews[index].spacing, along: axis)
     }
 
-    private func updateFlexibleItems(in line: inout ItemWithSpacing<Line>, proposedSize: ProposedViewSize, justification: Justification) {
-        let subviewsInPriorityOrder = line.item.enumerated().map { offset, subview in
-            SubviewProperties(indexInLine: offset, spacing: subview.spacing, cache: subview.item.cache)
-        }.sorted(using: [KeyPathComparator(\.cache.priority), KeyPathComparator(\.flexibility), KeyPathComparator(\.cache.ideal.breadth)])
-
-        let sumOfIdeal = subviewsInPriorityOrder.map { $0.spacing + $0.cache.ideal.breadth }.reduce(into: 0, +=)
-        var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
-        let count = line.item.count
-
-        if case .stretchSpaces = justification {
-            let distributedSpace = remainingSpace / Double(count - 1)
-            for index in line.item.indices.dropFirst() {
-                line.item[index].spacing += distributedSpace
-                remainingSpace -= distributedSpace
+    private func updateFlexibleItems(
+        in line: inout ItemWithSpacing<Line>,
+        proposedSize: ProposedViewSize,
+        justification: Justification
+    ) {
+        let subviewsInPriorityOrder = line.item.enumerated()
+            .map { offset, subview in
+                SubviewProperties(
+                    indexInLine: offset,
+                    spacing: subview.spacing,
+                    cache: subview.item.cache
+                )
             }
-        } else {
-            let sumOfMax = subviewsInPriorityOrder.map { $0.spacing + $0.cache.max.breadth }.reduce(into: 0, +=)
+            .sorted(using: [
+                KeyPathComparator(\.cache.priority),
+                KeyPathComparator(\.flexibility),
+                KeyPathComparator(\.cache.ideal.breadth)
+            ])
+
+        let count = line.item.count
+        let sumOfIdeal = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.ideal.breadth }
+        var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
+
+        if justification.isStretchingItems {
+            let sumOfMax = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.max.breadth }
             let potentialGrowth = sumOfMax - sumOfIdeal
             if potentialGrowth <= remainingSpace {
                 for subview in subviewsInPriorityOrder {
@@ -262,14 +241,16 @@ struct FlowLayout {
                     line.item[subview.indexInLine].size.breadth += actual
                 }
             }
-            if case .stretchItemsAndSpaces = justification {
-                let distributedSpace = remainingSpace / Double(count - 1)
-                for index in line.item.indices.dropFirst() {
-                    line.item[index].spacing += distributedSpace
-                    remainingSpace -= distributedSpace
-                }
+        }
+        
+        if justification.isStretchingSpaces {
+            let distributedSpace = remainingSpace / Double(count - 1)
+            for index in line.item.indices.dropFirst() {
+                line.item[index].spacing += distributedSpace
+                remainingSpace -= distributedSpace
             }
         }
+        
         line.size.breadth = proposedSize.value(on: axis) - remainingSpace
     }
 }
@@ -338,10 +319,4 @@ private struct SubviewProperties {
     var spacing: Double
     var cache: FlowLayoutCache.SubviewCache
     var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
-}
-
-private extension Sequence {
-    func adjacentPairs() -> some Sequence<(Element, Element)> {
-        zip(self, self.dropFirst())
-    }
 }

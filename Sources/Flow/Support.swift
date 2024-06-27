@@ -9,6 +9,20 @@ public enum Justification {
     case stretchSpaces
     /// Primarily the items are being stretched as much as they allow and then spaces too if needed
     case stretchItemsAndSpaces
+
+    var isStretchingItems: Bool {
+        switch self {
+            case .stretchItems, .stretchItemsAndSpaces: true
+            case .stretchSpaces: false
+        }
+    }
+
+    var isStretchingSpaces: Bool {
+        switch self {
+            case .stretchSpaces, .stretchItemsAndSpaces: true
+            case .stretchItems: false
+        }
+    }
 }
 
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).

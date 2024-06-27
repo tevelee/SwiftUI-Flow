@@ -162,28 +162,28 @@ struct FlowLayout {
 
         costs[0] = 0
 
-        for end in 0 ..< count {
+        for end in 1 ... count {
             var totalBreadth: CGFloat = 0
-            for start in stride(from: end, through: 0, by: -1) {
+            for start in (0 ..< end).reversed() {
                 let size = sizes[start].breadth
-                let spacing = start > 0 && start < end ? spacings[start] : 0
+                let spacing = (end - start) == 1 ? 0 : spacings[start + 1]
                 totalBreadth += size + spacing
                 if totalBreadth > proposedBreadth {
                     break
                 }
                 let remainingSpace = proposedBreadth - totalBreadth
-                let penalty = abs(totalBreadth - (proposedBreadth / CGFloat(end - start + 1))) * 2
-                let cost = costs[start] + remainingSpace * remainingSpace + penalty
-                if cost < costs[end + 1] {
-                    costs[end + 1] = cost
-                    breaks[end + 1] = start
+                let bias = CGFloat(count - end) * 0.5 // Introduce a small bias to prefer breaks that fill earlier lines more
+                let cost = costs[start] + remainingSpace * remainingSpace + bias
+                if cost < costs[end] {
+                    costs[end] = cost
+                    breaks[end] = start
                 }
             }
         }
 
         var breakpoints: [Int] = []
         var i = count
-        while let breakPoint = breaks[i], breakPoint >= 0 {
+        while let breakPoint = breaks[i] {
             breakpoints.insert(i, at: 0)
             i = breakPoint
         }
@@ -192,7 +192,7 @@ struct FlowLayout {
         var newLines: Lines = []
         for (start, end) in breakpoints.adjacentPairs() {
             var line: ItemWithSpacing<Line> = .init(item: [], size: .zero)
-            for index in start..<end {
+            for index in start ..< end {
                 let subview = subviews[index]
                 let size = sizes[index]
                 let spacing = index == start ? 0 : spacings[index] // Reset spacing for the first item in each line

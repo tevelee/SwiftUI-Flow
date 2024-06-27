@@ -75,7 +75,10 @@ extension FlowLayout {
         )
         placeSubviews(
             in: CGRect(origin: .zero, size: bounds),
-            proposal: ProposedViewSize(width: size.width, height: size.height),
+            proposal: ProposedViewSize(
+                width: min(size.width, bounds.width),
+                height: min(size.height, bounds.height)
+            ),
             subviews: subviews,
             cache: &cache
         )

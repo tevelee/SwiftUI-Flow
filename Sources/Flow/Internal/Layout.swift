@@ -118,9 +118,6 @@ struct FlowLayout {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
-        var lines: Lines = []
-        let proposedBreadth = proposedSize.replacingUnspecifiedDimensions().value(on: axis)
-
         let sizes = cache.subviewsCache.map(\.ideal)
         let spacings = if let itemSpacing {
             [0] + Array(repeating: itemSpacing, count: subviews.count - 1)
@@ -130,40 +127,19 @@ struct FlowLayout {
             }
         }
 
-        for index in subviews.indices {
-            let (subview, size, spacing, cache) = (subviews[index], sizes[index], spacings[index], cache.subviewsCache[index])
-            if let lastIndex = lines.indices.last {
-                let additionalBreadth = spacing + size.breadth
-                if lines[lastIndex].size.breadth + additionalBreadth <= proposedBreadth {
-                    lines[lastIndex].append((subview, cache), size: size, spacing: spacing)
-                    continue
-                }
-            }
-            lines.append(.init(item: [.init(item: (subview: subview, cache: cache), size: size)], size: size))
+        let lineBreaker: LineBreaking = if distributeItemsEvenly {
+            KnuthPlassLineBreaker()
+        } else {
+            FlowLineBreaker()
         }
-        distributeItems(in: &lines, proposedSize: proposedSize, subviews: subviews, sizes: sizes, spacings: spacings, cache: cache)
-        updateFlexibleItems(in: &lines, proposedSize: proposedSize)
-        updateLineSpacings(in: &lines)
-        return lines
-    }
 
-    private func distributeItems(
-        in lines: inout Lines,
-        proposedSize: ProposedViewSize,
-        subviews: some Subviews,
-        sizes: [Size],
-        spacings: [CGFloat],
-        cache: FlowLayoutCache
-    ) {
-        guard distributeItemsEvenly else { return }
-
-        let breakpoints = knuthPlassLineBreakingAlgorithm(
-            proposedBreadth: proposedSize.replacingUnspecifiedDimensions().value(on: axis),
-            sizes: sizes,
-            spacings: spacings
+        let breakpoints = lineBreaker.wrapItemsToLines(
+            sizes: sizes.map(\.breadth),
+            spacings: spacings,
+            in: proposedSize.replacingUnspecifiedDimensions().value(on: axis)
         )
 
-        var newLines: Lines = []
+        var lines: Lines = []
         for (start, end) in breakpoints.adjacentPairs() {
             var line = ItemWithSpacing<Line>(item: [], size: .zero)
             for index in start ..< end {
@@ -172,10 +148,11 @@ struct FlowLayout {
                 let spacing = index == start ? 0 : spacings[index] // Reset spacing for the first item in each line
                 line.append((subview, cache.subviewsCache[index]), size: size, spacing: spacing)
             }
-            newLines.append(line)
+            lines.append(line)
         }
-
-        lines = newLines
+        updateFlexibleItems(in: &lines, proposedSize: proposedSize)
+        updateLineSpacings(in: &lines)
+        return lines
     }
 
     private func updateFlexibleItems(in lines: inout Lines, proposedSize: ProposedViewSize) {

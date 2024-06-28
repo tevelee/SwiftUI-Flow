@@ -10,6 +10,7 @@ public enum Justification {
     /// Primarily the items are being stretched as much as they allow and then spaces too if needed
     case stretchItemsAndSpaces
 
+    @inlinable
     var isStretchingItems: Bool {
         switch self {
             case .stretchItems, .stretchItemsAndSpaces: true
@@ -17,6 +18,7 @@ public enum Justification {
         }
     }
 
+    @inlinable
     var isStretchingSpaces: Bool {
         switch self {
             case .stretchSpaces, .stretchItemsAndSpaces: true

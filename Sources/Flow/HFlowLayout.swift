@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// A layout that arranges its children in a horizontally flowing manner.
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 @frozen
 public struct HFlowLayout {
     @usableFromInline
@@ -37,7 +36,6 @@ public struct HFlowLayout {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension HFlowLayout: Layout {
     @inlinable
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {

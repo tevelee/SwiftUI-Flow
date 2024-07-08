@@ -1,7 +1,6 @@
 import CoreFoundation
 import SwiftUI
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 @usableFromInline
 struct FlowLayout {
     let axis: Axis
@@ -235,7 +234,6 @@ struct FlowLayout {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout: Layout {
     @usableFromInline
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
@@ -297,7 +295,6 @@ extension Array where Element == Size {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 private struct SubviewProperties {
     var indexInLine: Int
     var spacing: Double

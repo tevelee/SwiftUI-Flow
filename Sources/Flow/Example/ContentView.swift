@@ -1,6 +1,5 @@
 import SwiftUI
 
-@available(macOS 13.0, *)
 struct ContentView: View {
     @State private var axis: Axis = .horizontal
     @State private var contents: Contents = .boxes
@@ -161,7 +160,6 @@ enum Contents: String, CustomStringConvertible, CaseIterable {
     var description: String { rawValue }
 }
 
-@available(macOS 13.0, *)
 enum Justified: String, CustomStringConvertible, CaseIterable {
     case none = "no justification"
     case stretchItems = "stretch items"
@@ -180,7 +178,6 @@ enum Justified: String, CustomStringConvertible, CaseIterable {
     }
 }
 
-@available(macOS 13.0, *)
 #Preview {
     ContentView()
 }

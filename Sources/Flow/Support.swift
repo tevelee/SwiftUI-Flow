@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// Justified layout stretches lines in a way to create a straight and even edge on both sides of the view
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public enum Justification {
     /// Flexible items are stretched proportionally in each line
     case stretchItems
@@ -30,7 +29,6 @@ public enum Justification {
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
 /// Even though it needs to be public (because it's part of the layout protocol conformance),
 /// it's considered an internal implementation detail.
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 public struct FlowLayoutCache {
     @usableFromInline
     struct SubviewCache {

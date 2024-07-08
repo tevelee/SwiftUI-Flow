@@ -2,7 +2,6 @@ import SwiftUI
 import XCTest
 @testable import Flow
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 final class TestSubview: Subview, CustomStringConvertible {
     var spacing = ViewSpacing()
     var priority: Double = 1
@@ -59,12 +58,10 @@ final class TestSubview: Subview, CustomStringConvertible {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension [TestSubview]: Subviews {}
 
 typealias LayoutDescription = (subviews: [TestSubview], reportedSize: CGSize)
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 extension FlowLayout {
     func layout(_ subviews: [TestSubview], in bounds: CGSize) -> LayoutDescription {
         var cache = makeCache(subviews)
@@ -91,7 +88,6 @@ extension FlowLayout {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)
 func render(_ layout: LayoutDescription, border: Bool = true) -> String {
     struct Point: Hashable {
         let x, y: Int

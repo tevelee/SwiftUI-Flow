@@ -94,6 +94,13 @@ extension CGSize: FixedOrientation2DCoordinate {
             case .vertical: height
         }
     }
+
+    static var infinity: CGSize {
+        CGSize(
+            width: CGFloat.infinity,
+            height: CGFloat.infinity
+        )
+    }
 }
 
 @available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *)

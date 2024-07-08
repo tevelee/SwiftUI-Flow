@@ -136,7 +136,7 @@ struct FlowLayout {
         let breakpoints = lineBreaker.wrapItemsToLines(
             sizes: sizes.map(\.breadth),
             spacings: spacings,
-            in: proposedSize.replacingUnspecifiedDimensions().value(on: axis)
+            in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
         )
 
         var lines: Lines = []

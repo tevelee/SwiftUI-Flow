@@ -2,9 +2,9 @@ import SwiftUI
 
 /// A layout that arranges its children in a horizontally flowing manner.
 @frozen
-public struct HFlowLayout {
+public struct HFlowLayout: Sendable {
     @usableFromInline
-    let layout: FlowLayout
+    nonisolated let layout: FlowLayout
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///

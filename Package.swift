@@ -1,4 +1,4 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -17,7 +17,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0")
     ],
     targets: [
-        .target(name: "Flow", exclude: ["Example"]),
-        .testTarget(name: "FlowTests", dependencies: ["Flow"])
+        .target(name: "Flow", exclude: ["Example"], swiftSettings: [.swiftLanguageVersion(.v6)]),
+        .testTarget(name: "FlowTests", dependencies: ["Flow"], swiftSettings: [.swiftLanguageVersion(.v6)])
     ]
 )

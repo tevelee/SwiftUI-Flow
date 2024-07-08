@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Justified layout stretches lines in a way to create a straight and even edge on both sides of the view
-public enum Justification {
+public enum Justification: Sendable {
     /// Flexible items are stretched proportionally in each line
     case stretchItems
     /// Spaces between items are stretched equally

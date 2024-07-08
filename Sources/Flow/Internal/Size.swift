@@ -2,7 +2,7 @@ import CoreFoundation
 import SwiftUI
 
 @usableFromInline
-struct Size {
+struct Size: Sendable {
     @usableFromInline
     var breadth: CGFloat
     @usableFromInline

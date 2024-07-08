@@ -2,7 +2,7 @@ import CoreFoundation
 import SwiftUI
 
 @usableFromInline
-struct FlowLayout {
+struct FlowLayout: Sendable {
     let axis: Axis
     var itemSpacing: CGFloat?
     var lineSpacing: CGFloat?
@@ -11,7 +11,7 @@ struct FlowLayout {
     var reversedDepth: Bool = false
     var justification: Justification?
     var distributeItemsEvenly: Bool
-    let align: (Dimensions) -> CGFloat
+    let align: @Sendable (Dimensions) -> CGFloat
 
     private struct ItemWithSpacing<T> {
         var item: T

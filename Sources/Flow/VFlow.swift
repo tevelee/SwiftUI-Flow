@@ -21,7 +21,7 @@ import SwiftUI
 @frozen
 public struct VFlow<Content: View>: View {
     @usableFromInline
-    let layout: VFlowLayout
+    nonisolated let layout: VFlowLayout
     @usableFromInline
     let content: Content
 
@@ -165,7 +165,7 @@ extension VFlow: Layout where Content == EmptyView {
     }
 
     @inlinable
-    public func sizeThatFits(
+    nonisolated public func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
@@ -178,7 +178,7 @@ extension VFlow: Layout where Content == EmptyView {
     }
 
     @inlinable
-    public func placeSubviews(
+    nonisolated public func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
@@ -193,12 +193,12 @@ extension VFlow: Layout where Content == EmptyView {
     }
 
     @inlinable
-    public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
+    nonisolated public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .vertical)
     }
 
     @inlinable
-    public static var layoutProperties: LayoutProperties {
+    nonisolated public static var layoutProperties: LayoutProperties {
         VFlowLayout.layoutProperties
     }
 }

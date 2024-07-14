@@ -18,13 +18,6 @@ struct Size: Sendable {
     static let zero = Size(breadth: 0, depth: 0)
 
     @usableFromInline
-    func adding(_ value: CGFloat, on axis: Axis) -> Size {
-        var size = self
-        size[axis] += value
-        return size
-    }
-
-    @usableFromInline
     subscript(axis: Axis) -> CGFloat {
         get {
             self[keyPath: keyPath(on: axis)]
@@ -34,7 +27,8 @@ struct Size: Sendable {
         }
     }
 
-    private func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
+    @usableFromInline
+    func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
         switch axis {
             case .horizontal: \.breadth
             case .vertical: \.depth
@@ -95,6 +89,7 @@ extension CGSize: FixedOrientation2DCoordinate {
         }
     }
 
+    @inlinable
     static var infinity: CGSize {
         CGSize(
             width: CGFloat.infinity,
@@ -114,6 +109,24 @@ extension ProposedViewSize: FixedOrientation2DCoordinate {
         switch axis {
             case .horizontal: width ?? .infinity
             case .vertical: height ?? .infinity
+        }
+    }
+}
+
+extension CGRect {
+    @inlinable
+    func minimumValue(on axis: Axis) -> CGFloat {
+        switch axis {
+            case .horizontal: minX
+            case .vertical: minY
+        }
+    }
+
+    @inlinable
+    func maximumValue(on axis: Axis) -> CGFloat {
+        switch axis {
+            case .horizontal: maxX
+            case .vertical: maxY
         }
     }
 }

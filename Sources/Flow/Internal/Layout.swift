@@ -16,10 +16,10 @@ struct FlowLayout: Sendable {
     private struct ItemWithSpacing<T> {
         var item: T
         var size: Size
-        var spacing: CGFloat = 0
+        var leadingSpace: CGFloat = 0
 
         mutating func append(_ item: Item, size: Size, spacing: CGFloat) where Self == ItemWithSpacing<Line> {
-            self.item.append(.init(item: item, size: size, spacing: spacing))
+            self.item.append(.init(item: item, size: size, leadingSpace: spacing))
             self.size = Size(breadth: self.size.breadth + spacing + size.breadth, depth: max(self.size.depth, size.depth))
         }
     }
@@ -37,11 +37,10 @@ struct FlowLayout: Sendable {
         guard !subviews.isEmpty else { return .zero }
 
         let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
-        let spacings = lines.sum(of: \.spacing)
-        let size = lines
+        var size = lines
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
-            .adding(spacings, on: .vertical)
+        size[.vertical] += lines.sum(of: \.leadingSpace)
         return CGSize(size: size, axis: axis)
     }
 
@@ -54,48 +53,45 @@ struct FlowLayout: Sendable {
     ) {
         guard !subviews.isEmpty else { return }
 
-        var reversedBreadth = self.reversedBreadth
         var target = bounds.origin.size(on: axis)
+        var reversedBreadth = self.reversedBreadth
+
         let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
+
         for line in lines {
-            if reversedDepth {
-                target.depth -= line.size.depth + line.spacing
-            } else {
-                target.depth += line.spacing
-            }
-            if reversedBreadth {
-                target.breadth = switch axis {
-                    case .horizontal: bounds.maxX
-                    case .vertical: bounds.maxY
+            adjust(&target, for: line, on: .vertical, reversed: reversedDepth) { target in
+                target.breadth = reversedBreadth ? bounds.maximumValue(on: axis) : bounds.minimumValue(on: axis)
+
+                for item in line.item {
+                    adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
+                        alignAndPlace(item, in: line, at: target)
+                    }
                 }
-            } else {
-                target.breadth = switch axis {
-                    case .horizontal: bounds.minX
-                    case .vertical: bounds.minY
+
+                if alternatingReversedBreadth {
+                    reversedBreadth.toggle()
                 }
-            }
-            for item in line.item {
-                if reversedBreadth {
-                    target.breadth -= item.size.breadth + item.spacing
-                } else {
-                    target.breadth += item.spacing
-                }
-                alignAndPlace(item, in: line, at: target)
-                if !reversedBreadth {
-                    target.breadth += item.size.breadth
-                }
-            }
-            if alternatingReversedBreadth {
-                reversedBreadth.toggle()
-            }
-            if !reversedDepth {
-                target.depth += line.size.depth
             }
         }
     }
 
+    @usableFromInline
     func makeCache(_ subviews: some Subviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: axis)
+    }
+
+    private func adjust<T>(
+        _ target: inout Size,
+        for item: ItemWithSpacing<T>,
+        on axis: Axis,
+        reversed: Bool,
+        body: (inout Size) -> Void
+    ) {
+        let leadingSpace = item.leadingSpace
+        let size = item.size[axis]
+        target[axis] += reversed ? -leadingSpace-size : leadingSpace
+        body(&target)
+        target[axis] += reversed ? 0 : size
     }
 
     private func alignAndPlace(
@@ -104,7 +100,8 @@ struct FlowLayout: Sendable {
         at placement: Size
     ) {
         var placement = placement
-        let proposedSize = ProposedViewSize(size: Size(breadth: item.size.breadth, depth: line.size.depth), axis: axis)
+        let size = Size(breadth: item.size.breadth, depth: line.size.depth)
+        let proposedSize = ProposedViewSize(size: size, axis: axis)
         let depth = item.size.depth
         if depth > 0 {
             placement.depth += (align(item.item.subview.dimensions(proposedSize)) / depth) * (line.size.depth - depth)
@@ -167,7 +164,7 @@ struct FlowLayout: Sendable {
         }
         for index in lines.indices.dropFirst() {
             let spacing = self.lineSpacing ?? lineSpacings[index].distance(to: lineSpacings[index.advanced(by: -1)], along: axis.perpendicular)
-            lines[index].spacing = spacing
+            lines[index].leadingSpace = spacing
         }
     }
 
@@ -188,7 +185,7 @@ struct FlowLayout: Sendable {
             .map { offset, subview in
                 SubviewProperties(
                     indexInLine: offset,
-                    spacing: subview.spacing,
+                    spacing: subview.leadingSpace,
                     cache: subview.item.cache
                 )
             }
@@ -225,7 +222,7 @@ struct FlowLayout: Sendable {
         if justification.isStretchingSpaces {
             let distributedSpace = remainingSpace / Double(count - 1)
             for index in line.item.indices.dropFirst() {
-                line.item[index].spacing += distributedSpace
+                line.item[index].leadingSpace += distributedSpace
                 remainingSpace -= distributedSpace
             }
         }

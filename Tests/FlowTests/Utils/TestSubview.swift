@@ -2,7 +2,7 @@ import SwiftUI
 import XCTest
 @testable import Flow
 
-final class TestSubview: Subview, CustomStringConvertible {
+final class TestSubview: Flow.Subview, CustomStringConvertible {
     var spacing = ViewSpacing()
     var priority: Double = 1
     var placement: (position: CGPoint, size: CGSize)?

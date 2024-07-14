@@ -9,6 +9,9 @@ protocol LineBreaking {
 @usableFromInline
 struct FlowLineBreaker: LineBreaking {
     @inlinable
+    init() {}
+
+    @inlinable
     func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int] {
         var breakpoints: [Int] = []
         var currentLineSize: CGFloat = 0
@@ -34,6 +37,9 @@ struct FlowLineBreaker: LineBreaking {
 
 @usableFromInline
 struct KnuthPlassLineBreaker: LineBreaking {
+    @inlinable
+    init() {}
+
     @inlinable
     func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int] {
         let count = sizes.count

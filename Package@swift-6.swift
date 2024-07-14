@@ -1,4 +1,4 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -19,11 +19,13 @@ let package = Package(
     targets: [
         .target(
             name: "Flow",
-            exclude: ["Example"]
+            exclude: ["Example"],
+            swiftSettings: [.swiftLanguageVersion(.v6)]
         ),
         .testTarget(
             name: "FlowTests",
-            dependencies: ["Flow"]
+            dependencies: ["Flow"],
+            swiftSettings: [.swiftLanguageVersion(.v6)]
         )
     ]
 )

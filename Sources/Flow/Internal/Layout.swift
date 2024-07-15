@@ -97,16 +97,20 @@ struct FlowLayout: Sendable {
     private func alignAndPlace(
         _ item: Line.Element,
         in line: Lines.Element,
-        at placement: Size
+        at target: Size
     ) {
-        var placement = placement
-        let size = Size(breadth: item.size.breadth, depth: line.size.depth)
+        var position = target
+        let lineDepth = line.size.depth
+        let size = Size(breadth: item.size.breadth, depth: lineDepth)
         let proposedSize = ProposedViewSize(size: size, axis: axis)
-        let depth = item.size.depth
-        if depth > 0 {
-            placement.depth += (align(item.item.subview.dimensions(proposedSize)) / depth) * (line.size.depth - depth)
+        let itemDepth = item.size.depth
+        if itemDepth > 0 {
+            let dimensions = item.item.subview.dimensions(proposedSize)
+            let alignedPosition = align(dimensions)
+            position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
         }
-        item.item.subview.place(at: .init(size: placement, axis: axis), anchor: .topLeading, proposal: proposedSize)
+        let point = CGPoint(size: position, axis: axis)
+        item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
     }
 
     private func calculateLayout(
@@ -137,7 +141,7 @@ struct FlowLayout: Sendable {
 
         var lines: Lines = []
         for (start, end) in breakpoints.adjacentPairs() {
-            var line = ItemWithSpacing<Line>(item: [], size: .zero)
+            var line = Lines.Element(item: [], size: .zero)
             for index in start ..< end {
                 let subview = subviews[index]
                 let size = sizes[index]
@@ -156,24 +160,6 @@ struct FlowLayout: Sendable {
         for index in lines.indices {
             updateFlexibleItems(in: &lines[index], proposedSize: proposedSize, justification: justification)
         }
-    }
-
-    private func updateLineSpacings(in lines: inout Lines) {
-        let lineSpacings = lines.map { line in
-            line.item.reduce(into: ViewSpacing()) { $0.formUnion($1.item.cache.spacing) }
-        }
-        for index in lines.indices.dropFirst() {
-            let spacing = self.lineSpacing ?? lineSpacings[index].distance(to: lineSpacings[index.advanced(by: -1)], along: axis.perpendicular)
-            lines[index].leadingSpace = spacing
-        }
-    }
-
-    private func itemSpacing<S: Subviews>(
-        toPrevious index: S.Index,
-        subviews: S
-    ) -> CGFloat {
-        guard index != subviews.startIndex else { return 0 }
-        return self.itemSpacing ?? subviews[index.advanced(by: -1)].spacing.distance(to: subviews[index].spacing, along: axis)
     }
 
     private func updateFlexibleItems(
@@ -228,6 +214,22 @@ struct FlowLayout: Sendable {
         }
         
         line.size.breadth = proposedSize.value(on: axis) - remainingSpace
+    }
+
+    private func updateLineSpacings(in lines: inout Lines) {
+        if let lineSpacing {
+            for index in lines.indices.dropFirst() {
+                lines[index].leadingSpace = lineSpacing
+            }
+        } else {
+            let lineSpacings = lines.map { line in
+                line.item.reduce(into: ViewSpacing()) { $0.formUnion($1.item.cache.spacing) }
+            }
+            for (previous, index) in lines.indices.adjacentPairs() {
+                let spacing = lineSpacings[index].distance(to: lineSpacings[previous], along: axis.perpendicular)
+                lines[index].leadingSpace = spacing
+            }
+        }
     }
 }
 

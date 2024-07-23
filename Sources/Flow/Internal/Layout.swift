@@ -118,8 +118,14 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
-        let sizes = cache.subviewsCache.map(\.ideal)
-        let spacings = if let itemSpacing {
+        let sizes: [Size] = zip(cache.subviewsCache, subviews).map { cache, subview in
+            if cache.ideal.fits(in: proposedSize) {
+                cache.ideal
+            } else {
+                subview.sizeThatFits(proposedSize).size(on: axis)
+            }
+        }
+        let spacings: [CGFloat] = if let itemSpacing {
             [0] + Array(repeating: itemSpacing, count: subviews.count - 1)
         } else {
             [0] + cache.subviewsCache.adjacentPairs().map { lhs, rhs in
@@ -133,7 +139,7 @@ struct FlowLayout: Sendable {
             FlowLineBreaker()
         }
 
-        let breakpoints = lineBreaker.wrapItemsToLines(
+        let breakpoints: [Int] = lineBreaker.wrapItemsToLines(
             sizes: sizes.map(\.breadth),
             spacings: spacings,
             in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
@@ -184,6 +190,8 @@ struct FlowLayout: Sendable {
         let count = line.item.count
         let sumOfIdeal = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.ideal.breadth }
         var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
+
+        guard remainingSpace > 0 else { return }
 
         if justification.isStretchingItems {
             let sumOfMax = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.max.breadth }

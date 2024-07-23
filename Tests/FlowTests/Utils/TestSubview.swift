@@ -2,7 +2,7 @@ import SwiftUI
 import XCTest
 @testable import Flow
 
-final class TestSubview: Flow.Subview, CustomStringConvertible {
+class TestSubview: Flow.Subview, CustomStringConvertible {
     var spacing = ViewSpacing()
     var priority: Double = 1
     var placement: (position: CGPoint, size: CGSize)?
@@ -58,7 +58,22 @@ final class TestSubview: Flow.Subview, CustomStringConvertible {
     }
 }
 
-extension [TestSubview]: Subviews {}
+final class WrappingText: TestSubview {
+    override func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
+        let area = idealSize.width * idealSize.height
+        if let proposedWidth = proposal.width, idealSize.width > proposedWidth {
+            let height = (Int(1)...).first { area <= proposedWidth * CGFloat($0) }!
+            return CGSize(width: proposedWidth, height: CGFloat(height))
+        }
+        if let proposedHeight = proposal.height, idealSize.height > proposedHeight {
+            let width = (Int(1)...).first { area <= proposedHeight * CGFloat($0) }!
+            return CGSize(width: CGFloat(width), height: proposedHeight)
+        }
+        return super.sizeThatFits(proposal)
+    }
+}
+
+extension [TestSubview]: Flow.Subviews {}
 
 typealias LayoutDescription = (subviews: [TestSubview], reportedSize: CGSize)
 
@@ -92,6 +107,8 @@ func render(_ layout: LayoutDescription, border: Bool = true) -> String {
     struct Point: Hashable {
         let x, y: Int
     }
+    let width = Int(layout.reportedSize.width)
+    let height = Int(layout.reportedSize.height)
 
     var positions: Set<Point> = []
     for view in layout.subviews {
@@ -101,14 +118,13 @@ func render(_ layout: LayoutDescription, border: Bool = true) -> String {
                 for x in Int(point.x) ..< Int(point.x + placement.size.width) {
                     let result = positions.insert(Point(x: x, y: y))
                     precondition(result.inserted, "Boxes should not overlap")
+                    precondition(x >= 0 && x < width && y >= 0 && y < height, "Out of bounds")
                 }
             }
         } else {
             fatalError("Should be placed")
         }
     }
-    let width = Int(layout.reportedSize.width)
-    let height = Int(layout.reportedSize.height)
     var result = ""
     if border {
         result += "+" + String(repeating: "-", count: width) + "+\n"

@@ -325,4 +325,21 @@ final class FlowTests: XCTestCase {
         +------+
         """)
     }
+
+    func test_HFlow_text() {
+        // Given
+        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0)
+
+        // When
+        let result = sut.layout([WrappingText(size: 6×1), 1×1, 1×1, 1×1], in: 5×3)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +-----+
+        |XXXXX|
+        |XXXXX|
+        |X X X|
+        +-----+
+        """)
+    }
 }

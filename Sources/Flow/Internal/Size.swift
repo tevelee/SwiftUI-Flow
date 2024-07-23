@@ -34,6 +34,17 @@ struct Size: Sendable {
             case .vertical: \.depth
         }
     }
+
+    @usableFromInline
+    func fits(in proposedSize: ProposedViewSize) -> Bool {
+        if let proposedWidth = proposedSize.width, self[.horizontal] > proposedWidth {
+            return false
+        }
+        if let proposedHeight = proposedSize.height, self[.vertical] > proposedHeight {
+            return false
+        }
+        return true
+    }
 }
 
 extension Axis {

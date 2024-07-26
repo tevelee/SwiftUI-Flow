@@ -1,4 +1,4 @@
-// swift-tools-version: 5.7
+// swift-tools-version: 5.9
 
 import PackageDescription
 
@@ -19,11 +19,19 @@ let package = Package(
     targets: [
         .target(
             name: "Flow",
-            exclude: ["Example"]
+            exclude: ["Example"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
         ),
         .testTarget(
             name: "FlowTests",
-            dependencies: ["Flow"]
+            dependencies: ["Flow"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
         )
     ]
 )

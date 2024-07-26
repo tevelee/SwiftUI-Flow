@@ -11,7 +11,7 @@ struct FlowLayout: Sendable {
     var reversedDepth: Bool = false
     var justification: Justification?
     var distributeItemsEvenly: Bool
-    let align: @Sendable (Dimensions) -> CGFloat
+    let align: @Sendable (any Dimensions) -> CGFloat
 
     private struct ItemWithSpacing<T> {
         var item: T
@@ -24,7 +24,7 @@ struct FlowLayout: Sendable {
         }
     }
 
-    private typealias Item = (subview: Subview, cache: FlowLayoutCache.SubviewCache)
+    private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
     private typealias Line = [ItemWithSpacing<Item>]
     private typealias Lines = [ItemWithSpacing<Line>]
 
@@ -133,7 +133,7 @@ struct FlowLayout: Sendable {
             }
         }
 
-        let lineBreaker: LineBreaking = if distributeItemsEvenly {
+        let lineBreaker: any LineBreaking = if distributeItemsEvenly {
             KnuthPlassLineBreaker()
         } else {
             FlowLineBreaker()

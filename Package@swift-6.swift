@@ -20,12 +20,18 @@ let package = Package(
         .target(
             name: "Flow",
             exclude: ["Example"],
-            swiftSettings: [.swiftLanguageVersion(.v6)]
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .swiftLanguageVersion(.v6)
+            ]
         ),
         .testTarget(
             name: "FlowTests",
             dependencies: ["Flow"],
-            swiftSettings: [.swiftLanguageVersion(.v6)]
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .swiftLanguageVersion(.v6)
+            ]
         )
     ]
 )

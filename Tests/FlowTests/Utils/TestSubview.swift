@@ -38,7 +38,7 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
         }
     }
 
-    func dimensions(_ proposal: ProposedViewSize) -> Dimensions {
+    func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
         let size = switch proposal {
         case .zero:  minSize
         case .unspecified: idealSize

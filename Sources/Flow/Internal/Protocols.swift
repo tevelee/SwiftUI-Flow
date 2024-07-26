@@ -10,13 +10,13 @@ protocol Subview {
     var spacing: ViewSpacing { get }
     var priority: Double { get }
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
-    func dimensions(_ proposal: ProposedViewSize) -> Dimensions
+    func dimensions(_ proposal: ProposedViewSize) -> any Dimensions
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize)
 }
 
 extension LayoutSubview: Subview {
     @usableFromInline
-    func dimensions(_ proposal: ProposedViewSize) -> Dimensions {
+    func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
         dimensions(in: proposal)
     }
 }

@@ -56,12 +56,12 @@ struct ContentView: View {
                     Grid {
                         GridRow {
                             Text("Width").gridColumnAlignment(.leading)
-                            Slider(value: $width.animation(), in: 0...400)
+                            Slider(value: $width.animation(.snappy), in: 0...400)
                                 .padding(.horizontal)
                         }
                         GridRow {
                             Text("Height")
-                            Slider(value: $height.animation(), in: 0...400)
+                            Slider(value: $height.animation(.snappy), in: 0...400)
                                 .padding(.horizontal)
                         }
                     }
@@ -77,7 +77,7 @@ struct ContentView: View {
                     stepper("Line", $lineSpacing)
                 }
                 Section(header: Text("Extras")) {
-                    picker($justified, style: .radioGroup)
+                    picker($justified, style: .inline)
                     Toggle("Distibute evenly", isOn: $distributeItemsEvenly.animation())
                 }
             }

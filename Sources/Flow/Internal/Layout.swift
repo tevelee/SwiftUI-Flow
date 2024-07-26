@@ -3,15 +3,41 @@ import SwiftUI
 
 @usableFromInline
 struct FlowLayout: Sendable {
+    @usableFromInline
     let axis: Axis
-    var itemSpacing: CGFloat?
-    var lineSpacing: CGFloat?
-    var reversedBreadth: Bool = false
-    var alternatingReversedBreadth: Bool = false
-    var reversedDepth: Bool = false
-    var justification: Justification?
-    var distributeItemsEvenly: Bool
+    @usableFromInline
+    let itemSpacing: CGFloat?
+    @usableFromInline
+    let lineSpacing: CGFloat?
+    @usableFromInline
+    let reversedBreadth: Bool = false
+    @usableFromInline
+    let alternatingReversedBreadth: Bool = false
+    @usableFromInline
+    let reversedDepth: Bool = false
+    @usableFromInline
+    let justification: Justification?
+    @usableFromInline
+    let distributeItemsEvenly: Bool
+    @usableFromInline
     let align: @Sendable (any Dimensions) -> CGFloat
+
+    @inlinable
+    init(
+        axis: Axis,
+        itemSpacing: CGFloat? = nil,
+        lineSpacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        distributeItemsEvenly: Bool = false,
+        align: @escaping @Sendable (any Dimensions) -> CGFloat
+    ) {
+        self.axis = axis
+        self.itemSpacing = itemSpacing
+        self.lineSpacing = lineSpacing
+        self.justification = justification
+        self.distributeItemsEvenly = distributeItemsEvenly
+        self.align = align
+    }
 
     private struct ItemWithSpacing<T> {
         var item: T
@@ -242,12 +268,12 @@ struct FlowLayout: Sendable {
 }
 
 extension FlowLayout: Layout {
-    @usableFromInline
+    @inlinable
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)
     }
 
-    @usableFromInline
+    @inlinable
     static func vertical(
         alignment: HorizontalAlignment,
         itemSpacing: CGFloat?,
@@ -266,7 +292,7 @@ extension FlowLayout: Layout {
         }
     }
 
-    @usableFromInline
+    @inlinable
     static func horizontal(
         alignment: VerticalAlignment,
         itemSpacing: CGFloat?,

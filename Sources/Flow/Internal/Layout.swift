@@ -145,7 +145,7 @@ struct FlowLayout: Sendable {
         cache: FlowLayoutCache
     ) -> Lines {
         let sizes: [Size] = zip(cache.subviewsCache, subviews).map { cache, subview in
-            if cache.ideal.fits(in: proposedSize) {
+            if cache.ideal.breadth <= proposedSize.value(on: axis) {
                 cache.ideal
             } else {
                 subview.sizeThatFits(proposedSize).size(on: axis)

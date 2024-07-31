@@ -4,7 +4,7 @@ import SwiftUI
 @frozen
 public struct HFlowLayout: Sendable {
     @usableFromInline
-    nonisolated let layout: FlowLayout
+    let layout: FlowLayout
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
     ///

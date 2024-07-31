@@ -21,7 +21,7 @@ import SwiftUI
 @frozen
 public struct VFlow<Content: View>: View {
     @usableFromInline
-    nonisolated let layout: VFlowLayout
+    let layout: VFlowLayout
     @usableFromInline
     let content: Content
 

@@ -22,7 +22,7 @@ struct Colors: View {
 
     var body: some View {
         HFlow {
-            ForEach(colors + colors, id: \.description) { color in
+            ForEach(colors, id: \.description) { color in
                 RoundedRectangle(cornerRadius: 10)
                     .fill(color.gradient)
                     .frame(width: Double.random(in: 40...60), height: 50)
@@ -90,7 +90,7 @@ Justify by stretching items, the spaces between them, or both.
 
 ```swift
 HFlow(justification: .stretchItems) {
-    ForEach(colors + colors, id: \.description) { color in
+    ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
             .frame(height: 50)
@@ -125,7 +125,7 @@ HFlow(distributeItemsEvenly: true) {
 Distribute and justify for visually pleasing UI.
 
 ```swift
-HFlow(justification: .stretchItems,  distributeItemsEvenly: true) {
+HFlow(justification: .stretchItems, distributeItemsEvenly: true) {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)

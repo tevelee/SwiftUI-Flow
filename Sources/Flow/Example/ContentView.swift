@@ -8,8 +8,8 @@ struct ContentView: View {
     @State private var itemSpacing: CGFloat? = nil
     @State private var lineSpacing: CGFloat? = nil
     @State private var justified: Justified = .none
-    @State private var horizontalAlignment: HAlignment = .center
-    @State private var verticalAlignment: VAlignment = .center
+    @State private var horizontalAlignment: HAlignment = .leading
+    @State private var verticalAlignment: VAlignment = .top
     @State private var distributeItemsEvenly: Bool = false
     private let texts = "This is a long text that wraps nicely in flow layout".components(separatedBy: " ").map { string in
         AnyView(Text(string))
@@ -67,10 +67,8 @@ struct ContentView: View {
                     }
                 }
                 Section(header: Text("Alignment")) {
-                    switch axis {
-                        case .horizontal: picker($verticalAlignment)
-                        case .vertical: picker($horizontalAlignment)
-                    }
+                    picker($horizontalAlignment)
+                    picker($verticalAlignment)
                 }
                 Section(header: Text("Spacing")) {
                     stepper("Item", $itemSpacing)
@@ -132,9 +130,10 @@ struct ContentView: View {
             case .horizontal:
             return AnyLayout(
                 HFlow(
-                    alignment: verticalAlignment.value,
-                    itemSpacing: itemSpacing,
-                    rowSpacing: lineSpacing,
+                    horizontalAlignment: horizontalAlignment.value,
+                    verticalAlignment: verticalAlignment.value,
+                    horizontalSpacing: itemSpacing,
+                    verticalSpacing: lineSpacing,
                     justification: justified.justification,
                     distributeItemsEvenly: distributeItemsEvenly
                 )
@@ -142,9 +141,10 @@ struct ContentView: View {
             case .vertical:
             return AnyLayout(
                 VFlow(
-                    alignment: horizontalAlignment.value,
-                    itemSpacing: itemSpacing,
-                    columnSpacing: lineSpacing,
+                    horizontalAlignment: horizontalAlignment.value,
+                    verticalAlignment: verticalAlignment.value,
+                    horizontalSpacing: lineSpacing,
+                    verticalSpacing: itemSpacing,
                     justification: justified.justification,
                     distributeItemsEvenly: distributeItemsEvenly
                 )

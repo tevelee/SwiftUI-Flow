@@ -5,7 +5,7 @@ import XCTest
 final class FlowTests: XCTestCase {
     func test_HFlow_size_singleElement() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 10, verticalSpacing: 20)
 
         // When
         let size = sut.sizeThatFits(proposal: 100×100, subviews: [50×50])
@@ -16,7 +16,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_size_multipleElements() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 10, verticalSpacing: 20)
 
         // When
         let size = sut.sizeThatFits(proposal: 130×130, subviews: repeated(50×50, times: 3))
@@ -27,7 +27,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_size_justifiedSpaces() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 0, lineSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, justification: .stretchSpaces)
 
         // When
         let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×50, 50×50])
@@ -38,7 +38,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_size_justifiedItems() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 0, lineSpacing: 0, justification: .stretchItems)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, justification: .stretchItems)
 
         // When
         let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×1...100×1])
@@ -49,8 +49,8 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_layout_top() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .top, itemSpacing: 1, lineSpacing: 1)
-        
+        let sut: FlowLayout = .horizontal(verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 1)
+
         // When
         let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
 
@@ -67,9 +67,69 @@ final class FlowTests: XCTestCase {
         """)
     }
 
+    func test_HFlow_layout_top_and_leading() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalAlignment: .leading, verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 1)
+
+        // When
+        let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------------------+
+        |XXXXX XXXXX XXXXX   |
+        |      XXXXX         |
+        |      XXXXX         |
+        |                    |
+        |XXXXX               |
+        |                    |
+        +--------------------+
+        """)
+    }
+
+    func test_HFlow_layout_top_and_center() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalAlignment: .center, verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 1)
+
+        // When
+        let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------------------+
+        |XXXXX XXXXX XXXXX   |
+        |      XXXXX         |
+        |      XXXXX         |
+        |                    |
+        |      XXXXX         |
+        |                    |
+        +--------------------+
+        """)
+    }
+
+    func test_HFlow_layout_top_and_trailing() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalAlignment: .trailing, verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 1)
+
+        // When
+        let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------------------+
+        |XXXXX XXXXX XXXXX   |
+        |      XXXXX         |
+        |      XXXXX         |
+        |                    |
+        |            XXXXX   |
+        |                    |
+        +--------------------+
+        """)
+    }
+
     func test_HFlow_layout_center() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 1)
 
         // When
         let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
@@ -89,7 +149,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_layout_bottom() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .bottom, itemSpacing: 1, lineSpacing: 1)
+        let sut: FlowLayout = .horizontal(verticalAlignment: .bottom, horizontalSpacing: 1, verticalSpacing: 1)
 
         // When
         let result = sut.layout([5×1, 5×3, 5×1, 5×1], in: 20×6)
@@ -109,7 +169,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_default() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
 
         // When
         let result = sut.layout(repeated(1×1, times: 15), in: 11×3)
@@ -126,7 +186,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_distibuted() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, distributeItemsEvenly: true)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, distributeItemsEvenly: true)
 
         // When
         let result = sut.layout(repeated(1×1, times: 13), in: 11×3)
@@ -143,7 +203,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedSpaces_rigid() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchSpaces)
 
         // When
         let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
@@ -159,7 +219,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedSpaces_flexible() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchSpaces)
 
         // When
         let result = sut.layout([3×1, 3×1...inf×1, 2×1], in: 9×2)
@@ -175,7 +235,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedItems_rigid() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItems)
 
         // When
         let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
@@ -191,7 +251,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedItems_flexible() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItems)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItems)
 
         // When
         let result = sut.layout([3×1...4×1, 3×1...inf×1, 2×1...5×1], in: 9×2)
@@ -207,7 +267,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedItemsAndSpaces_rigid() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
 
         // When
         let result = sut.layout([1×1, 4×1, 3×1, 2×1, 2×1, 3×1], in: 12×2)
@@ -223,7 +283,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedItemsAndSpaces_flexible() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
 
         // When
         let result = sut.layout([1×1, 2×1...5×1, 1×1...inf×1, 2×1, 5×1...inf×1, 5×1...inf×1], in: 13×2)
@@ -239,7 +299,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_justifiedItemsAndSpaces_strethBoth() throws {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0, justification: .stretchItemsAndSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
 
         // When
         let result = sut.layout([4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1], in: 15×2)
@@ -255,7 +315,7 @@ final class FlowTests: XCTestCase {
 
     func test_VFlow_size_singleElement() throws {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 20, verticalSpacing: 10)
 
         // When
         let size = sut.sizeThatFits(proposal: 100×100, subviews: [50×50])
@@ -266,7 +326,7 @@ final class FlowTests: XCTestCase {
 
     func test_VFlow_size_multipleElements() throws {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 20, verticalSpacing: 10)
 
         // When
         let size = sut.sizeThatFits(proposal: 130×130, subviews: repeated(50×50, times: 3))
@@ -277,7 +337,7 @@ final class FlowTests: XCTestCase {
 
     func test_VFlow_layout_leading() {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .leading, itemSpacing: 1, lineSpacing: 1)
+        let sut: FlowLayout = .vertical(horizontalAlignment: .leading, horizontalSpacing: 1, verticalSpacing: 1)
 
         // When
         let result = sut.layout([1×1, 3×1, 1×1, 1×1, 1×1], in: 5×5)
@@ -295,7 +355,7 @@ final class FlowTests: XCTestCase {
     }
     func test_VFlow_layout_center() {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 1, lineSpacing: 1)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 1, verticalSpacing: 1)
 
         // When
         let result = sut.layout([1×1, 3×1, 1×1, 1×1, 1×1], in: 5×5)
@@ -314,7 +374,7 @@ final class FlowTests: XCTestCase {
 
     func test_VFlow_layout_trailing() {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .trailing, itemSpacing: 1, lineSpacing: 1)
+        let sut: FlowLayout = .vertical(horizontalAlignment: .trailing, horizontalSpacing: 1, verticalSpacing: 1)
 
         // When
         let result = sut.layout([1×1, 3×1, 1×1, 1×1, 1×1], in: 5×5)
@@ -333,7 +393,7 @@ final class FlowTests: XCTestCase {
 
     func test_VFlow_default() {
         // Given
-        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 0, lineSpacing: 0)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0)
 
         // When
         let result = sut.layout(repeated(1×1, times: 16), in: 6×3)
@@ -350,7 +410,7 @@ final class FlowTests: XCTestCase {
 
     func test_HFlow_text() {
         // Given
-        let sut: FlowLayout = .horizontal(alignment: .center, itemSpacing: 1, lineSpacing: 0)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
 
         // When
         let result = sut.layout([WrappingText(size: 6×1), 1×1, 1×1, 1×1], in: 5×3)

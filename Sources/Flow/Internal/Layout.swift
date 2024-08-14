@@ -20,7 +20,9 @@ struct FlowLayout: Sendable {
     @usableFromInline
     let distributeItemsEvenly: Bool
     @usableFromInline
-    let align: @Sendable (any Dimensions) -> CGFloat
+    let alignmentOnBreadth: @Sendable (any Dimensions) -> CGFloat
+    @usableFromInline
+    let alignmentOnDepth: @Sendable (any Dimensions) -> CGFloat
 
     @inlinable
     init(
@@ -29,14 +31,16 @@ struct FlowLayout: Sendable {
         lineSpacing: CGFloat? = nil,
         justification: Justification? = nil,
         distributeItemsEvenly: Bool = false,
-        align: @escaping @Sendable (any Dimensions) -> CGFloat
+        alignmentOnBreadth: @escaping @Sendable (any Dimensions) -> CGFloat,
+        alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat
     ) {
         self.axis = axis
         self.itemSpacing = itemSpacing
         self.lineSpacing = lineSpacing
         self.justification = justification
         self.distributeItemsEvenly = distributeItemsEvenly
-        self.align = align
+        self.alignmentOnBreadth = alignmentOnBreadth
+        self.alignmentOnDepth = alignmentOnDepth
     }
 
     private struct ItemWithSpacing<T> {
@@ -132,7 +136,7 @@ struct FlowLayout: Sendable {
         let itemDepth = item.size.depth
         if itemDepth > 0 {
             let dimensions = item.item.subview.dimensions(proposedSize)
-            let alignedPosition = align(dimensions)
+            let alignedPosition = alignmentOnDepth(dimensions)
             position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
         }
         let point = CGPoint(size: position, axis: axis)
@@ -184,6 +188,7 @@ struct FlowLayout: Sendable {
         }
         updateFlexibleItems(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
+        updateAlignment(in: &lines)
         return lines
     }
 
@@ -265,6 +270,21 @@ struct FlowLayout: Sendable {
             }
         }
     }
+
+    private func updateAlignment(in lines: inout Lines) {
+        let breadth = lines.map { $0.item.sum { $0.leadingSpace + $0.size.breadth } }.max() ?? 0
+        for index in lines.indices where !lines[index].item.isEmpty {
+            lines[index].item[0].leadingSpace += determineLeadingSpace(in: lines[index], breadth: breadth)
+        }
+    }
+
+    private func determineLeadingSpace(in line: Lines.Element, breadth: CGFloat) -> CGFloat {
+        guard let item = line.item.first(where: { $0.item.cache.ideal.breadth > 0 })?.item else { return 0 }
+        let lineSize = line.item.sum { $0.leadingSpace + $0.size.breadth }
+        let value = alignmentOnBreadth(item.subview.dimensions(.unspecified)) / item.cache.ideal.breadth
+        let remainingSpace = breadth - lineSize
+        return value * remainingSpace
+    }
 }
 
 extension FlowLayout: Layout {
@@ -275,40 +295,42 @@ extension FlowLayout: Layout {
 
     @inlinable
     static func vertical(
-        alignment: HorizontalAlignment,
-        itemSpacing: CGFloat?,
-        lineSpacing: CGFloat?,
+        horizontalAlignment: HorizontalAlignment = .center,
+        verticalAlignment: VerticalAlignment = .top,
+        horizontalSpacing: CGFloat? = nil,
+        verticalSpacing: CGFloat? = nil,
         justification: Justification? = nil,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
-        .init(
+        self.init(
             axis: .vertical,
-            itemSpacing: itemSpacing,
-            lineSpacing: lineSpacing,
+            itemSpacing: verticalSpacing,
+            lineSpacing: horizontalSpacing,
             justification: justification,
-            distributeItemsEvenly: distributeItemsEvenly
-        ) {
-            $0[alignment]
-        }
+            distributeItemsEvenly: distributeItemsEvenly,
+            alignmentOnBreadth: { $0[verticalAlignment] },
+            alignmentOnDepth: { $0[horizontalAlignment] }
+        )
     }
 
     @inlinable
     static func horizontal(
-        alignment: VerticalAlignment,
-        itemSpacing: CGFloat?,
-        lineSpacing: CGFloat?,
+        horizontalAlignment: HorizontalAlignment = .leading,
+        verticalAlignment: VerticalAlignment = .center,
+        horizontalSpacing: CGFloat? = nil,
+        verticalSpacing: CGFloat? = nil,
         justification: Justification? = nil,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
-        .init(
+        self.init(
             axis: .horizontal,
-            itemSpacing: itemSpacing,
-            lineSpacing: lineSpacing,
+            itemSpacing: horizontalSpacing,
+            lineSpacing: verticalSpacing,
             justification: justification,
-            distributeItemsEvenly: distributeItemsEvenly
-        ) {
-            $0[alignment]
-        }
+            distributeItemsEvenly: distributeItemsEvenly,
+            alignmentOnBreadth: { $0[horizontalAlignment] },
+            alignmentOnDepth: { $0[verticalAlignment] }
+        )
     }
 }
 

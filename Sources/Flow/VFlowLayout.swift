@@ -28,10 +28,43 @@ public struct VFlowLayout {
         justification: Justification? = nil,
         distributeItemsEvenly: Bool = false
     ) {
+        self.init(
+            horizontalAlignment: alignment,
+            verticalAlignment: .top,
+            horizontalSpacing: columnSpacing,
+            verticalSpacing: itemSpacing,
+            justification: justification,
+            distributeItemsEvenly: distributeItemsEvenly
+        )
+    }
+
+    /// Creates a vertical flow with the given spacing and alignment.
+    ///
+    /// - Parameters:
+    ///   - horizonalAlignment: The guide for aligning the subviews horizontally.
+    ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
+    ///   - verticalAlignment: The guide for aligning the subviews vertically.
+    ///   - verticalSpacing: The distance between subviews on the vertical axis.
+    ///   - justification: Whether the layout should fill the remaining
+    ///     available space in each column by stretching either items or spaces.
+    ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
+    ///     mode tries to distribute items more evenly by minimizing the empty
+    ///     spaces left in each column, while respecting their order.
+    ///   - content: A view builder that creates the content of this flow.
+    @inlinable
+    public init(
+        horizontalAlignment: HorizontalAlignment,
+        verticalAlignment: VerticalAlignment,
+        horizontalSpacing: CGFloat? = nil,
+        verticalSpacing: CGFloat? = nil,
+        justification: Justification? = nil,
+        distributeItemsEvenly: Bool = false
+    ) {
         layout = .vertical(
-            alignment: alignment,
-            itemSpacing: itemSpacing,
-            lineSpacing: columnSpacing,
+            horizontalAlignment: horizontalAlignment,
+            verticalAlignment: verticalAlignment,
+            horizontalSpacing: horizontalSpacing,
+            verticalSpacing: verticalSpacing,
             justification: justification,
             distributeItemsEvenly: distributeItemsEvenly
         )

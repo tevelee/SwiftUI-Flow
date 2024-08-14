@@ -253,6 +253,28 @@ final class FlowTests: XCTestCase {
         """)
     }
 
+    func test_VFlow_size_singleElement() throws {
+        // Given
+        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+
+        // When
+        let size = sut.sizeThatFits(proposal: 100×100, subviews: [50×50])
+
+        // Then
+        XCTAssertEqual(size, 50×50)
+    }
+
+    func test_VFlow_size_multipleElements() throws {
+        // Given
+        let sut: FlowLayout = .vertical(alignment: .center, itemSpacing: 10, lineSpacing: 20)
+
+        // When
+        let size = sut.sizeThatFits(proposal: 130×130, subviews: repeated(50×50, times: 3))
+
+        // Then
+        XCTAssertEqual(size, 120×110)
+    }
+
     func test_VFlow_layout_leading() {
         // Given
         let sut: FlowLayout = .vertical(alignment: .leading, itemSpacing: 1, lineSpacing: 1)

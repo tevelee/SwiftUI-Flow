@@ -66,7 +66,7 @@ struct FlowLayout: Sendable {
         var size = lines
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
-        size[.vertical] += lines.sum(of: \.leadingSpace)
+        size.depth += lines.sum(of: \.leadingSpace)
         return CGSize(size: size, axis: axis)
     }
 

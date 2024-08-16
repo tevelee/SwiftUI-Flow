@@ -22,7 +22,7 @@ let package = Package(
             exclude: ["Example"],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
-                .swiftLanguageVersion(.v6)
+                .swiftLanguageMode(.v6)
             ]
         ),
         .testTarget(
@@ -30,7 +30,7 @@ let package = Package(
             dependencies: ["Flow"],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
-                .swiftLanguageVersion(.v6)
+                .swiftLanguageMode(.v6)
             ]
         )
     ]

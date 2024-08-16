@@ -25,7 +25,7 @@ struct Colors: View {
             ForEach(colors, id: \.description) { color in
                 RoundedRectangle(cornerRadius: 10)
                     .fill(color.gradient)
-                    .frame(width: Double.random(in: 40...60), height: 50)
+                    .frame(width: .random(in: 40...60), height: 50)
             }
         }
         .frame(maxWidth: 300)
@@ -42,7 +42,7 @@ VFlow {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: 50, height: Double.random(in: 40...60))
+            .frame(width: 50, height: .random(in: 40...60))
     }
 }
 .frame(maxHeight: 300)
@@ -59,13 +59,28 @@ HFlow(alignment: .top) {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: 50, height: Double.random(in: 40...60))
+            .frame(width: 50, height: .random(in: 40...60))
     }
 }
 .frame(maxWidth: 300)
 ```
 
-![VFlow](Resources/hflow-top.png)
+![HFlow](Resources/hflow-top.png)
+
+Additionally, alignment can be specified on both axes. Ideal for tags.
+
+```swift
+HFlow(horizontalAlignment: .center, verticalAlignment: .top) {
+    ForEach(colors, id: \.description) { color in
+        RoundedRectangle(cornerRadius: 10)
+            .fill(color.gradient)
+            .frame(width: .random(in: 30...60), height: 30)
+    }
+}
+.frame(maxWidth: 300)
+```
+
+![HFlow](Resources/hflow-center.png)
 
 ## Spacing
 
@@ -82,7 +97,7 @@ HFlow(itemSpacing: 4, rowSpacing: 20) {
 .frame(maxWidth: 300)
 ```
 
-![VFlow](Resources/hflow-spacing.png)
+![HFlow](Resources/hflow-spacing.png)
 
 ## Justified
 
@@ -147,11 +162,11 @@ HFlow {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(width: Double.random(in: 40...60), height: 50)
+            .frame(width: .random(in: 40...60), height: 50)
     }
 }
 .frame(maxWidth: 300)
 .environment(\.layoutDirection, .rightToLeft)
 ```
 
-![VFlow](Resources/hflow-rtl.png)
+![HFlow](Resources/hflow-rtl.png)

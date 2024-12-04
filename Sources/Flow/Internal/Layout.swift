@@ -172,6 +172,7 @@ struct FlowLayout: Sendable {
         let breakpoints: [Int] = lineBreaker.wrapItemsToLines(
             sizes: sizes.map(\.breadth),
             spacings: spacings,
+            lineBreaks: cache.subviewsCache.enumerated().filter(\.element.shouldStartInNewLine).map(\.offset),
             in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
         )
 
@@ -181,7 +182,7 @@ struct FlowLayout: Sendable {
             for index in start ..< end {
                 let subview = subviews[index]
                 let size = sizes[index]
-                let spacing = index == start ? 0 : spacings[index] // Reset spacing for the first item in each line
+                let spacing = index == start || cache.subviewsCache[index - 1].isLineBreak ? 0 : spacings[index] // Reset spacing for the first item in each line
                 line.append((subview, cache.subviewsCache[index]), size: size, spacing: spacing)
             }
             lines.append(line)

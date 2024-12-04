@@ -3,7 +3,7 @@ import CoreFoundation
 @usableFromInline
 protocol LineBreaking {
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int]
+    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int]
 }
 
 @usableFromInline
@@ -12,13 +12,13 @@ struct FlowLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int] {
+    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
         var breakpoints: [Int] = []
         var currentLineSize: CGFloat = 0
 
         for (index, size) in sizes.enumerated() {
             let requiredSpace = spacings[index] + size
-            if currentLineSize + requiredSpace > availableSpace {
+            if currentLineSize + requiredSpace > availableSpace || lineBreaks.contains(index) {
                 breakpoints.append(index)
                 currentLineSize = size
             } else {
@@ -41,7 +41,30 @@ struct KnuthPlassLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
+    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
+        if lineBreaks.isEmpty {
+            return wrapItemsToLines(sizes: sizes, spacings: spacings, in: availableSpace)
+        }
+        var result: [Int] = []
+        var start: Int = 0
+        for lineBreak in lineBreaks + [sizes.endIndex] {
+            let partial = wrapItemsToLines(
+                sizes: Array(sizes[start..<lineBreak]),
+                spacings: Array(spacings[start..<lineBreak]),
+                in: availableSpace
+            )
+            result.append(contentsOf: partial.map { $0 + start }.dropLast())
+            start = lineBreak
+        }
+        result.append(sizes.endIndex)
+        return result
+    }
+
+    @inlinable
     func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int] {
+        if sizes.isEmpty {
+            return []
+        }
         let count = sizes.count
         var costs: [CGFloat] = Array(repeating: .infinity, count: count + 1)
         var breaks: [Int?] = Array(repeating: nil, count: count + 1)
@@ -68,7 +91,7 @@ struct KnuthPlassLineBreaker: LineBreaking {
         }
 
         if breaks.compactMap({ $0 }).isEmpty {
-            return Array(0 ... sizes.endIndex)
+            return [0, sizes.endIndex]
         }
 
         var breakpoints: [Int] = []

@@ -12,6 +12,7 @@ protocol Subview {
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
     func dimensions(_ proposal: ProposedViewSize) -> any Dimensions
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize)
+    subscript<K: LayoutValueKey>(key: K.Type) -> K.Value { get }
 }
 
 extension LayoutSubview: Subview {

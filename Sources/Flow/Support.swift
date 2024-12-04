@@ -37,6 +37,8 @@ public struct FlowLayoutCache {
         var min: Size
         var ideal: Size
         var max: Size
+        var shouldStartInNewLine: Bool
+        var isLineBreak: Bool
 
         @usableFromInline
         init(_ subview: some Subview, axis: Axis) {
@@ -45,6 +47,8 @@ public struct FlowLayoutCache {
             min = subview.dimensions(.zero).size(on: axis)
             ideal = subview.dimensions(.unspecified).size(on: axis)
             max = subview.dimensions(.infinity).size(on: axis)
+            shouldStartInNewLine = subview[ShouldStartInNewLine.self]
+            isLineBreak = subview[ShouldStartInNewLine.self]
         }
     }
 
@@ -56,5 +60,30 @@ public struct FlowLayoutCache {
         subviewsCache = subviews.map {
             SubviewCache($0, axis: axis)
         }
+    }
+}
+
+public struct LineBreak: View {
+    public var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .layoutValue(key: IsLineBreak.self, value: true)
+            .startInNewLine()
+    }
+
+    public init() {}
+}
+
+struct ShouldStartInNewLine: LayoutValueKey {
+    static let defaultValue = false
+}
+
+struct IsLineBreak: LayoutValueKey {
+    static let defaultValue = false
+}
+
+extension View {
+    public func startInNewLine() -> some View {
+        layoutValue(key: ShouldStartInNewLine.self, value: true)
     }
 }

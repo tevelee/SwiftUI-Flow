@@ -1,9 +1,19 @@
 import CoreFoundation
 
 @usableFromInline
+struct LineItem {
+    @usableFromInline
+    let subview: any Subview
+    @usableFromInline
+    let size: ClosedRange<CGFloat>
+    @usableFromInline
+    let spacing: CGFloat
+}
+
+@usableFromInline
 protocol LineBreaking {
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int]
+    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int]
 }
 
 @usableFromInline
@@ -12,15 +22,15 @@ struct FlowLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
+    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
         var breakpoints: [Int] = []
         var currentLineSize: CGFloat = 0
 
-        for (index, size) in sizes.enumerated() {
-            let requiredSpace = spacings[index] + size
+        for (index, item) in items.enumerated() {
+            let requiredSpace = items[index].spacing + item.size.lowerBound
             if currentLineSize + requiredSpace > availableSpace || lineBreaks.contains(index) {
                 breakpoints.append(index)
-                currentLineSize = size
+                currentLineSize = item.size.lowerBound
             } else {
                 currentLineSize += requiredSpace
             }
@@ -29,7 +39,7 @@ struct FlowLineBreaker: LineBreaking {
         if breakpoints.first != 0 {
             breakpoints.insert(0, at: 0)
         }
-        breakpoints.append(sizes.endIndex)
+        breakpoints.append(items.endIndex)
 
         return breakpoints
     }
@@ -41,31 +51,30 @@ struct KnuthPlassLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
+    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
         if lineBreaks.isEmpty {
-            return wrapItemsToLines(sizes: sizes, spacings: spacings, in: availableSpace)
+            return wrapItemsToLines(items: items, in: availableSpace)
         }
         var result: [Int] = []
         var start: Int = 0
-        for lineBreak in lineBreaks + [sizes.endIndex] {
+        for lineBreak in lineBreaks + [items.endIndex] {
             let partial = wrapItemsToLines(
-                sizes: Array(sizes[start..<lineBreak]),
-                spacings: Array(spacings[start..<lineBreak]),
+                items: Array(items[start..<lineBreak]),
                 in: availableSpace
             )
             result.append(contentsOf: partial.map { $0 + start }.dropLast())
             start = lineBreak
         }
-        result.append(sizes.endIndex)
+        result.append(items.endIndex)
         return result
     }
 
     @inlinable
-    func wrapItemsToLines(sizes: [CGFloat], spacings: [CGFloat], in availableSpace: CGFloat) -> [Int] {
-        if sizes.isEmpty {
+    func wrapItemsToLines(items: [LineItem], in availableSpace: CGFloat) -> [Int] {
+        if items.isEmpty {
             return []
         }
-        let count = sizes.count
+        let count = items.count
         var costs: [CGFloat] = Array(repeating: .infinity, count: count + 1)
         var breaks: [Int?] = Array(repeating: nil, count: count + 1)
 
@@ -74,8 +83,8 @@ struct KnuthPlassLineBreaker: LineBreaking {
         for end in 1 ... count {
             var totalBreadth: CGFloat = 0
             for start in (0 ..< end).reversed() {
-                let size = sizes[start]
-                let spacing = (end - start) == 1 ? 0 : spacings[start + 1]
+                let size = items[start].size.lowerBound
+                let spacing = (end - start) == 1 ? 0 : items[start + 1].spacing
                 totalBreadth += size + spacing
                 if totalBreadth > availableSpace {
                     break
@@ -91,11 +100,11 @@ struct KnuthPlassLineBreaker: LineBreaking {
         }
 
         if breaks.compactMap({ $0 }).isEmpty {
-            return [0, sizes.endIndex]
+            return [0, items.endIndex]
         }
 
         var breakpoints: [Int] = []
-        var i = sizes.count
+        var i = items.count
         while let breakPoint = breaks[i] {
             breakpoints.insert(i, at: 0)
             i = breakPoint

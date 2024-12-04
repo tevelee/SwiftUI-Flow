@@ -26,6 +26,13 @@ public enum Justification: Sendable {
     }
 }
 
+public enum FlexibilityBehavior: Sendable {
+    case compactRigid
+    case compactFlexible
+    case natural
+    case expanded
+}
+
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
 /// Even though it needs to be public (because it's part of the layout protocol conformance),
 /// it's considered an internal implementation detail.
@@ -37,8 +44,12 @@ public struct FlowLayoutCache {
         var min: Size
         var ideal: Size
         var max: Size
-        var shouldStartInNewLine: Bool
-        var isLineBreak: Bool
+        var layoutValues: LayoutValues
+        struct LayoutValues {
+            var shouldStartInNewLine: Bool
+            var isLineBreak: Bool
+            var flexibility: FlexibilityBehavior
+        }
 
         @usableFromInline
         init(_ subview: some Subview, axis: Axis) {
@@ -47,8 +58,11 @@ public struct FlowLayoutCache {
             min = subview.dimensions(.zero).size(on: axis)
             ideal = subview.dimensions(.unspecified).size(on: axis)
             max = subview.dimensions(.infinity).size(on: axis)
-            shouldStartInNewLine = subview[ShouldStartInNewLine.self]
-            isLineBreak = subview[ShouldStartInNewLine.self]
+            layoutValues = LayoutValues(
+                shouldStartInNewLine: subview[ShouldStartInNewLine.self],
+                isLineBreak: subview[_IsLineBreak.self],
+                flexibility: subview[Flexibility.self]
+            )
         }
     }
 
@@ -67,7 +81,7 @@ public struct LineBreak: View {
     public var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
-            .layoutValue(key: IsLineBreak.self, value: true)
+            .layoutValue(key: _IsLineBreak.self, value: true)
             .startInNewLine()
     }
 
@@ -78,12 +92,20 @@ struct ShouldStartInNewLine: LayoutValueKey {
     static let defaultValue = false
 }
 
-struct IsLineBreak: LayoutValueKey {
+struct _IsLineBreak: LayoutValueKey {
     static let defaultValue = false
+}
+
+struct Flexibility: LayoutValueKey {
+    static let defaultValue: FlexibilityBehavior = .compactFlexible
 }
 
 extension View {
     public func startInNewLine() -> some View {
         layoutValue(key: ShouldStartInNewLine.self, value: true)
+    }
+
+    public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
+        layoutValue(key: Flexibility.self, value: behavior)
     }
 }

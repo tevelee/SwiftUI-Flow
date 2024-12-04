@@ -47,11 +47,6 @@ struct FlowLayout: Sendable {
         var item: T
         var size: Size
         var leadingSpace: CGFloat = 0
-
-        mutating func append(_ item: Item, size: Size, spacing: CGFloat) where Self == ItemWithSpacing<Line> {
-            self.item.append(.init(item: item, size: size, leadingSpace: spacing))
-            self.size = Size(breadth: self.size.breadth + spacing + size.breadth, depth: max(self.size.depth, size.depth))
-        }
     }
 
     private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
@@ -148,7 +143,9 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
-        let items = subviews.enumerated().map { offset, subview in
+        let items = subviews.enumerated().map {
+            offset,
+            subview in
             let size: ClosedRange<CGFloat>
             let subviewCache = cache.subviewsCache[offset]
             if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
@@ -161,7 +158,12 @@ struct FlowLayout: Sendable {
                 ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
                 : 0
             )
-            return LineItem(subview: subview, size: size, spacing: spacing)
+            return LineItem(
+                subview: subview,
+                cache: subviewCache,
+                size: size,
+                spacing: spacing
+            )
         }
 
         let lineBreaker: any LineBreaking = if distributeItemsEvenly {
@@ -170,26 +172,30 @@ struct FlowLayout: Sendable {
             FlowLineBreaker()
         }
 
-        let breakpoints: [Int] = lineBreaker.wrapItemsToLines(
+        let wrapped = lineBreaker.wrapItemsToLines(
             items: items,
-            lineBreaks: cache.subviewsCache.enumerated().filter(\.element.layoutValues.shouldStartInNewLine).map(\.offset),
             in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
         )
 
-        var lines: Lines = []
-        for (start, end) in breakpoints.adjacentPairs() {
-            var line = Lines.Element(item: [], size: .zero)
-            for index in start ..< end {
-                let subview = subviews[index]
-                let breadth = items[index].size.lowerBound
-                let size = Size(
-                    breadth: breadth,
-                    depth: subview.sizeThatFits(ProposedViewSize(size: Size(breadth: breadth, depth: .infinity), axis: axis)).value(on: axis.perpendicular)
+        var lines: Lines = wrapped.map { line in
+            let items = line.enumerated().map { offset, item in
+                Line.Element(
+                    item: (item.item.subview, item.item.cache),
+                    size: item.item.subview
+                        .sizeThatFits(ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis))
+                        .size(on: axis),
+                    leadingSpace: offset > 0 && line[offset - 1].item.cache.layoutValues.isLineBreak ? 0 : item.leadingSpace
                 )
-                let spacing = index == start || cache.subviewsCache[index - 1].layoutValues.isLineBreak ? 0 : items[index].spacing // Reset spacing for the first item in each line
-                line.append((subview, cache.subviewsCache[index]), size: size, spacing: spacing)
             }
-            lines.append(line)
+            var size = items
+                .map(\.size)
+                .reduce(.zero, breadth: +, depth: max)
+            size.breadth += items.sum(of: \.leadingSpace)
+            return Lines.Element(
+                item: items,
+                size: size,
+                leadingSpace: 0
+            )
         }
         updateFlexibleItems(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)

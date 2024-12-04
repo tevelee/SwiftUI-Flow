@@ -27,10 +27,19 @@ public enum Justification: Sendable {
 }
 
 public enum FlexibilityBehavior: Sendable {
-    case compactRigid
-    case compactFlexible
-    case natural
-    case expanded
+    case compactRigid // take the ideal minimum size, but it cannot grow
+    case compactFlexible // take the ideal minimum size, but grow if there's space left
+    case natural // take the ideal size and even grow it to fill the line. If there are multiple growable ones in a row, their flexibility is proportionally distributed. If one can grow only a little, but others can fill the remaining space they do.
+    case expanded // same as natural but take the full row if necessary (pushing out other items), so there's only one expanded item per row is possible
+
+    @usableFromInline var canGrow: Bool {
+        switch self {
+        case .compactRigid:
+            return false
+        case .compactFlexible, .natural, .expanded:
+            return true
+        }
+    }
 }
 
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
@@ -39,19 +48,36 @@ public enum FlexibilityBehavior: Sendable {
 public struct FlowLayoutCache {
     @usableFromInline
     struct SubviewCache {
+        @usableFromInline
         var priority: Double
+        @usableFromInline
         var spacing: ViewSpacing
+        @usableFromInline
         var min: Size
+        @usableFromInline
         var ideal: Size
+        @usableFromInline
         var max: Size
+        @usableFromInline
         var layoutValues: LayoutValues
+        @usableFromInline
         struct LayoutValues {
+            @usableFromInline
             var shouldStartInNewLine: Bool
+            @usableFromInline
             var isLineBreak: Bool
+            @usableFromInline
             var flexibility: FlexibilityBehavior
+
+            @inlinable
+            init(shouldStartInNewLine: Bool, isLineBreak: Bool, flexibility: FlexibilityBehavior) {
+                self.shouldStartInNewLine = shouldStartInNewLine
+                self.isLineBreak = isLineBreak
+                self.flexibility = flexibility
+            }
         }
 
-        @usableFromInline
+        @inlinable
         init(_ subview: some Subview, axis: Axis) {
             priority = subview.priority
             spacing = subview.spacing
@@ -59,9 +85,9 @@ public struct FlowLayoutCache {
             ideal = subview.dimensions(.unspecified).size(on: axis)
             max = subview.dimensions(.infinity).size(on: axis)
             layoutValues = LayoutValues(
-                shouldStartInNewLine: subview[ShouldStartInNewLine.self],
-                isLineBreak: subview[_IsLineBreak.self],
-                flexibility: subview[Flexibility.self]
+                shouldStartInNewLine: subview[ShouldStartInNewLineLayoutValueKey.self],
+                isLineBreak: subview[_IsLineBreakLayoutValueKey.self],
+                flexibility: subview[FlexibilityLayoutValueKey.self]
             )
         }
     }
@@ -81,31 +107,52 @@ public struct LineBreak: View {
     public var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
-            .layoutValue(key: _IsLineBreak.self, value: true)
+            .layoutValue(key: _IsLineBreakLayoutValueKey.self, value: true)
             .startInNewLine()
     }
 
     public init() {}
 }
 
-struct ShouldStartInNewLine: LayoutValueKey {
+@usableFromInline
+struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
+    @usableFromInline
     static let defaultValue = false
 }
 
-struct _IsLineBreak: LayoutValueKey {
+@usableFromInline
+struct _IsLineBreakLayoutValueKey: LayoutValueKey {
+    @usableFromInline
     static let defaultValue = false
 }
 
-struct Flexibility: LayoutValueKey {
+@usableFromInline
+struct FlexibilityLayoutValueKey: LayoutValueKey {
+    @usableFromInline
     static let defaultValue: FlexibilityBehavior = .compactFlexible
+}
+
+@usableFromInline
+struct FlexibilityEnvironmentKey: EnvironmentKey {
+    @usableFromInline
+    static let defaultValue: FlexibilityBehavior = .compactFlexible
+}
+
+extension EnvironmentValues {
+    @usableFromInline
+    var flexibility: FlexibilityBehavior {
+        get { self[FlexibilityEnvironmentKey.self] }
+        set { self[FlexibilityEnvironmentKey.self] = newValue }
+    }
 }
 
 extension View {
     public func startInNewLine() -> some View {
-        layoutValue(key: ShouldStartInNewLine.self, value: true)
+        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: true)
     }
 
     public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
-        layoutValue(key: Flexibility.self, value: behavior)
+        layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
+            .environment(\.flexibility, behavior)
     }
 }

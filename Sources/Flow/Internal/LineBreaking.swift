@@ -1,20 +1,39 @@
 import CoreFoundation
+import Foundation
 
 @usableFromInline
 struct LineItem {
     @usableFromInline
     let subview: any Subview
     @usableFromInline
+    let cache: FlowLayoutCache.SubviewCache
+    @usableFromInline
     let size: ClosedRange<CGFloat>
     @usableFromInline
     let spacing: CGFloat
+    @inlinable
+    var flexibility: Double {
+        if cache.layoutValues.flexibility.canGrow {
+            return cache.max.breadth - cache.ideal.breadth
+        } else {
+            return 0
+        }
+    }
+
+    @inlinable
+    func requiresNewLine(availableSpace: CGFloat) -> Bool {
+        cache.layoutValues.shouldStartInNewLine || (cache.layoutValues.flexibility == .expanded && size.upperBound >= availableSpace)
+    }
 }
 
 @usableFromInline
 protocol LineBreaking {
     @inlinable
-    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int]
+    func wrapItemsToLines(items: [LineItem], in availableSpace: CGFloat) -> [Line]
 }
+
+@usableFromInline
+typealias Line = [(size: CGFloat, leadingSpace: CGFloat, item: LineItem)]
 
 @usableFromInline
 struct FlowLineBreaker: LineBreaking {
@@ -22,26 +41,37 @@ struct FlowLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
-    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
-        var breakpoints: [Int] = []
+    func wrapItemsToLines(items: [LineItem], in availableSpace: CGFloat) -> [Line] {
+        var currentLine: Line = []
+        var lines: [Line] = []
         var currentLineSize: CGFloat = 0
 
         for (index, item) in items.enumerated() {
-            let requiredSpace = items[index].spacing + item.size.lowerBound
-            if currentLineSize + requiredSpace > availableSpace || lineBreaks.contains(index) {
-                breakpoints.append(index)
-                currentLineSize = item.size.lowerBound
-            } else {
-                currentLineSize += requiredSpace
+            let spacing = items[index].spacing
+            let requiredSpaceForItem = item.size.lowerBound
+            let availableSpaceInRow = availableSpace - currentLineSize - spacing
+            let maximumSpaceForItem = min(item.size.upperBound, availableSpaceInRow)
+            var computedSpacing: CGFloat = spacing
+            if currentLineSize + spacing + requiredSpaceForItem > availableSpace || item.requiresNewLine(availableSpace: availableSpaceInRow) {
+                lines.append(currentLine)
+                currentLine = []
+                currentLineSize = 0
+                computedSpacing = 0
             }
+            let computedSize: CGFloat
+            switch item.cache.layoutValues.flexibility {
+            case .compactRigid, .compactFlexible:
+                computedSize = requiredSpaceForItem
+            case .natural, .expanded:
+                let availableSpaceInRow = availableSpace - currentLineSize - spacing
+                let maximumSpaceForItem = min(item.size.upperBound, availableSpaceInRow)
+                computedSize = maximumSpaceForItem
+            }
+            currentLine.append((computedSize, computedSpacing, item))
+            currentLineSize += computedSpacing + computedSize
         }
-
-        if breakpoints.first != 0 {
-            breakpoints.insert(0, at: 0)
-        }
-        breakpoints.append(items.endIndex)
-
-        return breakpoints
+        lines.append(currentLine)
+        return lines
     }
 }
 
@@ -51,26 +81,7 @@ struct KnuthPlassLineBreaker: LineBreaking {
     init() {}
 
     @inlinable
-    func wrapItemsToLines(items: [LineItem], lineBreaks: [Int], in availableSpace: CGFloat) -> [Int] {
-        if lineBreaks.isEmpty {
-            return wrapItemsToLines(items: items, in: availableSpace)
-        }
-        var result: [Int] = []
-        var start: Int = 0
-        for lineBreak in lineBreaks + [items.endIndex] {
-            let partial = wrapItemsToLines(
-                items: Array(items[start..<lineBreak]),
-                in: availableSpace
-            )
-            result.append(contentsOf: partial.map { $0 + start }.dropLast())
-            start = lineBreak
-        }
-        result.append(items.endIndex)
-        return result
-    }
-
-    @inlinable
-    func wrapItemsToLines(items: [LineItem], in availableSpace: CGFloat) -> [Int] {
+    func wrapItemsToLines(items: [LineItem], in availableSpace: CGFloat) -> [Line] {
         if items.isEmpty {
             return []
         }
@@ -81,17 +92,17 @@ struct KnuthPlassLineBreaker: LineBreaking {
         costs[0] = 0
 
         for end in 1 ... count {
-            var totalBreadth: CGFloat = 0
             for start in (0 ..< end).reversed() {
-                let size = items[start].size.lowerBound
-                let spacing = (end - start) == 1 ? 0 : items[start + 1].spacing
-                totalBreadth += size + spacing
-                if totalBreadth > availableSpace {
-                    break
+                let itemsToEvaluate = (start ..< end).map { items[$0] }
+                guard let calculation = sizes(of: itemsToEvaluate, availableSpace: availableSpace) else { continue }
+                let remainingSpace = calculation.remainingSpace
+                let spacePenalty = remainingSpace * remainingSpace
+                let stretchPenalty = zip(itemsToEvaluate, calculation.items).sum { item, calculation in
+                    let deviation = calculation.size - ((item.size.lowerBound + min(item.size.upperBound, availableSpace)) / 2) // Deviation from preferred size
+                    return deviation * deviation
                 }
-                let remainingSpace = availableSpace - totalBreadth
-                let bias = CGFloat(count - end) * 0.5 // Introduce a small bias to prefer breaks that fill earlier lines more
-                let cost = costs[start] + remainingSpace * remainingSpace + bias
+                let bias = CGFloat(count - start) * 10 // Introduce a small bias to prefer breaks that fill earlier lines more
+                let cost = costs[start] + spacePenalty + stretchPenalty + bias
                 if cost < costs[end] {
                     costs[end] = cost
                     breaks[end] = start
@@ -99,17 +110,60 @@ struct KnuthPlassLineBreaker: LineBreaking {
             }
         }
 
-        if breaks.compactMap({ $0 }).isEmpty {
-            return [0, items.endIndex]
+        var result: [Line] = []
+        var end = items.count
+        while let start = breaks[end] {
+            let line = sizes(of: (start..<end).map { items[$0] }, availableSpace: availableSpace)?.items ?? (start..<end).map { index in
+                (size: items[index].size.lowerBound, leadingSpace: index == start ? 0 : items[index].spacing, item: items[index])
+            }
+            result.insert(line, at: 0)
+            end = start
         }
-
-        var breakpoints: [Int] = []
-        var i = items.count
-        while let breakPoint = breaks[i] {
-            breakpoints.insert(i, at: 0)
-            i = breakPoint
-        }
-        breakpoints.insert(0, at: 0)
-        return breakpoints
+        return result
     }
+}
+
+@usableFromInline
+typealias SizeCalculation = (items: Line, remainingSpace: CGFloat)
+
+@inlinable
+func sizes(of items: [LineItem], availableSpace: CGFloat) -> SizeCalculation? {
+    let numberOfExpandedItems = items.count { $0.cache.layoutValues.flexibility == .expanded }
+    switch numberOfExpandedItems {
+    case 0:
+        break
+    case 1 where items.count == 1:
+        let size = max(items[0].size.lowerBound, min(availableSpace, items[0].size.upperBound))
+        return SizeCalculation(items: [(size: size, leadingSpace: 0, item: items[0])], remainingSpace: 0)
+    default:
+        return nil
+    }
+
+    if items.isEmpty {
+        return SizeCalculation(items: [], remainingSpace: availableSpace)
+    }
+    let totalSizeOfItems = items.sum(of: \.size.lowerBound) + items.dropFirst().sum(of: \.spacing)
+    if totalSizeOfItems > availableSpace {
+        return nil
+    }
+
+    var result: Line = items.map { (size: $0.size.lowerBound, leadingSpace: $0.spacing, item: $0) }
+    result[0].leadingSpace = 0
+    var remainingSpace = availableSpace - totalSizeOfItems
+    let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.cache.priority)
+    let priorities = itemsInPriorityOrder.keys.sorted(by: >)
+    for priority in priorities where remainingSpace > 0 {
+        let items = itemsInPriorityOrder[priority] ?? []
+        let itemsInFlexibilityOrder = items.sorted(using: KeyPathComparator(\.element.flexibility))
+        var remainingItemCount = items.count
+        let potentialGrowth = min(items.sum(of: \.element.flexibility), remainingSpace)
+        for (index, item) in itemsInFlexibilityOrder {
+            let offer = potentialGrowth / CGFloat(remainingItemCount)
+            let allocation = min(item.flexibility, offer)
+            result[index].size += allocation
+            remainingSpace -= allocation
+            remainingItemCount -= 1
+        }
+    }
+    return SizeCalculation(items: result, remainingSpace: remainingSpace)
 }

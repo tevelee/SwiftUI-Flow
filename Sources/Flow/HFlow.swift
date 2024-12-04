@@ -124,10 +124,14 @@ public struct HFlow<Content: View>: View {
         )
     }
 
+    @usableFromInline
+    @Environment(\.flexibility) var flexibility
+
     @inlinable 
     public var body: some View {
         layout {
             content
+                .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
         }
     }
 }

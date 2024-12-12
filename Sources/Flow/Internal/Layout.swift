@@ -16,7 +16,7 @@ struct FlowLayout: Sendable {
     @usableFromInline
     let reversedDepth: Bool = false
     @usableFromInline
-    let justification: Justification?
+    let justified: Bool
     @usableFromInline
     let distributeItemsEvenly: Bool
     @usableFromInline
@@ -29,7 +29,7 @@ struct FlowLayout: Sendable {
         axis: Axis,
         itemSpacing: CGFloat? = nil,
         lineSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         alignmentOnBreadth: @escaping @Sendable (any Dimensions) -> CGFloat,
         alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat
@@ -37,7 +37,7 @@ struct FlowLayout: Sendable {
         self.axis = axis
         self.itemSpacing = itemSpacing
         self.lineSpacing = lineSpacing
-        self.justification = justification
+        self.justified = justified
         self.distributeItemsEvenly = distributeItemsEvenly
         self.alignmentOnBreadth = alignmentOnBreadth
         self.alignmentOnDepth = alignmentOnDepth
@@ -197,16 +197,23 @@ struct FlowLayout: Sendable {
                 leadingSpace: 0
             )
         }
-        updateFlexibleItems(in: &lines, proposedSize: proposedSize)
+        updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
         return lines
     }
 
-    private func updateFlexibleItems(in lines: inout Lines, proposedSize: ProposedViewSize) {
-        guard let justification else { return }
-        for index in lines.indices {
-            updateFlexibleItems(in: &lines[index], proposedSize: proposedSize, justification: justification)
+    private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
+        guard justified else { return }
+        for (lineIndex, line) in lines.enumerated() {
+            let items = line.item
+            let remainingSpace = proposedSize.value(on: axis) - items.sum { $0.size[axis] + $0.leadingSpace }
+            for (itemIndex, item) in items.enumerated() {
+                let distributedSpace = remainingSpace / Double(items.count - 1)
+                for index in line.item.indices.dropFirst() {
+                    lines[lineIndex].item[index].leadingSpace = item.leadingSpace + distributedSpace
+                }
+            }
         }
     }
 
@@ -310,14 +317,14 @@ extension FlowLayout: Layout {
         verticalAlignment: VerticalAlignment = .top,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         self.init(
             axis: .vertical,
             itemSpacing: verticalSpacing,
             lineSpacing: horizontalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[verticalAlignment] },
             alignmentOnDepth: { $0[horizontalAlignment] }
@@ -330,14 +337,14 @@ extension FlowLayout: Layout {
         verticalAlignment: VerticalAlignment = .center,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         self.init(
             axis: .horizontal,
             itemSpacing: horizontalSpacing,
             lineSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[horizontalAlignment] },
             alignmentOnDepth: { $0[verticalAlignment] }

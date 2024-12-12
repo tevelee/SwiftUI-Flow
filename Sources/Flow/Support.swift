@@ -27,19 +27,9 @@ public enum Justification: Sendable {
 }
 
 public enum FlexibilityBehavior: Sendable {
-    case compactRigid // take the ideal minimum size, but it cannot grow
-    case compactFlexible // take the ideal minimum size, but grow if there's space left
-    case natural // take the ideal size and even grow it to fill the line. If there are multiple growable ones in a row, their flexibility is proportionally distributed. If one can grow only a little, but others can fill the remaining space they do.
-    case expanded // same as natural but take the full row if necessary (pushing out other items), so there's only one expanded item per row is possible
-
-    @usableFromInline var canGrow: Bool {
-        switch self {
-        case .compactRigid:
-            return false
-        case .compactFlexible, .natural, .expanded:
-            return true
-        }
-    }
+    case minimum
+    case natural
+    case maximum
 }
 
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
@@ -129,13 +119,13 @@ struct _IsLineBreakLayoutValueKey: LayoutValueKey {
 @usableFromInline
 struct FlexibilityLayoutValueKey: LayoutValueKey {
     @usableFromInline
-    static let defaultValue: FlexibilityBehavior = .compactFlexible
+    static let defaultValue: FlexibilityBehavior = .natural
 }
 
 @usableFromInline
 struct FlexibilityEnvironmentKey: EnvironmentKey {
     @usableFromInline
-    static let defaultValue: FlexibilityBehavior = .compactFlexible
+    static let defaultValue: FlexibilityBehavior = .natural
 }
 
 extension EnvironmentValues {

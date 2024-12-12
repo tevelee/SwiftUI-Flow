@@ -34,8 +34,8 @@ public struct HFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - rowSpacing: The distance between rows of subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of rows.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -45,7 +45,7 @@ public struct HFlow<Content: View>: View {
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -54,7 +54,7 @@ public struct HFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
@@ -66,8 +66,8 @@ public struct HFlow<Content: View>: View {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -76,7 +76,7 @@ public struct HFlow<Content: View>: View {
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -84,7 +84,7 @@ public struct HFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: spacing,
             rowSpacing: spacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             content: contentBuilder
         )
@@ -97,8 +97,8 @@ public struct HFlow<Content: View>: View {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -109,7 +109,7 @@ public struct HFlow<Content: View>: View {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -119,7 +119,7 @@ public struct HFlow<Content: View>: View {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
@@ -150,8 +150,8 @@ extension HFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - rowSpacing: The distance between rows of subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of rows.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -160,14 +160,14 @@ extension HFlow: Layout where Content == EmptyView {
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
@@ -181,8 +181,8 @@ extension HFlow: Layout where Content == EmptyView {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -190,13 +190,13 @@ extension HFlow: Layout where Content == EmptyView {
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
@@ -210,8 +210,8 @@ extension HFlow: Layout where Content == EmptyView {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -221,7 +221,7 @@ extension HFlow: Layout where Content == EmptyView {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
@@ -229,7 +229,7 @@ extension HFlow: Layout where Content == EmptyView {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()

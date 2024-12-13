@@ -143,9 +143,7 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
-        let items = subviews.enumerated().map {
-            offset,
-            subview in
+        let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
             let size: ClosedRange<CGFloat>
             let subviewCache = cache.subviewsCache[offset]
             if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
@@ -158,11 +156,11 @@ struct FlowLayout: Sendable {
                 ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
                 : 0
             )
-            return LineItem(
-                subview: subview,
-                cache: subviewCache,
+            return .init(
                 size: size,
-                spacing: spacing
+                spacing: spacing,
+                priority: subviewCache.priority,
+                flexibility: subviewCache.layoutValues.flexibility
             )
         }
 
@@ -178,13 +176,13 @@ struct FlowLayout: Sendable {
         )
 
         var lines: Lines = wrapped.map { line in
-            let items = line.enumerated().map { offset, item in
+            let items = line.map { item in
                 Line.Element(
-                    item: (item.item.subview, item.item.cache),
-                    size: item.item.subview
+                    item: (subview: subviews[item.index], cache: cache.subviewsCache[item.index]),
+                    size: subviews[item.index]
                         .sizeThatFits(ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis))
                         .size(on: axis),
-                    leadingSpace: offset > 0 && line[offset - 1].item.cache.layoutValues.isLineBreak ? 0 : item.leadingSpace
+                    leadingSpace: item.leadingSpace
                 )
             }
             var size = items
@@ -208,69 +206,11 @@ struct FlowLayout: Sendable {
         for (lineIndex, line) in lines.enumerated() {
             let items = line.item
             let remainingSpace = proposedSize.value(on: axis) - items.sum { $0.size[axis] + $0.leadingSpace }
-            for (itemIndex, item) in items.enumerated() {
+            for (itemIndex, item) in items.enumerated().dropFirst() {
                 let distributedSpace = remainingSpace / Double(items.count - 1)
-                for index in line.item.indices.dropFirst() {
-                    lines[lineIndex].item[index].leadingSpace = item.leadingSpace + distributedSpace
-                }
+                lines[lineIndex].item[itemIndex].leadingSpace = item.leadingSpace + distributedSpace
             }
         }
-    }
-
-    private func updateFlexibleItems(
-        in line: inout ItemWithSpacing<Line>,
-        proposedSize: ProposedViewSize,
-        justification: Justification
-    ) {
-        let subviewsInPriorityOrder = line.item.enumerated()
-            .map { offset, subview in
-                SubviewProperties(
-                    indexInLine: offset,
-                    spacing: subview.leadingSpace,
-                    cache: subview.item.cache
-                )
-            }
-            .sorted(using: [
-                KeyPathComparator(\.cache.priority),
-                KeyPathComparator(\.flexibility),
-                KeyPathComparator(\.cache.ideal.breadth)
-            ])
-
-        let count = line.item.count
-        let sumOfIdeal = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.ideal.breadth }
-        var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
-
-        guard remainingSpace > 0 else { return }
-
-        if justification.isStretchingItems {
-            let sumOfMax = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.max.breadth }
-            let potentialGrowth = sumOfMax - sumOfIdeal
-            if potentialGrowth <= remainingSpace {
-                for subview in subviewsInPriorityOrder {
-                    line.item[subview.indexInLine].size.breadth = subview.cache.max.breadth
-                    remainingSpace -= subview.flexibility
-                }
-            } else {
-                var remainingItemCount = count
-                for subview in subviewsInPriorityOrder {
-                    let offer = remainingSpace / Double(remainingItemCount)
-                    let actual = min(subview.flexibility, offer)
-                    remainingSpace -= actual
-                    remainingItemCount -= 1
-                    line.item[subview.indexInLine].size.breadth += actual
-                }
-            }
-        }
-        
-        if justification.isStretchingSpaces {
-            let distributedSpace = remainingSpace / Double(count - 1)
-            for index in line.item.indices.dropFirst() {
-                line.item[index].leadingSpace += distributedSpace
-                remainingSpace -= distributedSpace
-            }
-        }
-        
-        line.size.breadth = proposedSize.value(on: axis) - remainingSpace
     }
 
     private func updateLineSpacings(in lines: inout Lines) {

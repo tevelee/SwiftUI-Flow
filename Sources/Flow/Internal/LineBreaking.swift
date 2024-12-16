@@ -11,6 +11,10 @@ struct LineItemInput {
     var priority: Double = 0
     @usableFromInline
     var flexibility: FlexibilityBehavior = .natural
+    @usableFromInline
+    var isLineBreakView: Bool = false
+    @usableFromInline
+    var shouldStartInNewLine: Bool = false
     @inlinable
     var growingPotential: Double {
         if flexibility == .minimum {
@@ -120,7 +124,11 @@ struct KnuthPlassLineBreaker: LineBreaking {
         var end = items.count
         while let start = breaks[end] {
             let line = sizes(of: (start..<end).map { ($0, items[$0]) }, availableSpace: availableSpace)?.items ?? (start..<end).map { index in
-                LineItemOutput(index: index, size: items[index].size.lowerBound, leadingSpace: index == start ? 0 : items[index].spacing)
+                LineItemOutput(
+                    index: index,
+                    size: items[index].size.lowerBound,
+                    leadingSpace: index == start ? 0 : items[index].spacing
+                )
             }
             result.insert(line, at: 0)
             end = start
@@ -137,6 +145,10 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     if items.isEmpty {
         return nil
     }
+    let positionOfLineBreak = items.lastIndex(where: \.element.isLineBreakView)
+    if let positionOfLineBreak, positionOfLineBreak > 0 {
+        return nil
+    }
     let numberOfExpandedItems = items.count { $0.element.flexibility == .maximum }
     switch numberOfExpandedItems {
     case 0:
@@ -148,6 +160,13 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
         return nil
     }
 
+    let numberOfNewLines = items.count(where: \.element.shouldStartInNewLine)
+    if numberOfNewLines > 1 {
+        return nil
+    } else if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {
+        return nil
+    }
+
     let totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
     if totalSizeOfItems > availableSpace {
         return nil
@@ -155,6 +174,9 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
 
     var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }
     result[0].leadingSpace = 0
+    if let positionOfLineBreak, case let afterLineBreak = items.index(after: positionOfLineBreak), afterLineBreak < items.endIndex {
+        result[afterLineBreak].leadingSpace = 0
+    }
     var remainingSpace = availableSpace - totalSizeOfItems
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)

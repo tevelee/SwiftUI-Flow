@@ -160,7 +160,9 @@ struct FlowLayout: Sendable {
                 size: size,
                 spacing: spacing,
                 priority: subviewCache.priority,
-                flexibility: subviewCache.layoutValues.flexibility
+                flexibility: subviewCache.layoutValues.flexibility,
+                isLineBreakView: subviewCache.layoutValues.isLineBreak,
+                shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
             )
         }
 
@@ -195,6 +197,9 @@ struct FlowLayout: Sendable {
                 leadingSpace: 0
             )
         }
+
+        // TODO: account for manual line breaks
+
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
@@ -226,6 +231,10 @@ struct FlowLayout: Sendable {
                 let spacing = lineSpacings[index].distance(to: lineSpacings[previous], along: axis.perpendicular)
                 lines[index].leadingSpace = spacing
             }
+        }
+        // remove space from empty lines (where the only item is a line break view)
+        for index in lines.indices where lines[index].item.count == 1 && lines[index].item[0].item.cache.layoutValues.isLineBreak {
+            lines[index].leadingSpace = 0
         }
     }
 

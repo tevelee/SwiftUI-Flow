@@ -1,34 +1,12 @@
 import SwiftUI
 
-/// Justified layout stretches lines in a way to create a straight and even edge on both sides of the view
-public enum Justification: Sendable {
-    /// Flexible items are stretched proportionally in each line
-    case stretchItems
-    /// Spaces between items are stretched equally
-    case stretchSpaces
-    /// Primarily the items are being stretched as much as they allow and then spaces too if needed
-    case stretchItemsAndSpaces
-
-    @inlinable
-    var isStretchingItems: Bool {
-        switch self {
-            case .stretchItems, .stretchItemsAndSpaces: true
-            case .stretchSpaces: false
-        }
-    }
-
-    @inlinable
-    var isStretchingSpaces: Bool {
-        switch self {
-            case .stretchSpaces, .stretchItemsAndSpaces: true
-            case .stretchItems: false
-        }
-    }
-}
-
+/// The way line breaking treats flexible items. The default behavior is `.natural`.
 public enum FlexibilityBehavior: Sendable {
+    /// The layout chooses the minimum space for the view, regardless of how much it can expand
     case minimum
+    /// The layout allows the views to exapand as they naturally do.
     case natural
+    /// If a view can expand, it allows to "push" out other views and fill a whole row on its own.
     case maximum
 }
 
@@ -76,7 +54,7 @@ public struct FlowLayoutCache {
             max = subview.dimensions(.infinity).size(on: axis)
             layoutValues = LayoutValues(
                 shouldStartInNewLine: subview[ShouldStartInNewLineLayoutValueKey.self],
-                isLineBreak: subview[_IsLineBreakLayoutValueKey.self],
+                isLineBreak: subview[IsLineBreakLayoutValueKey.self],
                 flexibility: subview[FlexibilityLayoutValueKey.self]
             )
         }
@@ -93,15 +71,31 @@ public struct FlowLayoutCache {
     }
 }
 
+/// A view to manually insert breaks into flow layout, allowing precise control over line breaking.
 public struct LineBreak: View {
+    /// Initializes a new line break view
+    public init() {}
+
     public var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
-            .layoutValue(key: _IsLineBreakLayoutValueKey.self, value: true)
-            .startInNewLine()
+            .layoutValue(key: IsLineBreakLayoutValueKey.self, value: true)
+    }
+}
+
+extension View {
+    /// Allows flow layout elements to be started on new lines, allowing precise control over line breaking.
+    public func startInNewLine() -> some View {
+        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: true)
     }
 
-    public init() {}
+    /// Allows modifying the flexibility behavior of views so that flow can layout them accordingly.
+    /// This modifier can be placed outside of flow layout too, and propagate to all flow layouts inside that view tree (using environment).
+    /// The default flexibility of each item in a flow is `.natural`.
+    public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
+        layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
+            .environment(\.flexibility, behavior)
+    }
 }
 
 @usableFromInline
@@ -111,7 +105,7 @@ struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
 }
 
 @usableFromInline
-struct _IsLineBreakLayoutValueKey: LayoutValueKey {
+struct IsLineBreakLayoutValueKey: LayoutValueKey {
     @usableFromInline
     static let defaultValue = false
 }
@@ -133,16 +127,5 @@ extension EnvironmentValues {
     var flexibility: FlexibilityBehavior {
         get { self[FlexibilityEnvironmentKey.self] }
         set { self[FlexibilityEnvironmentKey.self] = newValue }
-    }
-}
-
-extension View {
-    public func startInNewLine() -> some View {
-        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: true)
-    }
-
-    public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
-        layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
-            .environment(\.flexibility, behavior)
     }
 }

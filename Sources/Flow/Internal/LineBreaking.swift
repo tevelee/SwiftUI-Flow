@@ -145,10 +145,16 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     if items.isEmpty {
         return nil
     }
+    // Handle line break view
     let positionOfLineBreak = items.lastIndex(where: \.element.isLineBreakView)
     if let positionOfLineBreak, positionOfLineBreak > 0 {
         return nil
     }
+    var items = items
+    if let positionOfLineBreak, case let afterLineBreak = items.index(after: positionOfLineBreak), afterLineBreak < items.endIndex {
+        items[afterLineBreak].element.spacing = 0
+    }
+    // Only continue for lines with multiple items
     let numberOfExpandedItems = items.count { $0.element.flexibility == .maximum }
     switch numberOfExpandedItems {
     case 0:
@@ -159,24 +165,21 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     default:
         return nil
     }
-
+    // Handle manual new line modifier
     let numberOfNewLines = items.count(where: \.element.shouldStartInNewLine)
     if numberOfNewLines > 1 {
         return nil
     } else if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {
         return nil
     }
-
-    let totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
+    // Calculate total size
+    var totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
     if totalSizeOfItems > availableSpace {
         return nil
     }
-
+    // Layout accoring to priorities and proportionally distribute remaining space between flexible views
     var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }
     result[0].leadingSpace = 0
-    if let positionOfLineBreak, case let afterLineBreak = items.index(after: positionOfLineBreak), afterLineBreak < items.endIndex {
-        result[afterLineBreak].leadingSpace = 0
-    }
     var remainingSpace = availableSpace - totalSizeOfItems
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)
@@ -184,9 +187,8 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
         let items = itemsInPriorityOrder[priority] ?? []
         let itemsInFlexibilityOrder = items.sorted(using: KeyPathComparator(\.element.element.growingPotential))
         var remainingItemCount = items.count
-        let potentialGrowth = min(items.sum(of: \.element.element.growingPotential), remainingSpace)
         for (index, item) in itemsInFlexibilityOrder {
-            let offer = potentialGrowth / CGFloat(remainingItemCount)
+            let offer = remainingSpace / CGFloat(remainingItemCount)
             let allocation = min(item.element.growingPotential, offer)
             result[index].size += allocation
             remainingSpace -= allocation

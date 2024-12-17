@@ -190,7 +190,7 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_justifiedSpaces_rigid() {
+    func test_HFlow_justified_rigid() {
         // Given
         let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
 
@@ -206,7 +206,7 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_justifiedSpaces_flexible() {
+    func test_HFlow_justified_flexible() {
         // Given
         let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
 
@@ -216,7 +216,7 @@ final class FlowTests: XCTestCase {
         // Then
         XCTAssertEqual(render(result), """
         +---------+
-        |XXX   XXX|
+        |XXX XXXXX|
         |XX       |
         +---------+
         """)

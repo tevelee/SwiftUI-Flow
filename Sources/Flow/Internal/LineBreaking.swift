@@ -111,7 +111,7 @@ struct KnuthPlassLineBreaker: LineBreaking {
                     let deviation = calculation.size - item.element.size.lowerBound
                     return deviation * deviation
                 }
-                let bias = CGFloat(count - start) * 10 // Introduce a small bias to prefer breaks that fill earlier lines more
+                let bias = CGFloat(count - start) * 5 // Introduce a small bias to prefer breaks that fill earlier lines more
                 let cost = costs[start] + spacePenalty + stretchPenalty + bias
                 if cost < costs[end] {
                     costs[end] = cost
@@ -154,17 +154,6 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     if let positionOfLineBreak, case let afterLineBreak = items.index(after: positionOfLineBreak), afterLineBreak < items.endIndex {
         items[afterLineBreak].element.spacing = 0
     }
-    // Only continue for lines with multiple items
-    let numberOfExpandedItems = items.count { $0.element.flexibility == .maximum }
-    switch numberOfExpandedItems {
-    case 0:
-        break
-    case 1 where items.count == 1:
-        let size = max(items[0].element.size.lowerBound, min(availableSpace, items[0].element.size.upperBound))
-        return SizeCalculation(items: [LineItemOutput(index: items[0].offset, size: size, leadingSpace: 0)], remainingSpace: 0)
-    default:
-        return nil
-    }
     // Handle manual new line modifier
     let numberOfNewLines = items.count(where: \.element.shouldStartInNewLine)
     if numberOfNewLines > 1 {
@@ -177,10 +166,17 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     if totalSizeOfItems > availableSpace {
         return nil
     }
+    var remainingSpace = availableSpace - totalSizeOfItems
+    // Handle expanded items
+    for item in items where item.element.flexibility == .maximum {
+        let size = max(item.element.size.lowerBound, min(availableSpace, item.element.size.upperBound))
+        if size - item.element.size.lowerBound > remainingSpace {
+            return nil
+        }
+    }
     // Layout accoring to priorities and proportionally distribute remaining space between flexible views
     var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }
     result[0].leadingSpace = 0
-    var remainingSpace = availableSpace - totalSizeOfItems
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)
     for priority in priorities where remainingSpace > 0 {

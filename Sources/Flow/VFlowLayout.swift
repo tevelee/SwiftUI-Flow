@@ -15,8 +15,8 @@ public struct VFlowLayout {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - columnSpacing: The distance between adjacent columns, or `nil` if you
     ///     want the flow to choose a default distance for each pair of columns.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each column by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each column by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
@@ -25,7 +25,7 @@ public struct VFlowLayout {
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
@@ -33,7 +33,7 @@ public struct VFlowLayout {
             verticalAlignment: .top,
             horizontalSpacing: columnSpacing,
             verticalSpacing: itemSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
@@ -45,8 +45,8 @@ public struct VFlowLayout {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each column by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each column by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
@@ -57,7 +57,7 @@ public struct VFlowLayout {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         layout = .vertical(
@@ -65,7 +65,7 @@ public struct VFlowLayout {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }

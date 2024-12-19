@@ -13,8 +13,8 @@ public struct HFlowLayout: Sendable {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -23,7 +23,7 @@ public struct HFlowLayout: Sendable {
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
@@ -31,7 +31,7 @@ public struct HFlowLayout: Sendable {
             verticalAlignment: alignment,
             horizontalSpacing: itemSpacing,
             verticalSpacing: rowSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
@@ -43,8 +43,8 @@ public struct HFlowLayout: Sendable {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each row by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
@@ -54,7 +54,7 @@ public struct HFlowLayout: Sendable {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         layout = .horizontal(
@@ -62,7 +62,7 @@ public struct HFlowLayout: Sendable {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }

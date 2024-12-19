@@ -25,26 +25,15 @@ final class FlowTests: XCTestCase {
         XCTAssertEqual(size, 110×120)
     }
 
-    func test_HFlow_size_justifiedSpaces() throws {
+    func test_HFlow_size_justified() throws {
         // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, justified: true)
 
         // When
         let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×50, 50×50])
 
         // Then
         XCTAssertEqual(size, 1000×50)
-    }
-
-    func test_HFlow_size_justifiedItems() throws {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, justification: .stretchItems)
-
-        // When
-        let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×1...100×1])
-
-        // Then
-        XCTAssertEqual(size, 100×1)
     }
 
     func test_HFlow_layout_top() {
@@ -201,9 +190,9 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_justifiedSpaces_rigid() {
+    func test_HFlow_justified_rigid() {
         // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
 
         // When
         let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
@@ -217,9 +206,9 @@ final class FlowTests: XCTestCase {
         """)
     }
 
-    func test_HFlow_justifiedSpaces_flexible() {
+    func test_HFlow_justified_flexible() {
         // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchSpaces)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
 
         // When
         let result = sut.layout([3×1, 3×1...inf×1, 2×1], in: 9×2)
@@ -227,89 +216,9 @@ final class FlowTests: XCTestCase {
         // Then
         XCTAssertEqual(render(result), """
         +---------+
-        |XXX   XXX|
+        |XXX XXXXX|
         |XX       |
         +---------+
-        """)
-    }
-
-    func test_HFlow_justifiedItems_rigid() {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItems)
-
-        // When
-        let result = sut.layout([3×1, 3×1, 2×1], in: 9×2)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +---------+
-        |XXX XXX  |
-        |XX       |
-        +---------+
-        """)
-    }
-
-    func test_HFlow_justifiedItems_flexible() {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItems)
-
-        // When
-        let result = sut.layout([3×1...4×1, 3×1...inf×1, 2×1...5×1], in: 9×2)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +---------+
-        |XXXX XXXX|
-        |XXXXX    |
-        +---------+
-        """)
-    }
-
-    func test_HFlow_justifiedItemsAndSpaces_rigid() throws {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
-
-        // When
-        let result = sut.layout([1×1, 4×1, 3×1, 2×1, 2×1, 3×1], in: 12×2)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +------------+
-        |X  XXXX  XXX|
-        |XX  XX   XXX|
-        +------------+
-        """)
-    }
-
-    func test_HFlow_justifiedItemsAndSpaces_flexible() throws {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
-
-        // When
-        let result = sut.layout([1×1, 2×1...5×1, 1×1...inf×1, 2×1, 5×1...inf×1, 5×1...inf×1], in: 13×2)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +-------------+
-        |X XXXX XXX XX|
-        |XXXXXX XXXXXX|
-        +-------------+
-        """)
-    }
-
-    func test_HFlow_justifiedItemsAndSpaces_strethBoth() throws {
-        // Given
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justification: .stretchItemsAndSpaces)
-
-        // When
-        let result = sut.layout([4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1, 4×1...5×1], in: 15×2)
-
-        // Then
-        XCTAssertEqual(render(result), """
-        +---------------+
-        |XXXX XXXX XXXXX|
-        |XXXXX     XXXXX|
-        +---------------+
         """)
     }
 
@@ -422,6 +331,71 @@ final class FlowTests: XCTestCase {
         |XXXXX|
         |X X X|
         +-----+
+        """)
+    }
+
+    func test_HFlow_flexible() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, 1×1...10×1, 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X XX X|
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_minimum() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.minimum), 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X X X |
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_natural() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.natural), 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X XX X|
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_maximum() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.maximum), 1×1, 1×1], in: 8×3)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X     |
+        |XXXXXXXX|
+        |X X     |
+        +--------+
         """)
     }
 }

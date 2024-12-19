@@ -16,7 +16,7 @@ struct FlowLayout: Sendable {
     @usableFromInline
     let reversedDepth: Bool = false
     @usableFromInline
-    let justification: Justification?
+    let justified: Bool
     @usableFromInline
     let distributeItemsEvenly: Bool
     @usableFromInline
@@ -29,7 +29,7 @@ struct FlowLayout: Sendable {
         axis: Axis,
         itemSpacing: CGFloat? = nil,
         lineSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         alignmentOnBreadth: @escaping @Sendable (any Dimensions) -> CGFloat,
         alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat
@@ -37,7 +37,7 @@ struct FlowLayout: Sendable {
         self.axis = axis
         self.itemSpacing = itemSpacing
         self.lineSpacing = lineSpacing
-        self.justification = justification
+        self.justified = justified
         self.distributeItemsEvenly = distributeItemsEvenly
         self.alignmentOnBreadth = alignmentOnBreadth
         self.alignmentOnDepth = alignmentOnDepth
@@ -47,11 +47,6 @@ struct FlowLayout: Sendable {
         var item: T
         var size: Size
         var leadingSpace: CGFloat = 0
-
-        mutating func append(_ item: Item, size: Size, spacing: CGFloat) where Self == ItemWithSpacing<Line> {
-            self.item.append(.init(item: item, size: size, leadingSpace: spacing))
-            self.size = Size(breadth: self.size.breadth + spacing + size.breadth, depth: max(self.size.depth, size.depth))
-        }
     }
 
     private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
@@ -71,6 +66,9 @@ struct FlowLayout: Sendable {
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
         size.depth += lines.sum(of: \.leadingSpace)
+        if justified {
+            size.breadth = proposedSize.value(on: axis)
+        }
         return CGSize(size: size, axis: axis)
     }
 
@@ -148,19 +146,27 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
-        let sizes: [Size] = zip(cache.subviewsCache, subviews).map { cache, subview in
-            if cache.ideal.breadth <= proposedSize.value(on: axis) {
-                cache.ideal
+        let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
+            let size: ClosedRange<CGFloat>
+            let subviewCache = cache.subviewsCache[offset]
+            if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
+                size = subviewCache.ideal.breadth ... subviewCache.max.breadth
             } else {
-                subview.sizeThatFits(proposedSize).size(on: axis)
+                size = subview.sizeThatFits(proposedSize).value(on: axis) ... subviewCache.max.breadth
             }
-        }
-        let spacings: [CGFloat] = if let itemSpacing {
-            [0] + Array(repeating: itemSpacing, count: subviews.count - 1)
-        } else {
-            [0] + cache.subviewsCache.adjacentPairs().map { lhs, rhs in
-                lhs.spacing.distance(to: rhs.spacing, along: axis)
-            }
+            let spacing = itemSpacing ?? (
+                offset > cache.subviewsCache.startIndex
+                ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
+                : 0
+            )
+            return .init(
+                size: size,
+                spacing: spacing,
+                priority: subviewCache.priority,
+                flexibility: subviewCache.layoutValues.flexibility,
+                isLineBreakView: subviewCache.layoutValues.isLineBreak,
+                shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
+            )
         }
 
         let lineBreaker: any LineBreaking = if distributeItemsEvenly {
@@ -169,91 +175,50 @@ struct FlowLayout: Sendable {
             FlowLineBreaker()
         }
 
-        let breakpoints: [Int] = lineBreaker.wrapItemsToLines(
-            sizes: sizes.map(\.breadth),
-            spacings: spacings,
-            lineBreaks: cache.subviewsCache.enumerated().filter(\.element.shouldStartInNewLine).map(\.offset),
+        let wrapped = lineBreaker.wrapItemsToLines(
+            items: items,
             in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
         )
 
-        var lines: Lines = []
-        for (start, end) in breakpoints.adjacentPairs() {
-            var line = Lines.Element(item: [], size: .zero)
-            for index in start ..< end {
-                let subview = subviews[index]
-                let size = sizes[index]
-                let spacing = index == start || cache.subviewsCache[index - 1].isLineBreak ? 0 : spacings[index] // Reset spacing for the first item in each line
-                line.append((subview, cache.subviewsCache[index]), size: size, spacing: spacing)
+        var lines: Lines = wrapped.map { line in
+            let items = line.map { item in
+                Line.Element(
+                    item: (subview: subviews[item.index], cache: cache.subviewsCache[item.index]),
+                    size: subviews[item.index]
+                        .sizeThatFits(ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis))
+                        .size(on: axis),
+                    leadingSpace: item.leadingSpace
+                )
             }
-            lines.append(line)
+            var size = items
+                .map(\.size)
+                .reduce(.zero, breadth: +, depth: max)
+            size.breadth += items.sum(of: \.leadingSpace)
+            return Lines.Element(
+                item: items,
+                size: size,
+                leadingSpace: 0
+            )
         }
-        updateFlexibleItems(in: &lines, proposedSize: proposedSize)
+
+        // TODO: account for manual line breaks
+
+        updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
         return lines
     }
 
-    private func updateFlexibleItems(in lines: inout Lines, proposedSize: ProposedViewSize) {
-        guard let justification else { return }
-        for index in lines.indices {
-            updateFlexibleItems(in: &lines[index], proposedSize: proposedSize, justification: justification)
-        }
-    }
-
-    private func updateFlexibleItems(
-        in line: inout ItemWithSpacing<Line>,
-        proposedSize: ProposedViewSize,
-        justification: Justification
-    ) {
-        let subviewsInPriorityOrder = line.item.enumerated()
-            .map { offset, subview in
-                SubviewProperties(
-                    indexInLine: offset,
-                    spacing: subview.leadingSpace,
-                    cache: subview.item.cache
-                )
-            }
-            .sorted(using: [
-                KeyPathComparator(\.cache.priority),
-                KeyPathComparator(\.flexibility),
-                KeyPathComparator(\.cache.ideal.breadth)
-            ])
-
-        let count = line.item.count
-        let sumOfIdeal = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.ideal.breadth }
-        var remainingSpace = proposedSize.value(on: axis) - sumOfIdeal
-
-        guard remainingSpace > 0 else { return }
-
-        if justification.isStretchingItems {
-            let sumOfMax = subviewsInPriorityOrder.sum { $0.spacing + $0.cache.max.breadth }
-            let potentialGrowth = sumOfMax - sumOfIdeal
-            if potentialGrowth <= remainingSpace {
-                for subview in subviewsInPriorityOrder {
-                    line.item[subview.indexInLine].size.breadth = subview.cache.max.breadth
-                    remainingSpace -= subview.flexibility
-                }
-            } else {
-                var remainingItemCount = count
-                for subview in subviewsInPriorityOrder {
-                    let offer = remainingSpace / Double(remainingItemCount)
-                    let actual = min(subview.flexibility, offer)
-                    remainingSpace -= actual
-                    remainingItemCount -= 1
-                    line.item[subview.indexInLine].size.breadth += actual
-                }
+    private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
+        guard justified else { return }
+        for (lineIndex, line) in lines.enumerated() {
+            let items = line.item
+            let remainingSpace = proposedSize.value(on: axis) - items.sum { $0.size[axis] + $0.leadingSpace }
+            for (itemIndex, item) in items.enumerated().dropFirst() {
+                let distributedSpace = remainingSpace / Double(items.count - 1)
+                lines[lineIndex].item[itemIndex].leadingSpace = item.leadingSpace + distributedSpace
             }
         }
-        
-        if justification.isStretchingSpaces {
-            let distributedSpace = remainingSpace / Double(count - 1)
-            for index in line.item.indices.dropFirst() {
-                line.item[index].leadingSpace += distributedSpace
-                remainingSpace -= distributedSpace
-            }
-        }
-        
-        line.size.breadth = proposedSize.value(on: axis) - remainingSpace
     }
 
     private func updateLineSpacings(in lines: inout Lines) {
@@ -269,6 +234,10 @@ struct FlowLayout: Sendable {
                 let spacing = lineSpacings[index].distance(to: lineSpacings[previous], along: axis.perpendicular)
                 lines[index].leadingSpace = spacing
             }
+        }
+        // remove space from empty lines (where the only item is a line break view)
+        for index in lines.indices where lines[index].item.count == 1 && lines[index].item[0].item.cache.layoutValues.isLineBreak {
+            lines[index].leadingSpace = 0
         }
     }
 
@@ -300,14 +269,14 @@ extension FlowLayout: Layout {
         verticalAlignment: VerticalAlignment = .top,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         self.init(
             axis: .vertical,
             itemSpacing: verticalSpacing,
             lineSpacing: horizontalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[verticalAlignment] },
             alignmentOnDepth: { $0[horizontalAlignment] }
@@ -320,14 +289,14 @@ extension FlowLayout: Layout {
         verticalAlignment: VerticalAlignment = .center,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) -> FlowLayout {
         self.init(
             axis: .horizontal,
             itemSpacing: horizontalSpacing,
             lineSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[horizontalAlignment] },
             alignmentOnDepth: { $0[verticalAlignment] }

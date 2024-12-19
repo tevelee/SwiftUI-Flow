@@ -85,8 +85,8 @@ public struct LineBreak: View {
 
 extension View {
     /// Allows flow layout elements to be started on new lines, allowing precise control over line breaking.
-    public func startInNewLine() -> some View {
-        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: true)
+    public func startInNewLine(_ enabled: Bool = true) -> some View {
+        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: enabled)
     }
 
     /// Allows modifying the flexibility behavior of views so that flow can layout them accordingly.

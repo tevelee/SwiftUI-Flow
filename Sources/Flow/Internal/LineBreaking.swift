@@ -162,7 +162,7 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
         return nil
     }
     // Calculate total size
-    var totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
+    let totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
     if totalSizeOfItems > availableSpace {
         return nil
     }

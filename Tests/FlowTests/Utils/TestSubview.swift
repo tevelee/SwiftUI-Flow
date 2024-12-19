@@ -62,6 +62,11 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
     var description: String {
         "origin: \((placement?.position.x).map { "\($0)" } ?? "nil")×\((placement?.position.y).map { "\($0)" } ?? "nil"), size: \(idealSize.width)×\(idealSize.height)"
     }
+
+    func flexibility(_ behavior: FlexibilityBehavior) -> Self {
+        self[FlexibilityLayoutValueKey.self] = behavior
+        return self
+    }
 }
 
 final class WrappingText: TestSubview {

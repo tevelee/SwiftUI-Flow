@@ -333,4 +333,69 @@ final class FlowTests: XCTestCase {
         +-----+
         """)
     }
+
+    func test_HFlow_flexible() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, 1×1...10×1, 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X XX X|
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_minimum() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.minimum), 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X X X |
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_natural() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.natural), 1×1, 1×1], in: 8×2)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X XX X|
+        |X       |
+        +--------+
+        """)
+    }
+
+    func test_HFlow_flexible_maximum() {
+        // Given
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
+
+        // When
+        let result = sut.layout([1×1, 1×1, (1×1...10×1).flexibility(.maximum), 1×1, 1×1], in: 8×3)
+
+        // Then
+        XCTAssertEqual(render(result), """
+        +--------+
+        |X X     |
+        |XXXXXXXX|
+        |X X     |
+        +--------+
+        """)
+    }
 }

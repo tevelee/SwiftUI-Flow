@@ -81,6 +81,8 @@ struct FlowLayout: Sendable {
     ) {
         guard !subviews.isEmpty else { return }
 
+        var bounds = bounds
+        bounds.origin.replaceNaN(with: 0)
         var target = bounds.origin.size(on: axis)
         var reversedBreadth = self.reversedBreadth
 
@@ -136,6 +138,9 @@ struct FlowLayout: Sendable {
             let dimensions = item.item.subview.dimensions(proposedSize)
             let alignedPosition = alignmentOnDepth(dimensions)
             position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
+            if position.depth.isNaN {
+                position.depth = .infinity
+            }
         }
         let point = CGPoint(size: position, axis: axis)
         item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
@@ -325,4 +330,19 @@ private struct SubviewProperties {
     var spacing: Double
     var cache: FlowLayoutCache.SubviewCache
     var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
+}
+
+private extension CGPoint {
+    mutating func replaceNaN(with value: CGFloat) {
+        x.replaceNaN(with: value)
+        y.replaceNaN(with: value)
+    }
+}
+
+private extension CGFloat {
+    mutating func replaceNaN(with value: CGFloat) {
+        if isNaN {
+            self = value
+        }
+    }
 }

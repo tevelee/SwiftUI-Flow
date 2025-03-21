@@ -155,7 +155,7 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
         items[afterLineBreak].element.spacing = 0
     }
     // Handle manual new line modifier
-    let numberOfNewLines = items.count(where: \.element.shouldStartInNewLine)
+    let numberOfNewLines = items.filter(\.element.shouldStartInNewLine).count
     if numberOfNewLines > 1 {
         return nil
     } else if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {

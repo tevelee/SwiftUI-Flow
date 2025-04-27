@@ -9,6 +9,7 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
     var minSize: CGSize
     var idealSize: CGSize
     var maxSize: CGSize
+    var layoutValues: [ObjectIdentifier: Any] = [:]
 
     init(size: CGSize) {
         minSize = size
@@ -20,6 +21,11 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
         self.minSize = minSize
         self.idealSize = idealSize
         self.maxSize = maxSize
+    }
+
+    subscript<K: LayoutValueKey>(key: K.Type) -> K.Value {
+        get { layoutValues[ObjectIdentifier(key)] as? K.Value ?? K.defaultValue }
+        set { layoutValues[ObjectIdentifier(key)] = newValue }
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
@@ -55,6 +61,11 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
 
     var description: String {
         "origin: \((placement?.position.x).map { "\($0)" } ?? "nil")×\((placement?.position.y).map { "\($0)" } ?? "nil"), size: \(idealSize.width)×\(idealSize.height)"
+    }
+
+    func flexibility(_ behavior: FlexibilityBehavior) -> Self {
+        self[FlexibilityLayoutValueKey.self] = behavior
+        return self
     }
 }
 

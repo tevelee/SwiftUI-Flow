@@ -34,7 +34,7 @@ public struct VFlow<Content: View>: View {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - columnSpacing: The distance between adjacent columns, or `nil` if you
     ///     want the flow to choose a default distance for each pair of columns.
-    ///   - justification: Whether the layout should fill the remaining
+    ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
@@ -45,7 +45,7 @@ public struct VFlow<Content: View>: View {
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -54,7 +54,7 @@ public struct VFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
@@ -66,7 +66,7 @@ public struct VFlow<Content: View>: View {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    ///   - justification: Whether the layout should fill the remaining
+    ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
@@ -76,7 +76,7 @@ public struct VFlow<Content: View>: View {
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -84,7 +84,7 @@ public struct VFlow<Content: View>: View {
             alignment: alignment,
             itemSpacing: spacing,
             columnSpacing: spacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             content: contentBuilder
         )
@@ -97,8 +97,8 @@ public struct VFlow<Content: View>: View {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
-    ///     available space in each column by stretching either items or spaces.
+    ///   - justified: Whether the layout should fill the remaining
+    ///     available space in each column by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
@@ -109,7 +109,7 @@ public struct VFlow<Content: View>: View {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
@@ -119,14 +119,18 @@ public struct VFlow<Content: View>: View {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         )
     }
 
+    @usableFromInline
+    @Environment(\.flexibility) var flexibility
+
     public var body: some View {
         layout {
             content
+                .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
         }
     }
 }
@@ -145,7 +149,7 @@ extension VFlow: Layout where Content == EmptyView {
     ///     want the flow to choose a default distance for each pair of subviews.
     ///   - columnSpacing: The distance between adjacent columns, or `nil` if you
     ///     want the flow to choose a default distance for each pair of columns.
-    ///   - justification: Whether the layout should fill the remaining
+    ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
@@ -155,14 +159,14 @@ extension VFlow: Layout where Content == EmptyView {
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
@@ -176,7 +180,7 @@ extension VFlow: Layout where Content == EmptyView {
     ///     guide has the same vertical screen coordinate for every child view.
     ///   - spacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
-    ///   - justification: Whether the layout should fill the remaining
+    ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
@@ -185,13 +189,13 @@ extension VFlow: Layout where Content == EmptyView {
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()
@@ -205,7 +209,7 @@ extension VFlow: Layout where Content == EmptyView {
     ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
-    ///   - justification: Whether the layout should fill the remaining
+    ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching either items or spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
@@ -216,7 +220,7 @@ extension VFlow: Layout where Content == EmptyView {
         verticalAlignment: VerticalAlignment,
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
-        justification: Justification? = nil,
+        justified: Bool = false,
         distributeItemsEvenly: Bool = false
     ) {
         self.init(
@@ -224,7 +228,7 @@ extension VFlow: Layout where Content == EmptyView {
             verticalAlignment: verticalAlignment,
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
-            justification: justification,
+            justified: justified,
             distributeItemsEvenly: distributeItemsEvenly
         ) {
             EmptyView()

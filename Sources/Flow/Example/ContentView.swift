@@ -7,7 +7,7 @@ struct ContentView: View {
     @State private var height: CGFloat = 400
     @State private var itemSpacing: CGFloat? = nil
     @State private var lineSpacing: CGFloat? = nil
-    @State private var justified: Justified = .none
+    @State private var justified: Bool = false
     @State private var horizontalAlignment: HAlignment = .leading
     @State private var verticalAlignment: VAlignment = .top
     @State private var distributeItemsEvenly: Bool = false
@@ -75,7 +75,7 @@ struct ContentView: View {
                     stepper("Line", $lineSpacing)
                 }
                 Section(header: Text("Extras")) {
-                    picker($justified, style: .inline)
+                    Toggle("Justified", isOn: $justified)
                     Toggle("Distibute evenly", isOn: $distributeItemsEvenly.animation())
                 }
             }
@@ -134,7 +134,7 @@ struct ContentView: View {
                     verticalAlignment: verticalAlignment.value,
                     horizontalSpacing: itemSpacing,
                     verticalSpacing: lineSpacing,
-                    justification: justified.justification,
+                    justified: justified,
                     distributeItemsEvenly: distributeItemsEvenly
                 )
             )
@@ -145,7 +145,7 @@ struct ContentView: View {
                     verticalAlignment: verticalAlignment.value,
                     horizontalSpacing: lineSpacing,
                     verticalSpacing: itemSpacing,
-                    justification: justified.justification,
+                    justified: justified,
                     distributeItemsEvenly: distributeItemsEvenly
                 )
             )
@@ -158,24 +158,6 @@ enum Contents: String, CustomStringConvertible, CaseIterable {
     case boxes
 
     var description: String { rawValue }
-}
-
-enum Justified: String, CustomStringConvertible, CaseIterable {
-    case none = "no justification"
-    case stretchItems = "stretch items"
-    case stretchSpaces = "stretch spaces"
-    case stretchItemsAndSpaces = "stretch both"
-
-    var description: String { rawValue }
-
-    var justification: Justification? {
-        switch self {
-            case .none: nil
-            case .stretchItems: .stretchItems
-            case .stretchSpaces: .stretchSpaces
-            case .stretchItemsAndSpaces: .stretchItemsAndSpaces
-        }
-    }
 }
 
 #Preview {

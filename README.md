@@ -99,25 +99,7 @@ HFlow(itemSpacing: 4, rowSpacing: 20) {
 
 ![HFlow](Resources/hflow-spacing.png)
 
-## Justified
-
-Justify by stretching items, the spaces between them, or both.
-
-```swift
-HFlow(justification: .stretchItems) {
-    ForEach(colors, id: \.description) { color in
-        RoundedRectangle(cornerRadius: 10)
-            .fill(color.gradient)
-            .frame(height: 50)
-            .frame(minWidth: 35)
-    }
-}
-.frame(width: 300)
-```
-
-![HFlow](Resources/hflow-justified.png)
-
----
+## Distribute items
 
 Distribute items evenly by minimizing the empty spaces left in each row. 
 Implements the Knuth-Plass line breaking algorithm.
@@ -135,23 +117,94 @@ HFlow(distributeItemsEvenly: true) {
 
 ![HFlow](Resources/hflow-distributed.png)
 
----
-
-Distribute and justify for visually pleasing UI.
+## Justified
 
 ```swift
-HFlow(justification: .stretchItems, distributeItemsEvenly: true) {
+HFlow(justified: true) {
     ForEach(colors, id: \.description) { color in
         RoundedRectangle(cornerRadius: 10)
             .fill(color.gradient)
-            .frame(height: 50)
-            .frame(minWidth: 60)
+            .frame(width: 50, height: 50)
     }
 }
 .frame(width: 300)
 ```
 
-![HFlow](Resources/hflow-justified-and-distributed.png)
+![HFlow](Resources/hflow-justified.png)
+
+## Flexibility
+
+```swift
+HFlow { // distributes flexible items proportionally
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.red)
+        .frame(minWidth: 50, maxWidth: .infinity)
+        .frame(height: 50)
+        .flexibility(.minimum) // takes as little space as possible, rigid
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.green)
+        .frame(minWidth: 50, maxWidth: .infinity)
+        .frame(height: 50)
+        .flexibility(.natural) // expands
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.blue)
+        .frame(minWidth: 50, maxWidth: .infinity)
+        .frame(height: 50)
+        .flexibility(.natural) // expands
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.yellow)
+        .frame(minWidth: 50, maxWidth: .infinity)
+        .frame(height: 50) // takes as much space as possible
+        .flexibility(.maximum)
+}
+.frame(width: 300)
+```
+
+![HFlow](Resources/hflow-flexibility.png)
+
+## Line breaks
+
+```swift
+HFlow {
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.red)
+        .frame(width: 50, height: 50)
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.green)
+        .frame(width: 50, height: 50)
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.blue)
+        .frame(width: 50, height: 50)
+    LineBreak()
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.yellow)
+        .frame(width: 50, height: 50)
+}
+.frame(width: 300)
+```
+
+![HFlow](Resources/hflow-linebreak.png)
+
+```swift
+HFlow {
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.red)
+        .frame(width: 50, height: 50)
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.green)
+        .frame(width: 50, height: 50)
+        .startInNewLine()
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.blue)
+        .frame(width: 50, height: 50)
+    RoundedRectangle(cornerRadius: 10)
+        .fill(.yellow)
+        .frame(width: 50, height: 50)
+}
+.frame(width: 300)
+```
+
+![HFlow](Resources/hflow-newline.png)
 
 ## RTL
 

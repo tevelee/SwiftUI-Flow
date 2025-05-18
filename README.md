@@ -6,6 +6,8 @@ Arranges views in lines and cuts new lines accordingly (if elements don't fit th
 ## HFlow
 
 ```swift
+import Flow
+
 struct Colors: View {
     let colors: [Color] = [
         .blue,

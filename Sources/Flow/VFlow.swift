@@ -139,7 +139,7 @@ extension VFlow: Animatable where Content == EmptyView {
     public typealias AnimatableData = EmptyAnimatableData
 }
 
-extension VFlow: Layout where Content == EmptyView {
+extension VFlow: Layout, Sendable where Content == EmptyView {
     /// Creates a vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:

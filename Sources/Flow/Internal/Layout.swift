@@ -96,9 +96,29 @@ struct FlowLayout: Sendable {
             adjust(&target, for: line, on: .vertical, reversed: reversedDepth) { target in
                 target.breadth = reversedBreadth ? bounds.maximumValue(on: axis) : bounds.minimumValue(on: axis)
                 
+                let isSingleAxisLayout: Bool
+                if let singleAxisThreshold = singleAxisThreshold {
+                    let maxItemDepth = line.item.map { $0.size.depth }.max() ?? 0
+                    isSingleAxisLayout = maxItemDepth <= singleAxisThreshold
+                } else {
+                    isSingleAxisLayout = false
+                }
+                
                 for item in line.item {
                     adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
-                        alignAndPlace(item, in: line, at: target)
+                        if isSingleAxisLayout {
+                            let remainingWidth = (reversedBreadth ? bounds.minimumValue(on: axis) : bounds.maximumValue(on: axis)) - target.breadth
+                            let constrainedBreadth = min(item.size.breadth, remainingWidth)
+                            
+                            var position = target
+                            let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
+                            let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
+                            let point = CGPoint(size: position, axis: axis)
+                            
+                            item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
+                        } else {
+                            alignAndPlace(item, in: line, at: target)
+                        }
                     }
                 }
                 

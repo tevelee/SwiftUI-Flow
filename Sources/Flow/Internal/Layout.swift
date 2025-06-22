@@ -46,17 +46,17 @@ struct FlowLayout: Sendable {
         self.alignmentOnBreadth = alignmentOnBreadth
         self.alignmentOnDepth = alignmentOnDepth
     }
-
+    
     private struct ItemWithSpacing<T> {
         var item: T
         var size: Size
         var leadingSpace: CGFloat = 0
     }
-
+    
     private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
     private typealias Line = [ItemWithSpacing<Item>]
     private typealias Lines = [ItemWithSpacing<Line>]
-
+    
     @usableFromInline
     func sizeThatFits(
         proposal proposedSize: ProposedViewSize,
@@ -64,7 +64,7 @@ struct FlowLayout: Sendable {
         cache: inout FlowLayoutCache
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
-
+        
         let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
         var size = lines
             .map(\.size)
@@ -75,7 +75,7 @@ struct FlowLayout: Sendable {
         }
         return CGSize(size: size, axis: axis)
     }
-
+    
     @usableFromInline
     func placeSubviews(
         in bounds: CGRect,
@@ -84,36 +84,36 @@ struct FlowLayout: Sendable {
         cache: inout FlowLayoutCache
     ) {
         guard !subviews.isEmpty else { return }
-
+        
         var bounds = bounds
         bounds.origin.replaceNaN(with: 0)
         var target = bounds.origin.size(on: axis)
         var reversedBreadth = self.reversedBreadth
-
+        
         let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
-
+        
         for line in lines {
             adjust(&target, for: line, on: .vertical, reversed: reversedDepth) { target in
                 target.breadth = reversedBreadth ? bounds.maximumValue(on: axis) : bounds.minimumValue(on: axis)
-
+                
                 for item in line.item {
                     adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
                         alignAndPlace(item, in: line, at: target)
                     }
                 }
-
+                
                 if alternatingReversedBreadth {
                     reversedBreadth.toggle()
                 }
             }
         }
     }
-
+    
     @usableFromInline
     func makeCache(_ subviews: some Subviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: axis)
     }
-
+    
     private func adjust<T>(
         _ target: inout Size,
         for item: ItemWithSpacing<T>,
@@ -127,7 +127,7 @@ struct FlowLayout: Sendable {
         body(&target)
         target[axis] += reversed ? 0 : size
     }
-
+    
     private func alignAndPlace(
         _ item: Line.Element,
         in line: Lines.Element,
@@ -135,6 +135,22 @@ struct FlowLayout: Sendable {
     ) {
         var position = target
         let lineDepth = line.size.depth
+        
+        if let singleAxisThreshold {
+            let maxItemDepth = line.item.map { $0.size.depth }.max() ?? 0
+            if maxItemDepth <= singleAxisThreshold {
+                let remainingBreadth = line.size.breadth - (position.breadth - target.breadth)
+                let constrainedBreadth = min(item.size.breadth, remainingBreadth)
+                
+                let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
+                let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
+                let point = CGPoint(size: position, axis: axis)
+                
+                item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
+                return
+            }
+        }
+        
         let size = Size(breadth: item.size.breadth, depth: lineDepth)
         let proposedSize = ProposedViewSize(size: size, axis: axis)
         let itemDepth = item.size.depth
@@ -149,7 +165,7 @@ struct FlowLayout: Sendable {
         let point = CGPoint(size: position, axis: axis)
         item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
     }
-
+    
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
@@ -197,12 +213,12 @@ struct FlowLayout: Sendable {
         } else {
             FlowLineBreaker()
         }
-
+        
         let wrapped = lineBreaker.wrapItemsToLines(
             items: items,
             in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
         )
-
+        
         var lines: Lines = wrapped.map { line in
             let items = line.map { item in
                 Line.Element(
@@ -223,9 +239,9 @@ struct FlowLayout: Sendable {
                 leadingSpace: 0
             )
         }
-
+        
         // TODO: account for manual line breaks
-
+        
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
@@ -245,20 +261,11 @@ struct FlowLayout: Sendable {
                 : 0
             )
             
-            let availableWidth = proposedSize.value(on: axis)
-            let totalSpacing = CGFloat(subviews.count - 1) * spacing
-            let maxItemWidth = max(0, (availableWidth - totalSpacing) / CGFloat(subviews.count))
-            
-            let constrainedWidth = min(subviewCache.ideal.breadth, maxItemWidth)
-            
-            let constrainedProposal = ProposedViewSize(
-                size: Size(breadth: constrainedWidth, depth: .infinity),
-                axis: axis
-            )
+            let itemSize = subview.sizeThatFits(proposedSize).size(on: axis)
             
             return Line.Element(
                 item: (subview: subview, cache: subviewCache),
-                size: subview.sizeThatFits(constrainedProposal).size(on: axis),
+                size: itemSize,
                 leadingSpace: offset == 0 ? 0 : spacing
             )
         }
@@ -276,7 +283,7 @@ struct FlowLayout: Sendable {
             leadingSpace: 0
         )]
     }
-
+    
     private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
         guard justified else { return }
         for (lineIndex, line) in lines.enumerated() {
@@ -288,7 +295,7 @@ struct FlowLayout: Sendable {
             }
         }
     }
-
+    
     private func updateLineSpacings(in lines: inout Lines) {
         if let lineSpacing {
             for index in lines.indices.dropFirst() {
@@ -308,14 +315,14 @@ struct FlowLayout: Sendable {
             lines[index].leadingSpace = 0
         }
     }
-
+    
     private func updateAlignment(in lines: inout Lines) {
         let breadth = lines.map { $0.item.sum { $0.leadingSpace + $0.size.breadth } }.max() ?? 0
         for index in lines.indices where !lines[index].item.isEmpty {
             lines[index].item[0].leadingSpace += determineLeadingSpace(in: lines[index], breadth: breadth)
         }
     }
-
+    
     private func determineLeadingSpace(in line: Lines.Element, breadth: CGFloat) -> CGFloat {
         guard let item = line.item.first(where: { $0.item.cache.ideal.breadth > 0 })?.item else { return 0 }
         let lineSize = line.item.sum { $0.leadingSpace + $0.size.breadth }

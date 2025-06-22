@@ -106,30 +106,13 @@ struct FlowLayout: Sendable {
                 
                 for item in line.item {
                     adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
-                        if isSingleAxisLayout {
-                            let remainingWidth = (reversedBreadth ? bounds.minimumValue(on: axis) : bounds.maximumValue(on: axis)) - target.breadth
-                                let constrainedBreadth = min(item.size.breadth, remainingWidth)
-                                
-                                var position = target
-                                let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
-                                let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
-                                
-                                let lineDepth = line.size.depth
-                                let itemDepth = item.size.depth
-                                if itemDepth > 0 {
-                                    let dimensions = item.item.subview.dimensions(proposedSize)
-                                    let alignedPosition = alignmentOnDepth(dimensions)
-                                    position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
-                                    if position.depth.isNaN {
-                                        position.depth = .infinity
-                                    }
-                                }
-                                
-                                let point = CGPoint(size: position, axis: axis)
-                                item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
-                        } else {
-                            alignAndPlace(item, in: line, at: target)
-                        }
+                        alignAndPlace(
+                            item,
+                            in: line,
+                            at: target,
+                            bounds: bounds,
+                            isSingleAxisLayout: isSingleAxisLayout
+                        )
                     }
                 }
                 
@@ -162,29 +145,29 @@ struct FlowLayout: Sendable {
     private func alignAndPlace(
         _ item: Line.Element,
         in line: Lines.Element,
-        at target: Size
+        at target: Size,
+        bounds: CGRect,
+        isSingleAxisLayout: Bool
     ) {
         var position = target
         let lineDepth = line.size.depth
+        let itemDepth = item.size.depth
         
-        if let singleAxisThreshold {
-            let maxItemDepth = line.item.map { $0.size.depth }.max() ?? 0
-            if maxItemDepth <= singleAxisThreshold {
-                let remainingBreadth = line.size.breadth - (position.breadth - target.breadth)
-                let constrainedBreadth = min(item.size.breadth, remainingBreadth)
-                
-                let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
-                let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
-                let point = CGPoint(size: position, axis: axis)
-                
-                item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
-                return
-            }
+        let proposedSize: ProposedViewSize
+        
+        if isSingleAxisLayout {
+            // Single-axis layout: constrain breadth to available space
+            let remainingWidth = bounds.maximumValue(on: axis) - target.breadth
+            let constrainedBreadth = min(item.size.breadth, remainingWidth)
+            let size = Size(breadth: constrainedBreadth, depth: itemDepth)
+            proposedSize = ProposedViewSize(size: size, axis: axis)
+        } else {
+            // Normal flow layout: use full line depth
+            let size = Size(breadth: item.size.breadth, depth: lineDepth)
+            proposedSize = ProposedViewSize(size: size, axis: axis)
         }
         
-        let size = Size(breadth: item.size.breadth, depth: lineDepth)
-        let proposedSize = ProposedViewSize(size: size, axis: axis)
-        let itemDepth = item.size.depth
+        // Apply alignment calculation for both modes
         if itemDepth > 0 {
             let dimensions = item.item.subview.dimensions(proposedSize)
             let alignedPosition = alignmentOnDepth(dimensions)
@@ -193,6 +176,7 @@ struct FlowLayout: Sendable {
                 position.depth = .infinity
             }
         }
+        
         let point = CGPoint(size: position, axis: axis)
         item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
     }

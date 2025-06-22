@@ -245,16 +245,14 @@ struct FlowLayout: Sendable {
                 : 0
             )
             
-            let availableDepth = proposedSize.value(on: axis) - CGFloat(subviews.count - 1) * (spacing)
-            let maxItemDepth = availableDepth / CGFloat(subviews.count)
-            let constrainedProposal = ProposedViewSize(
-                size: Size(breadth: maxItemDepth, depth: .infinity),
+            let idealProposal = ProposedViewSize(
+                size: Size(breadth: subviewCache.ideal.breadth, depth: .infinity),
                 axis: axis
             )
             
             return Line.Element(
                 item: (subview: subview, cache: subviewCache),
-                size: subview.sizeThatFits(constrainedProposal).size(on: axis),
+                size: subview.sizeThatFits(idealProposal).size(on: axis),
                 leadingSpace: offset == 0 ? 0 : spacing
             )
         }

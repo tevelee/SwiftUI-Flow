@@ -108,14 +108,25 @@ struct FlowLayout: Sendable {
                     adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
                         if isSingleAxisLayout {
                             let remainingWidth = (reversedBreadth ? bounds.minimumValue(on: axis) : bounds.maximumValue(on: axis)) - target.breadth
-                            let constrainedBreadth = min(item.size.breadth, remainingWidth)
-                            
-                            var position = target
-                            let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
-                            let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
-                            let point = CGPoint(size: position, axis: axis)
-                            
-                            item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
+                                let constrainedBreadth = min(item.size.breadth, remainingWidth)
+                                
+                                var position = target
+                                let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
+                                let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
+                                
+                                let lineDepth = line.size.depth
+                                let itemDepth = item.size.depth
+                                if itemDepth > 0 {
+                                    let dimensions = item.item.subview.dimensions(proposedSize)
+                                    let alignedPosition = alignmentOnDepth(dimensions)
+                                    position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
+                                    if position.depth.isNaN {
+                                        position.depth = .infinity
+                                    }
+                                }
+                                
+                                let point = CGPoint(size: position, axis: axis)
+                                item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
                         } else {
                             alignAndPlace(item, in: line, at: target)
                         }

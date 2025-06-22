@@ -20,13 +20,15 @@ public struct VFlowLayout {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil
     ) {
         self.init(
             horizontalAlignment: alignment,
@@ -34,7 +36,8 @@ public struct VFlowLayout {
             horizontalSpacing: columnSpacing,
             verticalSpacing: itemSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         )
     }
 
@@ -50,7 +53,7 @@ public struct VFlowLayout {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
-    ///   - content: A view builder that creates the content of this flow.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
@@ -58,7 +61,8 @@ public struct VFlowLayout {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil
     ) {
         layout = .vertical(
             horizontalAlignment: horizontalAlignment,
@@ -66,7 +70,8 @@ public struct VFlowLayout {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            singleAxisThreshold: maxWidthForSingleColumn
         )
     }
 }

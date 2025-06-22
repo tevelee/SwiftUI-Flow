@@ -39,6 +39,7 @@ public struct VFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     ///   - content: A view builder that creates the content of this flow.
     @inlinable
     public init(
@@ -47,6 +48,7 @@ public struct VFlow<Content: View>: View {
         columnSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -55,7 +57,8 @@ public struct VFlow<Content: View>: View {
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         )
     }
 
@@ -71,6 +74,7 @@ public struct VFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     ///   - content: A view builder that creates the content of this flow.
     @inlinable
     public init(
@@ -78,6 +82,7 @@ public struct VFlow<Content: View>: View {
         spacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         self.init(
@@ -86,6 +91,7 @@ public struct VFlow<Content: View>: View {
             columnSpacing: spacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn,
             content: contentBuilder
         )
     }
@@ -102,6 +108,7 @@ public struct VFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     ///   - content: A view builder that creates the content of this flow.
     @inlinable
     public init(
@@ -111,6 +118,7 @@ public struct VFlow<Content: View>: View {
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -120,7 +128,8 @@ public struct VFlow<Content: View>: View {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         )
     }
 
@@ -154,20 +163,23 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         columnSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             columnSpacing: columnSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         ) {
             EmptyView()
         }
@@ -185,18 +197,21 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         ) {
             EmptyView()
         }
@@ -210,10 +225,11 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
     ///   - justified: Whether the layout should fill the remaining
-    ///     available space in each column by stretching either items or spaces.
+    ///     available space in each column by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
+    ///   - maxWidthForSingleColumn: Maximum width threshold for forcing single column layout.
     @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
@@ -221,7 +237,8 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxWidthForSingleColumn: CGFloat? = nil
     ) {
         self.init(
             horizontalAlignment: horizontalAlignment,
@@ -229,7 +246,8 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxWidthForSingleColumn: maxWidthForSingleColumn
         ) {
             EmptyView()
         }

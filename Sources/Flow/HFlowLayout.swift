@@ -18,13 +18,15 @@ public struct HFlowLayout: Sendable {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil
     ) {
         self.init(
             horizontalAlignment: .leading,
@@ -32,7 +34,8 @@ public struct HFlowLayout: Sendable {
             horizontalSpacing: itemSpacing,
             verticalSpacing: rowSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         )
     }
 
@@ -48,6 +51,7 @@ public struct HFlowLayout: Sendable {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
@@ -55,7 +59,8 @@ public struct HFlowLayout: Sendable {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil
     ) {
         layout = .horizontal(
             horizontalAlignment: horizontalAlignment,
@@ -63,7 +68,8 @@ public struct HFlowLayout: Sendable {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            singleAxisThreshold: maxHeightForSingleRow
         )
     }
 }

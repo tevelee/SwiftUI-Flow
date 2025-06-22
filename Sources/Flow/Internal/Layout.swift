@@ -20,10 +20,12 @@ struct FlowLayout: Sendable {
     @usableFromInline
     let distributeItemsEvenly: Bool
     @usableFromInline
+    let singleAxisThreshold: CGFloat?
+    @usableFromInline
     let alignmentOnBreadth: @Sendable (any Dimensions) -> CGFloat
     @usableFromInline
     let alignmentOnDepth: @Sendable (any Dimensions) -> CGFloat
-
+    
     @inlinable
     init(
         axis: Axis,
@@ -31,6 +33,7 @@ struct FlowLayout: Sendable {
         lineSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        singleAxisThreshold: CGFloat? = nil,
         alignmentOnBreadth: @escaping @Sendable (any Dimensions) -> CGFloat,
         alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat
     ) {
@@ -39,6 +42,7 @@ struct FlowLayout: Sendable {
         self.lineSpacing = lineSpacing
         self.justified = justified
         self.distributeItemsEvenly = distributeItemsEvenly
+        self.singleAxisThreshold = singleAxisThreshold
         self.alignmentOnBreadth = alignmentOnBreadth
         self.alignmentOnDepth = alignmentOnDepth
     }
@@ -151,6 +155,20 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> Lines {
+        if let singleAxisThreshold {
+            let maxItemDepth = subviews.enumerated().map { offset, subview in
+                cache.subviewsCache[offset].ideal.depth
+            }.max() ?? 0
+            
+            if maxItemDepth <= singleAxisThreshold {
+                return createSingleAxisLayout(
+                    in: proposedSize,
+                    of: subviews,
+                    cache: cache
+                )
+            }
+        }
+        
         let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
             let size: ClosedRange<CGFloat>
             let subviewCache = cache.subviewsCache[offset]
@@ -173,7 +191,7 @@ struct FlowLayout: Sendable {
                 shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
             )
         }
-
+        
         let lineBreaker: any LineBreaking = if distributeItemsEvenly {
             KnuthPlassLineBreaker()
         } else {
@@ -212,6 +230,45 @@ struct FlowLayout: Sendable {
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
         return lines
+    }
+    
+    private func createSingleAxisLayout(
+        in proposedSize: ProposedViewSize,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache
+    ) -> Lines {
+        let items = subviews.enumerated().map { offset, subview in
+            let subviewCache = cache.subviewsCache[offset]
+            let spacing = itemSpacing ?? (
+                offset > cache.subviewsCache.startIndex
+                ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
+                : 0
+            )
+            
+            let availableDepth = proposedSize.value(on: axis) - CGFloat(subviews.count - 1) * (spacing)
+            let maxItemDepth = availableDepth / CGFloat(subviews.count)
+            let constrainedProposal = ProposedViewSize(
+                size: Size(breadth: maxItemDepth, depth: .infinity),
+                axis: axis
+            )
+            
+            return Line.Element(
+                item: (subview: subview, cache: subviewCache),
+                size: subview.sizeThatFits(constrainedProposal).size(on: axis),
+                leadingSpace: offset == 0 ? 0 : spacing
+            )
+        }
+        
+        var size = items
+            .map(\.size)
+            .reduce(.zero, breadth: +, depth: max)
+        size.breadth += items.sum(of: \.leadingSpace)
+        
+        return [Lines.Element(
+            item: items,
+            size: size,
+            leadingSpace: 0
+        )]
     }
 
     private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
@@ -267,7 +324,7 @@ extension FlowLayout: Layout {
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)
     }
-
+    
     @inlinable
     static func vertical(
         horizontalAlignment: HorizontalAlignment = .center,
@@ -275,7 +332,8 @@ extension FlowLayout: Layout {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        singleAxisThreshold: CGFloat? = nil
     ) -> FlowLayout {
         self.init(
             axis: .vertical,
@@ -283,11 +341,12 @@ extension FlowLayout: Layout {
             lineSpacing: horizontalSpacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
+            singleAxisThreshold: singleAxisThreshold,
             alignmentOnBreadth: { $0[verticalAlignment] },
             alignmentOnDepth: { $0[horizontalAlignment] }
         )
     }
-
+    
     @inlinable
     static func horizontal(
         horizontalAlignment: HorizontalAlignment = .leading,
@@ -295,7 +354,8 @@ extension FlowLayout: Layout {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        singleAxisThreshold: CGFloat? = nil
     ) -> FlowLayout {
         self.init(
             axis: .horizontal,
@@ -303,6 +363,7 @@ extension FlowLayout: Layout {
             lineSpacing: verticalSpacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
+            singleAxisThreshold: singleAxisThreshold,
             alignmentOnBreadth: { $0[horizontalAlignment] },
             alignmentOnDepth: { $0[verticalAlignment] }
         )

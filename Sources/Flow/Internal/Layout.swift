@@ -156,18 +156,15 @@ struct FlowLayout: Sendable {
         let proposedSize: ProposedViewSize
         
         if isSingleAxisLayout {
-            // Single-axis layout: constrain breadth to available space
             let remainingWidth = bounds.maximumValue(on: axis) - target.breadth
             let constrainedBreadth = min(item.size.breadth, remainingWidth)
             let size = Size(breadth: constrainedBreadth, depth: itemDepth)
             proposedSize = ProposedViewSize(size: size, axis: axis)
         } else {
-            // Normal flow layout: use full line depth
             let size = Size(breadth: item.size.breadth, depth: lineDepth)
             proposedSize = ProposedViewSize(size: size, axis: axis)
         }
         
-        // Apply alignment calculation for both modes
         if itemDepth > 0 {
             let dimensions = item.item.subview.dimensions(proposedSize)
             let alignedPosition = alignmentOnDepth(dimensions)

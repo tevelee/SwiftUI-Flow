@@ -245,14 +245,20 @@ struct FlowLayout: Sendable {
                 : 0
             )
             
-            let idealProposal = ProposedViewSize(
-                size: Size(breadth: subviewCache.ideal.breadth, depth: .infinity),
+            let availableWidth = proposedSize.value(on: axis)
+            let totalSpacing = CGFloat(subviews.count - 1) * spacing
+            let maxItemWidth = max(0, (availableWidth - totalSpacing) / CGFloat(subviews.count))
+            
+            let constrainedWidth = min(subviewCache.ideal.breadth, maxItemWidth)
+            
+            let constrainedProposal = ProposedViewSize(
+                size: Size(breadth: constrainedWidth, depth: .infinity),
                 axis: axis
             )
             
             return Line.Element(
                 item: (subview: subview, cache: subviewCache),
-                size: subview.sizeThatFits(idealProposal).size(on: axis),
+                size: subview.sizeThatFits(constrainedProposal).size(on: axis),
                 leadingSpace: offset == 0 ? 0 : spacing
             )
         }
@@ -261,6 +267,8 @@ struct FlowLayout: Sendable {
             .map(\.size)
             .reduce(.zero, breadth: +, depth: max)
         size.breadth += items.sum(of: \.leadingSpace)
+        
+        size.breadth = min(size.breadth, proposedSize.value(on: axis))
         
         return [Lines.Element(
             item: items,

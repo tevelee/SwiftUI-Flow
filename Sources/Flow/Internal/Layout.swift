@@ -108,32 +108,25 @@ struct FlowLayout: Sendable {
                     adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
                         if isSingleAxisLayout {
                             let remainingWidth = (reversedBreadth ? bounds.minimumValue(on: axis) : bounds.maximumValue(on: axis)) - target.breadth
-                            let constrainedBreadth = min(item.size.breadth, remainingWidth)
-                            
-                            var position = target
-                            
-                            // ✅ Line depth'i hesapla (normal flow'daki gibi)
-                            let lineDepth = line.size.depth
-                            let itemDepth = item.size.depth
-                            
-                            // ✅ Alignment hesapla (alignAndPlace'teki kod)
-                            if itemDepth > 0 {
-                                let size = Size(breadth: constrainedBreadth, depth: lineDepth)
-                                let proposedSize = ProposedViewSize(size: size, axis: axis)
-                                let dimensions = item.item.subview.dimensions(proposedSize)
-                                let alignedPosition = alignmentOnDepth(dimensions)
-                                position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
-                                if position.depth.isNaN {
-                                    position.depth = .infinity
+                                let constrainedBreadth = min(item.size.breadth, remainingWidth)
+                                
+                                var position = target
+                                let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
+                                let proposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
+                                
+                                let lineDepth = line.size.depth
+                                let itemDepth = item.size.depth
+                                if itemDepth > 0 {
+                                    let dimensions = item.item.subview.dimensions(proposedSize)
+                                    let alignedPosition = alignmentOnDepth(dimensions)
+                                    position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
+                                    if position.depth.isNaN {
+                                        position.depth = .infinity
+                                    }
                                 }
-                            }
-                            
-                            // ✅ Final placement
-                            let constrainedSize = Size(breadth: constrainedBreadth, depth: item.size.depth)
-                            let finalProposedSize = ProposedViewSize(size: constrainedSize, axis: axis)
-                            let point = CGPoint(size: position, axis: axis)
-                            
-                            item.item.subview.place(at: point, anchor: .topLeading, proposal: finalProposedSize)
+                                
+                                let point = CGPoint(size: position, axis: axis)
+                                item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
                         } else {
                             alignAndPlace(item, in: line, at: target)
                         }

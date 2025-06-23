@@ -152,13 +152,15 @@ struct FlowLayout: Sendable {
         cache: FlowLayoutCache
     ) -> Lines {
         let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
-            let size: ClosedRange<CGFloat>
+            let minValue: CGFloat
             let subviewCache = cache.subviewsCache[offset]
             if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
-                size = subviewCache.ideal.breadth ... subviewCache.max.breadth
+                minValue = subviewCache.ideal.breadth
             } else {
-                size = subview.sizeThatFits(proposedSize).value(on: axis) ... subviewCache.max.breadth
+                minValue = subview.sizeThatFits(proposedSize).value(on: axis)
             }
+            let maxValue = subviewCache.max.breadth
+            let size = min(minValue, maxValue) ... max(minValue, maxValue)
             let spacing = itemSpacing ?? (
                 offset > cache.subviewsCache.startIndex
                 ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)

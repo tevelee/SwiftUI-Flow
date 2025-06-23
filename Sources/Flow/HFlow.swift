@@ -20,7 +20,7 @@ import SwiftUI
 ///
 @frozen
 public struct HFlow<Content: View>: View {
-    @usableFromInline 
+    @usableFromInline
     let layout: HFlowLayout
     @usableFromInline
     let content: Content
@@ -39,14 +39,16 @@ public struct HFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     ///   - content: A view builder that creates the content of this flow.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -55,7 +57,8 @@ public struct HFlow<Content: View>: View {
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         )
     }
 
@@ -71,13 +74,15 @@ public struct HFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     ///   - content: A view builder that creates the content of this flow.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         self.init(
@@ -86,6 +91,7 @@ public struct HFlow<Content: View>: View {
             rowSpacing: spacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow,
             content: contentBuilder
         )
     }
@@ -102,6 +108,7 @@ public struct HFlow<Content: View>: View {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     ///   - content: A view builder that creates the content of this flow.
     @inlinable
     public init(
@@ -111,6 +118,7 @@ public struct HFlow<Content: View>: View {
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil,
         @ViewBuilder content contentBuilder: () -> Content
     ) {
         content = contentBuilder()
@@ -120,14 +128,15 @@ public struct HFlow<Content: View>: View {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         )
     }
 
     @usableFromInline
     @Environment(\.flexibility) var flexibility
 
-    @inlinable 
+    @inlinable
     public var body: some View {
         layout {
             content
@@ -155,20 +164,23 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable 
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
         rowSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil
     ) {
         self.init(
             alignment: alignment,
             itemSpacing: itemSpacing,
             rowSpacing: rowSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         ) {
             EmptyView()
         }
@@ -186,18 +198,21 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable 
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil
     ) {
         self.init(
             alignment: alignment,
             spacing: spacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         ) {
             EmptyView()
         }
@@ -215,6 +230,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
+    ///   - maxHeightForSingleRow: Maximum height threshold for forcing single row layout.
     @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
@@ -222,7 +238,8 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxHeightForSingleRow: CGFloat? = nil
     ) {
         self.init(
             horizontalAlignment: horizontalAlignment,
@@ -230,13 +247,14 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
             horizontalSpacing: horizontalSpacing,
             verticalSpacing: verticalSpacing,
             justified: justified,
-            distributeItemsEvenly: distributeItemsEvenly
+            distributeItemsEvenly: distributeItemsEvenly,
+            maxHeightForSingleRow: maxHeightForSingleRow
         ) {
             EmptyView()
         }
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
@@ -249,7 +267,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         )
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -269,7 +287,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public static var layoutProperties: LayoutProperties {
         HFlowLayout.layoutProperties
     }

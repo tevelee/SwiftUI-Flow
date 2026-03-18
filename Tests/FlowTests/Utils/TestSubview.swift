@@ -160,6 +160,36 @@ func render(_ layout: LayoutDescription, border: Bool = true) -> String {
     return result.trimmingCharacters(in: .newlines)
 }
 
+func labeledRender(_ layout: LayoutDescription) -> String {
+    let width = Int(layout.reportedSize.width)
+    let height = Int(layout.reportedSize.height)
+    guard width > 0 && height > 0 else { return "(empty)" }
+
+    let labels: [Character] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+    var grid = Array(repeating: Array(repeating: Character(" "), count: width), count: height)
+
+    for (i, view) in layout.subviews.enumerated() {
+        guard let placement = view.placement else { continue }
+        let label = labels[i % labels.count]
+        let x0 = Int(placement.position.x)
+        let y0 = Int(placement.position.y)
+        let w = Int(placement.size.width)
+        let h = Int(placement.size.height)
+        for y in y0..<(y0 + h) where y >= 0 && y < height {
+            for x in x0..<(x0 + w) where x >= 0 && x < width {
+                grid[y][x] = label
+            }
+        }
+    }
+
+    var result = "+" + String(repeating: "-", count: width) + "+\n"
+    for y in 0..<height {
+        result += "|" + String(grid[y]) + "|\n"
+    }
+    result += "+" + String(repeating: "-", count: width) + "+"
+    return result
+}
+
 private struct TestDimensions: Dimensions {
     let width, height: CGFloat
 

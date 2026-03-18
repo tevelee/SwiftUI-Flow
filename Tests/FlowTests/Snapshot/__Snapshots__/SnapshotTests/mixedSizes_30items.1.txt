@@ -1,0 +1,25 @@
++-------------------+
+|  BB CCC      EEEEE|
+|A BB CCC DDDD EEEEE|
+|     CCC           |
+|                   |
+|F    HHH IIII      |
+|F GG HHH IIII JJJJJ|
+|F        IIII      |
+|                   |
+|K LL     NNNN OOOOO|
+|K LL MMM NNNN OOOOO|
+|  LL          OOOOO|
+|                   |
+|  QQ RRR      TTTTT|
+|P QQ RRR SSSS TTTTT|
+|     RRR           |
+|                   |
+|U    WWW XXXX      |
+|U VV WWW XXXX YYYYY|
+|U        XXXX      |
+|                   |
+|Z aa     cccc ddddd|
+|Z aa bbb cccc ddddd|
+|  aa          ddddd|
++-------------------+

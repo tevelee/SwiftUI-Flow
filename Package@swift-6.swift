@@ -14,6 +14,9 @@ let package = Package(
     products: [
         .library(name: "Flow", targets: ["Flow"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.0")
+    ],
     targets: [
         .target(
             name: "Flow",
@@ -25,7 +28,11 @@ let package = Package(
         ),
         .testTarget(
             name: "FlowTests",
-            dependencies: ["Flow"],
+            dependencies: [
+                "Flow",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+                .product(name: "InlineSnapshotTesting", package: "swift-snapshot-testing")
+            ],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
                 .swiftLanguageMode(.v6)

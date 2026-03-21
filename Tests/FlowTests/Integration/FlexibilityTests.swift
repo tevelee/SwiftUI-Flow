@@ -126,4 +126,22 @@ struct FlexibilityTests {
         +--------+
         """)
     }
+
+    @Test func VFlow_flexible_minimum() {
+        // With minimum flexibility, item2 stays at height 1 even with remaining space in column
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 1)
+        let result = sut.layout([1×1, 1×1, (1×1...1×5).flexibility(.minimum), 1×1, 1×1], in: 2×8)
+        #expect(render(result) == """
+        +--+
+        |XX|
+        |  |
+        |X |
+        |  |
+        |X |
+        |  |
+        |X |
+        |  |
+        +--+
+        """)
+    }
 }

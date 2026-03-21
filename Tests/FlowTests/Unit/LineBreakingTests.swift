@@ -1,3 +1,4 @@
+import CoreFoundation
 import Testing
 @testable import Flow
 
@@ -176,6 +177,58 @@ struct LineBreakingTests {
             [.init(index: 0, size: 20, leadingSpace: 0)],
             [.init(index: 1, size: 20, leadingSpace: 0)]
         ])
+    }
+
+    @Test func knuth_plass_vs_flow_balancedLines() {
+        let items: [LineItemInput] = [
+            .init(size: .rigid(30), spacing: 0),
+            .init(size: .rigid(30), spacing: 10),
+            .init(size: .rigid(30), spacing: 10),
+            .init(size: .rigid(30), spacing: 10),
+            .init(size: .rigid(30), spacing: 10)
+        ]
+
+        let flow = FlowLineBreaker().wrapItemsToLines(items: items, in: 80)
+        let knuth = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 80)
+
+        // Both should produce valid line breaks
+        #expect(!flow.isEmpty)
+        #expect(!knuth.isEmpty)
+
+        // Knuth-Plass should produce more balanced lines
+        func lineWidth(_ line: [LineItemOutput]) -> CGFloat {
+            line.reduce(CGFloat(0)) { $0 + $1.size + $1.leadingSpace }
+        }
+        let flowWidths = flow.map(lineWidth)
+        let knuthWidths = knuth.map(lineWidth)
+
+        let flowImbalance = (flowWidths.max() ?? 0) - (flowWidths.min() ?? 0)
+        let knuthImbalance = (knuthWidths.max() ?? 0) - (knuthWidths.min() ?? 0)
+
+        #expect(knuthImbalance <= flowImbalance, "Knuth-Plass should produce more balanced or equal lines")
+    }
+
+    @Test func knuth_plass_multipleFlexItems() {
+        let sut = KnuthPlassLineBreaker()
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: 20...40, spacing: 0),
+            .init(size: 20...40, spacing: 10),
+            .init(size: 20...40, spacing: 10)
+        ], in: 80)
+        #expect(!result.isEmpty)
+        // All items should fit on one line since they're flexible
+        #expect(result.count == 1)
+    }
+
+    @Test func knuth_plass_newLine_withFlex() {
+        let sut = KnuthPlassLineBreaker()
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: .rigid(30), spacing: 0),
+            .init(size: 20...60, spacing: 10, shouldStartInNewLine: true)
+        ], in: 100)
+        #expect(result.count == 2, "shouldStartInNewLine should force a new line")
+        #expect(result[0].count == 1)
+        #expect(result[1].count == 1)
     }
 }
 

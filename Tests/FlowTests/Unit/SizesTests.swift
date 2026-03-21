@@ -143,6 +143,50 @@ struct SizesTests {
         #expect(result?.items[2].size == 20)
         #expect(result?.remainingSpace == 0)
     }
+
+    @Test func allFlexible_evenSplit() {
+        let items = indexed([
+            LineItemInput(size: 10...50, spacing: 0, flexibility: .natural),
+            LineItemInput(size: 10...50, spacing: 10, flexibility: .natural)
+        ])
+        let result = sizes(of: items, availableSpace: 70)
+        #expect(result?.items[0].size == 30)
+        #expect(result?.items[1].size == 30)
+        #expect(result?.remainingSpace == 0)
+    }
+
+    @Test func threePriorityLevels() {
+        let items = indexed([
+            LineItemInput(size: 10...40, spacing: 0, priority: 2, flexibility: .natural),
+            LineItemInput(size: 10...40, spacing: 10, priority: 1, flexibility: .natural),
+            LineItemInput(size: 10...40, spacing: 10, priority: 0, flexibility: .natural)
+        ])
+        let result = sizes(of: items, availableSpace: 100)
+        #expect(result != nil)
+        // Higher priority should get more space
+        #expect(result!.items[0].size >= result!.items[1].size, "Priority 2 should get >= priority 1")
+        #expect(result!.items[1].size >= result!.items[2].size, "Priority 1 should get >= priority 0")
+    }
+
+    @Test func maximumFlexAloneOnLine() {
+        let items = indexed([
+            LineItemInput(size: 10...100, spacing: 0, flexibility: .maximum)
+        ])
+        let result = sizes(of: items, availableSpace: 80)
+        #expect(result?.items[0].size == 80)
+        #expect(result?.remainingSpace == 0)
+    }
+
+    @Test func zeroSpacingItems() {
+        let items = indexed([
+            LineItemInput(size: 20...20, spacing: 0),
+            LineItemInput(size: 20...20, spacing: 0),
+            LineItemInput(size: 20...20, spacing: 0)
+        ])
+        let result = sizes(of: items, availableSpace: 60)
+        #expect(result?.remainingSpace == 0)
+        #expect(result?.items.count == 3)
+    }
 }
 
 private func indexed(_ items: [LineItemInput]) -> IndexedLineBreakingInput {

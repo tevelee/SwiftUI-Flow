@@ -280,4 +280,124 @@ struct FlowTests {
         +--------+
         """)
     }
+
+    @Test func VFlow_size_justified() {
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0, justified: true)
+        let size = sut.sizeThatFits(proposal: 1000×1000, subviews: [50×50, 50×50])
+        #expect(size == (50×1000 as CGSize))
+    }
+
+    @Test func VFlow_layout_top_and_leading() {
+        // Items [3×3, 1×3, 1×1] create 2 columns: col1(width 3, items 0,1), col2(width 1, item 2)
+        // horizontalAlignment .leading: narrow item1 aligned left within col1
+        // verticalAlignment .top: short col2 starts at top
+        let sut: FlowLayout = .vertical(horizontalAlignment: .leading, verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 1)
+        let result = sut.layout([3×3, 1×3, 1×1], in: 5×7)
+        #expect(render(result) == """
+        +-----+
+        |XXX X|
+        |XXX  |
+        |XXX  |
+        |     |
+        |X    |
+        |X    |
+        |X    |
+        +-----+
+        """)
+    }
+
+    @Test func VFlow_layout_top_and_center() {
+        // center horizontalAlignment: item1 (width 1) centered within col1 (width 3) → x offset 1
+        // center verticalAlignment: col2 (height 1) centered in overall height 7 → y offset 3
+        let sut: FlowLayout = .vertical(horizontalAlignment: .center, verticalAlignment: .center, horizontalSpacing: 1, verticalSpacing: 1)
+        let result = sut.layout([3×3, 1×3, 1×1], in: 5×7)
+        #expect(render(result) == """
+        +-----+
+        |XXX  |
+        |XXX  |
+        |XXX  |
+        |    X|
+        | X   |
+        | X   |
+        | X   |
+        +-----+
+        """)
+    }
+
+    @Test func VFlow_layout_top_and_trailing() {
+        let sut: FlowLayout = .vertical(horizontalAlignment: .trailing, verticalAlignment: .bottom, horizontalSpacing: 1, verticalSpacing: 1)
+        let result = sut.layout([3×3, 1×3, 1×1], in: 5×7)
+        #expect(render(result) == """
+        +-----+
+        |XXX  |
+        |XXX  |
+        |XXX  |
+        |     |
+        |  X  |
+        |  X  |
+        |  X X|
+        +-----+
+        """)
+    }
+
+    @Test func VFlow_distributed() {
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 1, distributeItemsEvenly: true)
+        let result = sut.layout(repeated(1×1, times: 7), in: 3×5)
+        #expect(render(result) == """
+        +---+
+        |XXX|
+        |   |
+        |XXX|
+        |   |
+        |X  |
+        +---+
+        """)
+    }
+
+    @Test func VFlow_text() {
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 1)
+        let result = sut.layout([WrappingText(size: 1×6), 1×1, 1×1, 1×1], in: 3×5)
+        #expect(render(result) == """
+        +---+
+        |XXX|
+        |XX |
+        |XXX|
+        |XX |
+        |XXX|
+        +---+
+        """)
+    }
+
+    @Test func VFlow_flexible() {
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 1)
+        let result = sut.layout([1×1, 1×1, 1×1...1×10, 1×1, 1×1], in: 2×6)
+        #expect(render(result) == """
+        +--+
+        |XX|
+        |  |
+        |XX|
+        |  |
+        |X |
+        |X |
+        +--+
+        """)
+    }
+
+    @Test func VFlow_flexible_minimum() {
+        // With minimum flexibility, the flex item stays at min size (1), allowing 4 items in column 1
+        // Compare with VFlow_flexible where the flex item grows, causing only 3 items in column 1
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 1)
+        let result = sut.layout([1×1, 1×1, (1×1...1×10).flexibility(.minimum), 1×1, 1×1], in: 2×7)
+        #expect(render(result) == """
+        +--+
+        |XX|
+        |  |
+        |X |
+        |  |
+        |X |
+        |  |
+        |X |
+        +--+
+        """)
+    }
 }

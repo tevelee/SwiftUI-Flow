@@ -35,7 +35,7 @@ struct Colors: View {
 }
 ```
 
-![HFlow](Resources/hflow.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow.1.png)
 
 ## VFlow
 
@@ -50,7 +50,7 @@ VFlow {
 .frame(maxHeight: 300)
 ```
 
-![VFlow](Resources/vflow.png)
+![VFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/vflow.1.png)
 
 ## Alignment
 
@@ -67,7 +67,7 @@ HFlow(alignment: .top) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Resources/hflow-top.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_top.1.png)
 
 Additionally, alignment can be specified on both axes. Ideal for tags.
 
@@ -82,7 +82,7 @@ HFlow(horizontalAlignment: .center, verticalAlignment: .top) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Resources/hflow-center.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_tag.1.png)
 
 ## Spacing
 
@@ -99,7 +99,7 @@ HFlow(itemSpacing: 4, rowSpacing: 20) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Resources/hflow-spacing.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_spacing.1.png)
 
 ## Distribute items
 
@@ -115,9 +115,10 @@ HFlow(distributeItemsEvenly: true) {
     }
 }
 .frame(width: 300, alignment: .leading)
+.border(.gray)
 ```
 
-![HFlow](Resources/hflow-distributed.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_distributed_evenly.1.png)
 
 ## Justified
 
@@ -132,7 +133,7 @@ HFlow(justified: true) {
 .frame(width: 300)
 ```
 
-![HFlow](Resources/hflow-justified.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_justified.1.png)
 
 ## Flexibility
 
@@ -162,7 +163,7 @@ HFlow { // distributes flexible items proportionally
 .frame(width: 300)
 ```
 
-![HFlow](Resources/hflow-flexibility.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_flexibility.1.png)
 
 ## Line breaks
 
@@ -177,7 +178,7 @@ HFlow {
     RoundedRectangle(cornerRadius: 10)
         .fill(.blue)
         .frame(width: 50, height: 50)
-    LineBreak()
+    LineBreak() // <--
     RoundedRectangle(cornerRadius: 10)
         .fill(.yellow)
         .frame(width: 50, height: 50)
@@ -185,7 +186,7 @@ HFlow {
 .frame(width: 300)
 ```
 
-![HFlow](Resources/hflow-linebreak.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_linebreak.1.png)
 
 ```swift
 HFlow {
@@ -195,7 +196,7 @@ HFlow {
     RoundedRectangle(cornerRadius: 10)
         .fill(.green)
         .frame(width: 50, height: 50)
-        .startInNewLine()
+        .startInNewLine() // <-- 
     RoundedRectangle(cornerRadius: 10)
         .fill(.blue)
         .frame(width: 50, height: 50)
@@ -206,7 +207,7 @@ HFlow {
 .frame(width: 300)
 ```
 
-![HFlow](Resources/hflow-newline.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_newline.1.png)
 
 ## RTL
 
@@ -224,4 +225,4 @@ HFlow {
 .environment(\.layoutDirection, .rightToLeft)
 ```
 
-![HFlow](Resources/hflow-rtl.png)
+![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_rtl.1.png)

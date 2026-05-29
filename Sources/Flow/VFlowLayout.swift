@@ -41,16 +41,15 @@ public struct VFlowLayout {
     /// Creates a vertical flow with the given spacing and alignment.
     ///
     /// - Parameters:
-    ///   - horizonalAlignment: The guide for aligning the subviews horizontally.
-    ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
+    ///   - horizontalAlignment: The guide for aligning the subviews horizontally.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
+    ///   - horizontalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
     ///   - justified: Whether the layout should fill the remaining
     ///     available space in each column by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
-    ///   - content: A view builder that creates the content of this flow.
     @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,

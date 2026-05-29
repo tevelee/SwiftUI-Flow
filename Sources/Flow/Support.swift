@@ -4,7 +4,7 @@ import SwiftUI
 public enum FlexibilityBehavior: Sendable {
     /// The layout chooses the minimum space for the view, regardless of how much it can expand
     case minimum
-    /// The layout allows the views to exapand as they naturally do.
+    /// The layout allows the views to expand as they naturally do.
     case natural
     /// If a view can expand, it allows to "push" out other views and fill a whole row on its own.
     case maximum

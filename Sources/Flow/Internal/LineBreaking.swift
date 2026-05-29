@@ -174,7 +174,7 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
             return nil
         }
     }
-    // Layout accoring to priorities and proportionally distribute remaining space between flexible views
+    // Layout according to priorities and proportionally distribute remaining space between flexible views
     var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }
     result[0].leadingSpace = 0
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)

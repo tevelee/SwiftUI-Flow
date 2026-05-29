@@ -15,7 +15,8 @@ let package = Package(
         .library(name: "Flow", targets: ["Flow"])
     ],
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.0")
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.0"),
+        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0")
     ],
     targets: [
         .target(

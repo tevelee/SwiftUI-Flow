@@ -11,8 +11,10 @@ public struct HFlowLayout: Sendable {
     /// - Parameters:
     ///   - alignment: The guide for aligning the subviews in this flow. This
     ///     guide has the same vertical screen coordinate for every child view.
-    ///   - spacing: The distance between adjacent subviews, or `nil` if you
+    ///   - itemSpacing: The distance between adjacent subviews, or `nil` if you
     ///     want the flow to choose a default distance for each pair of subviews.
+    ///   - rowSpacing: The distance between rows of subviews, or `nil` if you
+    ///     want the flow to choose a default distance for each pair of rows.
     ///   - justified: Whether the layout should fill the remaining
     ///     available space in each row by stretching spaces.
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
@@ -39,9 +41,9 @@ public struct HFlowLayout: Sendable {
     /// Creates a horizontal flow with the given spacing and alignment.
     ///
     /// - Parameters:
-    ///   - horizonalAlignment: The guide for aligning the subviews horizontally.
-    ///   - horizonalSpacing: The distance between subviews on the horizontal axis.
+    ///   - horizontalAlignment: The guide for aligning the subviews horizontally.
     ///   - verticalAlignment: The guide for aligning the subviews vertically.
+    ///   - horizontalSpacing: The distance between subviews on the horizontal axis.
     ///   - verticalSpacing: The distance between subviews on the vertical axis.
     ///   - justified: Whether the layout should fill the remaining
     ///     available space in each row by stretching spaces.

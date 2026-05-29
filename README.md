@@ -1,7 +1,42 @@
 # SwiftUI Flow Layout
 
+[![Swift Package Index versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftevelee%2FSwiftUI-Flow%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/tevelee/SwiftUI-Flow)
+[![Supported platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftevelee%2FSwiftUI-Flow%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/tevelee/SwiftUI-Flow)
+
 Introduces `HFlow` and `VFlow` similar to `HStack` and `VStack`. 
 Arranges views in lines and cuts new lines accordingly (if elements don't fit the bounding space).
+
+## Features
+
+- 📐 **Wrapping layout** — items flow onto new lines (or columns) when they run out of space.
+- ↔️ **Two axes** — `HFlow` wraps rows, `VFlow` wraps columns.
+- 🎯 **Per-axis alignment** — align items within a line and lines within the layout.
+- ↕️ **Independent spacing** — set item spacing and line spacing separately.
+- ⚖️ **Even distribution** — balance items across lines with the Knuth–Plass algorithm.
+- ↔️ **Justified lines** — stretch lines to fill the available space.
+- 🪗 **Flexibility model** — let items grow, stay rigid, or claim a whole line.
+- ✂️ **Manual line breaks** — force breaks with `LineBreak()` or `.startInNewLine()`.
+- 🌍 **RTL support** — adapts to the environment's layout direction.
+- 🧱 **`Layout` conformance** — `HFlowLayout` / `VFlowLayout` for use anywhere a `Layout` is expected.
+
+## Requirements
+
+- iOS 16+, macOS 13+, tvOS 16+, watchOS 9+, visionOS 1+
+- Swift 5.9+
+
+## Installation
+
+Add the package to your `Package.swift`:
+
+```swift
+.package(url: "https://github.com/tevelee/SwiftUI-Flow", from: "3.1.1")
+```
+
+then add `"Flow"` to your target's dependencies. In Xcode, choose **File ▸ Add Package Dependencies…** and enter `https://github.com/tevelee/SwiftUI-Flow`.
+
+## Documentation
+
+Full API reference and guides are hosted on the [Swift Package Index](https://swiftpackageindex.com/tevelee/SwiftUI-Flow/documentation/flow).
 
 ## HFlow
 

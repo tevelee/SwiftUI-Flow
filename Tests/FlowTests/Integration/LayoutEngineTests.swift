@@ -161,12 +161,12 @@ struct LayoutEngineTests {
     @Test func HFlow_justified_withLineBreak() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
         let result = sut.layout([3×1, lineBreakSubview(), 3×1, 3×1], in: 10×2)
-        // The zero-size LineBreak view is on the second line, so justified spacing
-        // is distributed among 3 items (linebreak + 2 visible), adding a leading space
+        // The zero-size LineBreak marker on the second line is excluded from
+        // justification, so the two visible items flush to the row's edges.
         #expect(render(result) == """
         +----------+
         |XXX       |
-        | XXX   XXX|
+        |XXX    XXX|
         +----------+
         """)
     }
@@ -248,6 +248,39 @@ struct LayoutEngineTests {
             #expect(placement.position.x + placement.size.width <= reportedSize.width + 0.001, "View \(i) should fit within reported width")
             #expect(placement.position.y + placement.size.height <= reportedSize.height + 0.001, "View \(i) should fit within reported height")
         }
+    }
+
+    // MARK: - Non-finite Arithmetic Safety
+
+    @Test func HFlow_infiniteDepthItem_placesWithFiniteCoordinates() {
+        // Unbounded cross-axis depth makes the depth-alignment offset ∞/NaN; placements must stay finite.
+        let sut: FlowLayout = .horizontal(horizontalAlignment: .leading, verticalAlignment: .center, horizontalSpacing: 1, verticalSpacing: 1)
+        let flexHeight = CGSize(width: 3, height: 1) ... CGSize(width: 3, height: inf)
+        let result = sut.layout([3×1, flexHeight, 3×1], in: 10×5)
+        for (i, view) in result.subviews.enumerated() {
+            let position = view.placement?.position
+            #expect(position?.x.isFinite == true, "x of view \(i) must be finite")
+            #expect(position?.y.isFinite == true, "y of view \(i) must be finite")
+        }
+    }
+
+    @Test func HFlow_infiniteBreadthItem_centerAligned_placesWithFiniteCoordinates() {
+        // Unbounded line breadth makes the breadth-alignment offset ∞-∞=NaN; placement must stay finite.
+        let sut: FlowLayout = .horizontal(horizontalAlignment: .center, horizontalSpacing: 0, verticalSpacing: 0)
+        let flexWidth = CGSize(width: 1, height: 1) ... CGSize(width: inf, height: 1)
+        flexWidth[FlexibilityLayoutValueKey.self] = .maximum
+        let result = sut.layout([flexWidth], in: CGSize(width: inf, height: 1))
+        let position = result.subviews[0].placement?.position
+        #expect(position?.x.isFinite == true, "x must be finite")
+        #expect(position?.y.isFinite == true, "y must be finite")
+    }
+
+    @Test func HFlow_justified_unboundedWidth_reportsFiniteNaturalSize() {
+        // Justified under an unbounded proposal must fall back to the natural (finite) size.
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true)
+        let size = sut.sizeThatFits(proposal: ProposedViewSize(width: inf, height: 1), subviews: [3×1, 3×1, 3×1])
+        #expect(size.width.isFinite, "Justified width must stay finite under an unbounded proposal")
+        #expect(size.width == 11, "Falls back to the natural width: three 3pt items plus two 1pt gaps")
     }
 }
 

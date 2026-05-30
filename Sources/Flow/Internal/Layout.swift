@@ -66,7 +66,8 @@ struct FlowLayout: Sendable {
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
         size.depth += lines.sum(of: \.leadingSpace)
-        if justified {
+        // Justification needs a finite proposal to stretch to.
+        if justified, proposedSize.value(on: axis).isFinite {
             size.breadth = proposedSize.value(on: axis)
         }
         return CGSize(size: size, axis: axis)
@@ -82,7 +83,7 @@ struct FlowLayout: Sendable {
         guard !subviews.isEmpty else { return }
 
         var bounds = bounds
-        bounds.origin.replaceNaN(with: 0)
+        bounds.origin = bounds.origin.finite(or: 0)
         var target = bounds.origin.size(on: axis)
         var reversedBreadth = self.reversedBreadth
 
@@ -137,12 +138,14 @@ struct FlowLayout: Sendable {
         if itemDepth > 0 {
             let dimensions = item.item.subview.dimensions(proposedSize)
             let alignedPosition = alignmentOnDepth(dimensions)
-            position.depth += (alignedPosition / itemDepth) * (lineDepth - itemDepth)
-            if position.depth.isNaN {
-                position.depth = .infinity
+            // Skip a non-finite offset (e.g. unbounded item/line depth).
+            let offset = (alignedPosition / itemDepth) * (lineDepth - itemDepth)
+            if offset.isFinite {
+                position.depth += offset
             }
         }
-        let point = CGPoint(size: position, axis: axis)
+        // Never hand a non-finite coordinate to CoreGraphics.
+        let point = CGPoint(size: position, axis: axis).finite(or: 0)
         item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
     }
 
@@ -208,8 +211,6 @@ struct FlowLayout: Sendable {
             )
         }
 
-        // TODO: account for manual line breaks
-
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
@@ -217,13 +218,18 @@ struct FlowLayout: Sendable {
     }
 
     private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
-        guard justified else { return }
+        let availableSpace = proposedSize.value(on: axis)
+        // Distributing leftover space is only meaningful when it's finite.
+        guard justified, availableSpace.isFinite else { return }
         for (lineIndex, line) in lines.enumerated() {
             let items = line.item
-            let remainingSpace = proposedSize.value(on: axis) - items.sum { $0.size[axis] + $0.leadingSpace }
-            for (itemIndex, item) in items.enumerated().dropFirst() {
-                let distributedSpace = remainingSpace / Double(items.count - 1)
-                lines[lineIndex].item[itemIndex].leadingSpace = item.leadingSpace + distributedSpace
+            // Zero-size line-break markers get no share; justify across visible items.
+            let visibleIndices = items.indices.filter { !items[$0].item.cache.layoutValues.isLineBreak }
+            guard visibleIndices.count > 1 else { continue }
+            let usedSpace = items.sum { $0.size[axis] + $0.leadingSpace }
+            let distributedSpace = (availableSpace - usedSpace) / Double(visibleIndices.count - 1)
+            for itemIndex in visibleIndices.dropFirst() {
+                lines[lineIndex].item[itemIndex].leadingSpace += distributedSpace
             }
         }
     }
@@ -260,7 +266,9 @@ struct FlowLayout: Sendable {
         let lineSize = line.item.sum { $0.leadingSpace + $0.size.breadth }
         let value = alignmentOnBreadth(item.subview.dimensions(.unspecified)) / item.cache.ideal.breadth
         let remainingSpace = breadth - lineSize
-        return value * remainingSpace
+        let leadingSpace = value * remainingSpace
+        // Skip a non-finite offset (e.g. unbounded item breadth).
+        return leadingSpace.isFinite ? leadingSpace : 0
     }
 }
 
@@ -334,17 +342,15 @@ private struct SubviewProperties {
     var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
 }
 
-private extension CGPoint {
-    mutating func replaceNaN(with value: CGFloat) {
-        x.replaceNaN(with: value)
-        y.replaceNaN(with: value)
+private extension CGFloat {
+    /// The value if finite, else the fallback — keeps NaN/±∞ out of CoreGraphics.
+    func finite(or fallback: CGFloat) -> CGFloat {
+        isFinite ? self : fallback
     }
 }
 
-private extension CGFloat {
-    mutating func replaceNaN(with value: CGFloat) {
-        if isNaN {
-            self = value
-        }
+private extension CGPoint {
+    func finite(or fallback: CGFloat) -> CGPoint {
+        CGPoint(x: x.finite(or: fallback), y: y.finite(or: fallback))
     }
 }

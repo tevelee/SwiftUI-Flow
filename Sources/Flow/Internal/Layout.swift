@@ -10,12 +10,6 @@ struct FlowLayout: Sendable {
     @usableFromInline
     let lineSpacing: CGFloat?
     @usableFromInline
-    let reversedBreadth: Bool = false
-    @usableFromInline
-    let alternatingReversedBreadth: Bool = false
-    @usableFromInline
-    let reversedDepth: Bool = false
-    @usableFromInline
     let justified: Bool
     @usableFromInline
     let distributeItemsEvenly: Bool
@@ -85,22 +79,17 @@ struct FlowLayout: Sendable {
         var bounds = bounds
         bounds.origin = bounds.origin.finite(or: 0)
         var target = bounds.origin.size(on: axis)
-        var reversedBreadth = self.reversedBreadth
 
         let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
 
         for line in lines {
-            adjust(&target, for: line, on: .vertical, reversed: reversedDepth) { target in
-                target.breadth = reversedBreadth ? bounds.maximumValue(on: axis) : bounds.minimumValue(on: axis)
+            adjust(&target, for: line, on: .vertical) { target in
+                target.breadth = bounds.minimumValue(on: axis)
 
                 for item in line.item {
-                    adjust(&target, for: item, on: .horizontal, reversed: reversedBreadth) { target in
+                    adjust(&target, for: item, on: .horizontal) { target in
                         alignAndPlace(item, in: line, at: target)
                     }
-                }
-
-                if alternatingReversedBreadth {
-                    reversedBreadth.toggle()
                 }
             }
         }
@@ -115,14 +104,11 @@ struct FlowLayout: Sendable {
         _ target: inout Size,
         for item: ItemWithSpacing<T>,
         on axis: Axis,
-        reversed: Bool,
         body: (inout Size) -> Void
     ) {
-        let leadingSpace = item.leadingSpace
-        let size = item.size[axis]
-        target[axis] += reversed ? -leadingSpace-size : leadingSpace
+        target[axis] += item.leadingSpace
         body(&target)
-        target[axis] += reversed ? 0 : size
+        target[axis] += item.size[axis]
     }
 
     private func alignAndPlace(
@@ -333,13 +319,6 @@ extension Array where Element == Size {
             )
         }
     }
-}
-
-private struct SubviewProperties {
-    var indexInLine: Int
-    var spacing: Double
-    var cache: FlowLayoutCache.SubviewCache
-    var flexibility: Double { cache.max.breadth - cache.ideal.breadth }
 }
 
 private extension CGFloat {

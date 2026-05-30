@@ -121,12 +121,4 @@ extension CGRect {
             case .vertical: minY
         }
     }
-
-    @inlinable
-    func maximumValue(on axis: Axis) -> CGFloat {
-        switch axis {
-            case .horizontal: maxX
-            case .vertical: maxY
-        }
-    }
 }

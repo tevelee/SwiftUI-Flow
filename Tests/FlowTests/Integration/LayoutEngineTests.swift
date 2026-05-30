@@ -121,8 +121,25 @@ struct LayoutEngineTests {
     @Test func HFlow_singleItemLargerThanContainer() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
         let size = sut.sizeThatFits(proposal: 5×5, subviews: [10×3])
-        // An item larger than the container cannot be placed by the greedy line breaker
-        #expect(size == .zero, "Oversized item that cannot fit is dropped")
+        // An item wider than the container is placed on its own line at its natural size.
+        #expect(size == (10×3 as CGSize))
+    }
+
+    @Test func HFlow_oversizedItem_doesNotDropNeighbours() {
+        // [A=3, B=10(overflow), C=3, D=3] in a container of width 5, spacing 0.
+        // B exceeds the available width but must still appear; C and D must not be dropped.
+        // With spacing=0: 3+3=6 > 5, so C and D each get their own row → 4 rows total.
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
+        let items: [TestSubview] = [3×1, 10×1, 3×1, 3×1]
+        let size = sut.sizeThatFits(proposal: 5×4, subviews: items)
+        #expect(size.height == 4, "All 4 items must be placed (none dropped)")
+        #expect(size.width == 10, "Widest line is the overflow item")
+    }
+
+    @Test func HFlow_distributeEvenly_oversizedItem_isPlaced() {
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: true)
+        let size = sut.sizeThatFits(proposal: 5×5, subviews: [10×3])
+        #expect(size == (10×3 as CGSize))
     }
 
     @Test func HFlow_zeroProposal() {

@@ -105,6 +105,33 @@ struct LineBreakingTests {
         ])
     }
 
+    @Test func flow_oversizedItem_placedAlone() {
+        let sut = FlowLineBreaker()
+        // Item (150) wider than the container (100) must still appear on its own line.
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: .rigid(150), spacing: 0)
+        ], in: 100)
+        #expect(result == [
+            [.init(index: 0, size: 150, leadingSpace: 0)]
+        ])
+    }
+
+    @Test func flow_oversizedItem_doesNotDropNeighbours() {
+        let sut = FlowLineBreaker()
+        // [A=30, B=150(overflow), C=30, D=30] in container 100.
+        // A on its own line, B on its own (overflow), C+D on their own line.
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: .rigid(30), spacing: 0),
+            .init(size: .rigid(150), spacing: 10),
+            .init(size: .rigid(30), spacing: 10),
+            .init(size: .rigid(30), spacing: 10)
+        ], in: 100)
+        #expect(result.count == 3)
+        #expect(result[0] == [.init(index: 0, size: 30, leadingSpace: 0)])
+        #expect(result[1] == [.init(index: 1, size: 150, leadingSpace: 0)])
+        #expect(result[2] == [.init(index: 2, size: 30, leadingSpace: 0), .init(index: 3, size: 30, leadingSpace: 10)])
+    }
+
     // MARK: - KnuthPlassLineBreaker
 
     @Test func knuth_plass_basic() {
@@ -206,6 +233,30 @@ struct LineBreakingTests {
         let knuthImbalance = (knuthWidths.max() ?? 0) - (knuthWidths.min() ?? 0)
 
         #expect(knuthImbalance <= flowImbalance, "Knuth-Plass should produce more balanced or equal lines")
+    }
+
+    @Test func knuth_plass_oversizedItem_placedAlone() {
+        let sut = KnuthPlassLineBreaker()
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: .rigid(150), spacing: 0)
+        ], in: 100)
+        #expect(result == [
+            [.init(index: 0, size: 150, leadingSpace: 0)]
+        ])
+    }
+
+    @Test func knuth_plass_oversizedItem_doesNotDropNeighbours() {
+        let sut = KnuthPlassLineBreaker()
+        let result = sut.wrapItemsToLines(items: [
+            .init(size: .rigid(30), spacing: 0),
+            .init(size: .rigid(150), spacing: 10),
+            .init(size: .rigid(30), spacing: 10),
+            .init(size: .rigid(30), spacing: 10)
+        ], in: 100)
+        #expect(result.count == 3)
+        #expect(result[0] == [.init(index: 0, size: 30, leadingSpace: 0)])
+        #expect(result[1] == [.init(index: 1, size: 150, leadingSpace: 0)])
+        #expect(result[2].map(\.index) == [2, 3])
     }
 
     @Test func knuth_plass_multipleFlexItems() {

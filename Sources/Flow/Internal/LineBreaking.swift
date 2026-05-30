@@ -73,13 +73,15 @@ struct FlowLineBreaker: LineBreaking {
         for item in items.enumerated() {
             if sizes(of: currentLine + [item], availableSpace: availableSpace) != nil {
                 currentLine.append(item)
-            } else if let line = sizes(of: currentLine, availableSpace: availableSpace)?.items {
-                lines.append(line)
+            } else {
+                if !currentLine.isEmpty {
+                    lines.append(sizes(of: currentLine, availableSpace: availableSpace)?.items ?? fallbackLine(currentLine))
+                }
                 currentLine = [item]
             }
         }
-        if let line = sizes(of: currentLine, availableSpace: availableSpace)?.items {
-            lines.append(line)
+        if !currentLine.isEmpty {
+            lines.append(sizes(of: currentLine, availableSpace: availableSpace)?.items ?? fallbackLine(currentLine))
         }
         return lines
     }
@@ -104,14 +106,26 @@ struct KnuthPlassLineBreaker: LineBreaking {
         for end in 1 ... count {
             for start in (0 ..< end).reversed() {
                 let itemsToEvaluate: IndexedLineBreakingInput = (start ..< end).map { ($0, items[$0]) }
-                guard let calculation = sizes(of: itemsToEvaluate, availableSpace: availableSpace) else { continue }
-                let remainingSpace = calculation.remainingSpace
-                let spacePenalty = remainingSpace * remainingSpace
-                let stretchPenalty = zip(itemsToEvaluate, calculation.items).sum { item, calculation in
-                    let deviation = calculation.size - item.element.size.lowerBound
-                    return deviation * deviation
+                let spacePenalty: CGFloat
+                let stretchPenalty: CGFloat
+                if let calculation = sizes(of: itemsToEvaluate, availableSpace: availableSpace) {
+                    let remaining = calculation.remainingSpace
+                    spacePenalty = remaining * remaining
+                    stretchPenalty = zip(itemsToEvaluate, calculation.items).sum { item, output in
+                        let deviation = output.size - item.element.size.lowerBound
+                        return deviation * deviation
+                    }
+                } else if end == start + 1 {
+                    // Single item that exceeds the available space: allow it on its own line
+                    // with an overflow penalty so it is only chosen as a last resort.
+                    let overflow = items[start].size.lowerBound - availableSpace
+                    guard overflow > 0 else { continue }
+                    spacePenalty = overflow * overflow
+                    stretchPenalty = 0
+                } else {
+                    continue
                 }
-                let bias = CGFloat(count - start) * 5 // Introduce a small bias to prefer breaks that fill earlier lines more
+                let bias = CGFloat(count - start) * 5
                 let cost = costs[start] + spacePenalty + stretchPenalty + bias
                 if cost < costs[end] {
                     costs[end] = cost
@@ -123,17 +137,21 @@ struct KnuthPlassLineBreaker: LineBreaking {
         var result: LineBreakingOutput = []
         var end = items.count
         while let start = breaks[end] {
-            let line = sizes(of: (start..<end).map { ($0, items[$0]) }, availableSpace: availableSpace)?.items ?? (start..<end).map { index in
-                LineItemOutput(
-                    index: index,
-                    size: items[index].size.lowerBound,
-                    leadingSpace: index == start ? 0 : items[index].spacing
-                )
-            }
+            let segment: IndexedLineBreakingInput = (start..<end).map { ($0, items[$0]) }
+            let line = sizes(of: segment, availableSpace: availableSpace)?.items ?? fallbackLine(segment)
             result.insert(line, at: 0)
             end = start
         }
         return result
+    }
+}
+
+/// Places items at their minimum sizes when the normal sizing constraints cannot be satisfied
+/// (e.g. an item wider than the available space).
+@inlinable
+func fallbackLine(_ items: IndexedLineBreakingInput) -> LineOutput {
+    items.enumerated().map { i, item in
+        LineItemOutput(index: item.offset, size: item.element.size.lowerBound, leadingSpace: i == 0 ? 0 : item.element.spacing)
     }
 }
 

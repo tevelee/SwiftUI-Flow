@@ -1,0 +1,36 @@
+name: Stale issues and PRs
+
+on:
+  schedule:
+    - cron: "0 8 * * 1"  # Mondays at 08:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 60
+          days-before-close: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: "pinned,security,enhancement,roadmap"
+          exempt-pr-labels: "pinned,security,dependencies"
+          stale-issue-message: |
+            This issue has been open for 60 days with no activity. Is it still relevant?
+
+            If so, please leave a comment or add new information. Otherwise it will be closed in 14 days. You can always re-open it or file a new one if needed.
+          stale-pr-message: |
+            This pull request has been open for 60 days with no activity. Is it still in progress?
+
+            If so, please leave a comment or push an update. Otherwise it will be marked for closure in 14 days. Feel free to re-open it when ready.
+          close-issue-message: |
+            Closing due to inactivity. Feel free to re-open this issue or file a new one if it's still relevant — we welcome contributions and bug reports at any time.
+          close-pr-message: |
+            Closing due to inactivity. Feel free to re-open this PR or submit a new one when ready — your contribution is always welcome.

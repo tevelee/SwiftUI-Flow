@@ -1,0 +1,69 @@
+name: /ci
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  trigger:
+    name: Trigger CI for PR
+    # Only run on PR comments containing /ci from repo members.
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/ci') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add rocket reaction
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('ref', pr.data.head.ref);
+            core.setOutput('sha', pr.data.head.sha);
+            core.setOutput('is_fork', pr.data.head.repo.fork);
+
+      - name: Dispatch CI workflow
+        if: steps.pr.outputs.is_fork != 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              ref: '${{ steps.pr.outputs.ref }}'
+            });
+
+      - name: Comment — fork PR limitation
+        if: steps.pr.outputs.is_fork == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ `/ci` can only re-trigger CI for branches in this repository, not for forks. Please push a new commit to re-run CI, or a maintainer can trigger it manually.'
+            });

@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Full test run on macOS across every supported Swift version.
+  #
+  # macOS is the only platform where the suite *executes*: SwiftUI rendering and the
+  # snapshot baselines are host-bound. The image (.png) snapshot suites are skipped —
+  # they are pixel comparisons tied to the exact machine that recorded them and are
+  # not reproducible on a shared runner. The deterministic ASCII snapshots, unit, and
+  # integration suites run in full.
+  #
+  # We deliberately use the Xcode-bundled toolchain (maxim-lobanov/setup-xcode), not
+  # swift-actions/setup-swift: the swift.org toolchain can lag the selected SDK and
+  # fails to parse its WebKit.swiftinterface, which swift-snapshot-testing pulls in.
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-macos:
+    name: Test · macOS · Swift ${{ matrix.swift }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Swift 5.9 — validates Package.swift. Build-only: Swift Testing is unavailable,
+          # so the test target cannot compile on this toolchain.
+          - os: macos-14
+            xcode: "15.4"
+            swift: "5.10"
+            build_only: true
+          # Swift 6.0 — validates Package@swift-6.swift (language mode 6, the floor for tests).
+          - os: macos-15
+            xcode: "16.2"
+            swift: "6.0"
+          # Latest stable — forward-compatibility on the newest toolchain.
+          - os: macos-15
+            xcode: "16.4"
+            swift: "6.1"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode ${{ matrix.xcode }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ matrix.xcode }}
+      - name: Swift version
+        run: swift --version
+      - name: Build
+        run: swift build
+      - name: Test
+        if: ${{ !matrix.build_only }}
+        # Skip the environment-sensitive image snapshot suites (ImageSnapshotTests +
+        # ReadmeSnapshotTests). Everything else is deterministic.
+        run: swift test --skip ImageSnapshots --skip ReadmeSnapshotTests
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Compile-verify the library on every other supported Apple platform.
+  #
+  # "generic/platform=…" builds against the SDK without booting a simulator, so this
+  # stays fast and robust. Uses the Swift 6 manifest (which declares visionOS).
+  # ─────────────────────────────────────────────────────────────────────────────
+  build-platforms:
+    name: Build · ${{ matrix.platform }}
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [iOS, tvOS, watchOS, visionOS]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.2"
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          xcodebuild build \
+            -scheme Flow \
+            -destination 'generic/platform=${{ matrix.platform }}' \
+            -skipMacroValidation
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Run the deterministic suites on the iOS Simulator — the flagship runtime for a
+  # SwiftUI layout library. The image suites are #if os(macOS)-gated, so only the
+  # ASCII/unit/integration tests compile and run here.
+  # ─────────────────────────────────────────────────────────────────────────────
+  test-ios-simulator:
+    name: Test · iOS Simulator
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.2"
+      - name: Test on iOS Simulator
+        run: |
+          xcodebuild test \
+            -scheme Flow \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -skipMacroValidation

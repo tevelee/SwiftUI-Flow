@@ -44,8 +44,8 @@ extension Dimensions {
     @usableFromInline
     func value(on axis: Axis) -> CGFloat {
         switch axis {
-        case .horizontal: width
-        case .vertical: height
+            case .horizontal: width
+            case .vertical: height
         }
     }
 }

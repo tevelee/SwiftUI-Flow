@@ -1,0 +1,13 @@
+file_length:
+  warning: 1200
+  error: 2000
+
+type_body_length:
+  warning: 900
+  error: 1800
+
+force_cast:
+  severity: warning
+
+force_try:
+  severity: warning

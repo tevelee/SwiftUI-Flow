@@ -5,8 +5,8 @@ struct ContentView: View {
     @State private var contents: Contents = .boxes
     @State private var width: CGFloat = 400
     @State private var height: CGFloat = 400
-    @State private var itemSpacing: CGFloat? = nil
-    @State private var lineSpacing: CGFloat? = nil
+    @State private var itemSpacing: CGFloat?
+    @State private var lineSpacing: CGFloat?
     @State private var justified: Bool = false
     @State private var horizontalAlignment: HAlignment = .leading
     @State private var verticalAlignment: VAlignment = .top
@@ -56,12 +56,12 @@ struct ContentView: View {
                     Grid {
                         GridRow {
                             Text("Width").gridColumnAlignment(.leading)
-                            Slider(value: $width.animation(.snappy), in: 0...400)
+                            Slider(value: $width.animation(.snappy), in: 0 ... 400)
                                 .padding(.horizontal)
                         }
                         GridRow {
                             Text("Height")
-                            Slider(value: $height.animation(.snappy), in: 0...400)
+                            Slider(value: $height.animation(.snappy), in: 0 ... 400)
                                 .padding(.horizontal)
                         }
                     }
@@ -85,10 +85,11 @@ struct ContentView: View {
             .padding()
         } detail: {
             layout {
-                let views: [AnyView] = switch contents {
-                    case .texts: texts
-                    case .boxes: colors
-                }
+                let views: [AnyView] =
+                    switch contents {
+                        case .texts: texts
+                        case .boxes: colors
+                    }
                 ForEach(Array(views.enumerated()), id: \.offset) { $0.element.border(.blue) }
             }
             .border(.red.opacity(0.2))
@@ -100,23 +101,30 @@ struct ContentView: View {
 
     private func stepper(_ title: String, _ selection: Binding<CGFloat?>) -> some View {
         HStack {
-            Toggle(isOn: Binding(
-                get: { selection.wrappedValue != nil },
-                set: { selection.wrappedValue = $0 ? 8 : nil }).animation()
+            Toggle(
+                isOn: Binding(
+                    get: { selection.wrappedValue != nil },
+                    set: { selection.wrappedValue = $0 ? 8 : nil }
+                ).animation()
             ) {
                 Text(title)
             }
             if let value = selection.wrappedValue {
                 Text("\(value.formatted())")
-                Stepper("", value: Binding(
-                    get: { value },
-                    set: { selection.wrappedValue = $0 }
-                ).animation(), step: 4)
+                Stepper(
+                    "",
+                    value: Binding(
+                        get: { value },
+                        set: { selection.wrappedValue = $0 }
+                    ).animation(),
+                    step: 4
+                )
             }
         }.fixedSize()
     }
 
-    private func picker<Value>(_ selection: Binding<Value>, style: some PickerStyle = .segmented) -> some View where Value: Hashable & CaseIterable & CustomStringConvertible, Value.AllCases: RandomAccessCollection {
+    private func picker<Value>(_ selection: Binding<Value>, style: some PickerStyle = .segmented) -> some View
+    where Value: Hashable & CaseIterable & CustomStringConvertible, Value.AllCases: RandomAccessCollection {
         Picker("", selection: selection.animation()) {
             ForEach(Value.allCases, id: \.self) { value in
                 Text(value.description).tag(value)
@@ -128,27 +136,27 @@ struct ContentView: View {
     private var layout: AnyLayout {
         switch axis {
             case .horizontal:
-            return AnyLayout(
-                HFlow(
-                    horizontalAlignment: horizontalAlignment.value,
-                    verticalAlignment: verticalAlignment.value,
-                    horizontalSpacing: itemSpacing,
-                    verticalSpacing: lineSpacing,
-                    justified: justified,
-                    distributeItemsEvenly: distributeItemsEvenly
+                return AnyLayout(
+                    HFlow(
+                        horizontalAlignment: horizontalAlignment.value,
+                        verticalAlignment: verticalAlignment.value,
+                        horizontalSpacing: itemSpacing,
+                        verticalSpacing: lineSpacing,
+                        justified: justified,
+                        distributeItemsEvenly: distributeItemsEvenly
+                    )
                 )
-            )
             case .vertical:
-            return AnyLayout(
-                VFlow(
-                    horizontalAlignment: horizontalAlignment.value,
-                    verticalAlignment: verticalAlignment.value,
-                    horizontalSpacing: lineSpacing,
-                    verticalSpacing: itemSpacing,
-                    justified: justified,
-                    distributeItemsEvenly: distributeItemsEvenly
+                return AnyLayout(
+                    VFlow(
+                        horizontalAlignment: horizontalAlignment.value,
+                        verticalAlignment: verticalAlignment.value,
+                        horizontalSpacing: lineSpacing,
+                        verticalSpacing: itemSpacing,
+                        justified: justified,
+                        distributeItemsEvenly: distributeItemsEvenly
+                    )
                 )
-            )
         }
     }
 }

@@ -20,7 +20,7 @@ import SwiftUI
 ///
 @frozen
 public struct HFlow<Content: View>: View {
-    @usableFromInline 
+    @usableFromInline
     let layout: HFlowLayout
     @usableFromInline
     let content: Content
@@ -40,7 +40,7 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -72,7 +72,7 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -127,7 +127,7 @@ public struct HFlow<Content: View>: View {
     @usableFromInline
     @Environment(\.flexibility) var flexibility
 
-    @inlinable 
+    @inlinable
     public var body: some View {
         layout {
             content
@@ -155,7 +155,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -186,7 +186,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable 
+    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -236,7 +236,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         }
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
@@ -249,7 +249,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         )
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -269,7 +269,7 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
-    @inlinable 
+    @inlinable
     nonisolated public static var layoutProperties: LayoutProperties {
         HFlowLayout.layoutProperties
     }

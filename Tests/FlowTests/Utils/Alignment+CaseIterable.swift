@@ -6,10 +6,10 @@ extension HorizontalAlignment: @retroactive CaseIterable, @retroactive CustomTes
 
     public var testDescription: String {
         switch self {
-        case .leading: "leading"
-        case .center: "center"
-        case .trailing: "trailing"
-        default: "unknown"
+            case .leading: "leading"
+            case .center: "center"
+            case .trailing: "trailing"
+            default: "unknown"
         }
     }
 }
@@ -19,10 +19,10 @@ extension VerticalAlignment: @retroactive CaseIterable, @retroactive CustomTestS
 
     public var testDescription: String {
         switch self {
-        case .top: "top"
-        case .center: "center"
-        case .bottom: "bottom"
-        default: "unknown"
+            case .top: "top"
+            case .center: "center"
+            case .bottom: "bottom"
+            default: "unknown"
         }
     }
 }

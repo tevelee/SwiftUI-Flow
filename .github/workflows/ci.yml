@@ -108,3 +108,22 @@ jobs:
             -scheme Flow \
             -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
             -skipMacroValidation
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Style gate. swift-format owns formatting; SwiftLint catches lint smells.
+  # The tree is kept clean, so both run strict and block the build on any issue.
+  # ─────────────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install linters
+        run: brew install swift-format swiftlint
+
+      - name: swift-format
+        run: swift-format lint --strict --recursive Sources Tests
+
+      - name: SwiftLint
+        run: swiftlint lint --strict --reporter github-actions-logging

@@ -56,7 +56,8 @@ struct FlowLayout: Sendable {
         guard !subviews.isEmpty else { return .zero }
 
         let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
-        var size = lines
+        var size =
+            lines
             .map(\.size)
             .reduce(.zero, breadth: max, depth: +)
         size.depth += lines.sum(of: \.leadingSpace)
@@ -150,11 +151,11 @@ struct FlowLayout: Sendable {
             }
             let maxValue = subviewCache.max.breadth
             let size = min(minValue, maxValue) ... max(minValue, maxValue)
-            let spacing = itemSpacing ?? (
-                offset > cache.subviewsCache.startIndex
-                ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
-                : 0
-            )
+            let spacing =
+                itemSpacing
+                ?? (offset > cache.subviewsCache.startIndex
+                    ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
+                    : 0)
             return .init(
                 size: size,
                 spacing: spacing,
@@ -165,11 +166,12 @@ struct FlowLayout: Sendable {
             )
         }
 
-        let lineBreaker: any LineBreaking = if distributeItemsEvenly {
-            KnuthPlassLineBreaker()
-        } else {
-            FlowLineBreaker()
-        }
+        let lineBreaker: any LineBreaking =
+            if distributeItemsEvenly {
+                KnuthPlassLineBreaker()
+            } else {
+                FlowLineBreaker()
+            }
 
         let wrapped = lineBreaker.wrapItemsToLines(
             items: items,
@@ -186,7 +188,8 @@ struct FlowLayout: Sendable {
                     leadingSpace: item.leadingSpace
                 )
             }
-            var size = items
+            var size =
+                items
                 .map(\.size)
                 .reduce(.zero, breadth: +, depth: max)
             size.breadth += items.sum(of: \.leadingSpace)
@@ -321,15 +324,15 @@ extension Array where Element == Size {
     }
 }
 
-private extension CGFloat {
+extension CGFloat {
     /// The value if finite, else the fallback — keeps NaN/±∞ out of CoreGraphics.
-    func finite(or fallback: CGFloat) -> CGFloat {
+    fileprivate func finite(or fallback: CGFloat) -> CGFloat {
         isFinite ? self : fallback
     }
 }
 
-private extension CGPoint {
-    func finite(or fallback: CGFloat) -> CGPoint {
+extension CGPoint {
+    fileprivate func finite(or fallback: CGFloat) -> CGPoint {
         CGPoint(x: x.finite(or: fallback), y: y.finite(or: fallback))
     }
 }

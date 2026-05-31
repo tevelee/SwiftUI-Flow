@@ -1,0 +1,29 @@
+# Test-specific SwiftLint overrides.
+# Inherits all rules from the root .swiftlint.yml; only differences listed here.
+
+# Test suites are legitimately longer than production code.
+file_length:
+  warning: 1200
+  error: 2000
+
+type_body_length:
+  warning: 900
+  error: 1800
+
+# Single-letter generic helpers (G, T, V) are common in test utilities.
+type_name:
+  min_length:
+    warning: 1
+    error: 1
+  max_length:
+    warning: 60
+    error: 80
+  excluded: [G, T, V, E, W]
+
+# force_cast and force_try are acceptable in test assertions where the
+# structure under test is known.
+force_cast:
+  severity: warning
+
+force_try:
+  severity: warning

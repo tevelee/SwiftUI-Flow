@@ -17,11 +17,10 @@ struct LineItemInput {
     var shouldStartInNewLine: Bool = false
     @inlinable
     var growingPotential: Double {
-        if flexibility == .minimum {
-            return 0
-        } else {
+        guard flexibility == .minimum else {
             return size.upperBound - size.lowerBound
         }
+        return 0
     }
 }
 
@@ -137,7 +136,7 @@ struct KnuthPlassLineBreaker: LineBreaking {
         var result: LineBreakingOutput = []
         var end = items.count
         while let start = breaks[end] {
-            let segment: IndexedLineBreakingInput = (start..<end).map { ($0, items[$0]) }
+            let segment: IndexedLineBreakingInput = (start ..< end).map { ($0, items[$0]) }
             let line = sizes(of: segment, availableSpace: availableSpace)?.items ?? fallbackLine(segment)
             result.insert(line, at: 0)
             end = start

@@ -1,5 +1,6 @@
 import SwiftUI
 import XCTest
+
 @testable import Flow
 
 class TestSubview: Flow.Subview, CustomStringConvertible {
@@ -30,27 +31,28 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
 
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize {
         switch proposal {
-        case .zero:
-            minSize
-        case .unspecified:
-            idealSize
-        case .infinity:
-            maxSize
-        default:
-            CGSize(
-                width: min(max(minSize.width, proposal.width ?? idealSize.width), maxSize.width),
-                height: min(max(minSize.height, proposal.height ?? idealSize.height), maxSize.height)
-            )
+            case .zero:
+                minSize
+            case .unspecified:
+                idealSize
+            case .infinity:
+                maxSize
+            default:
+                CGSize(
+                    width: min(max(minSize.width, proposal.width ?? idealSize.width), maxSize.width),
+                    height: min(max(minSize.height, proposal.height ?? idealSize.height), maxSize.height)
+                )
         }
     }
 
     func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
-        let size = switch proposal {
-        case .zero:  minSize
-        case .unspecified: idealSize
-        case .infinity: maxSize
-        default: sizeThatFits(proposal)
-        }
+        let size =
+            switch proposal {
+                case .zero: minSize
+                case .unspecified: idealSize
+                case .infinity: maxSize
+                default: sizeThatFits(proposal)
+            }
         return TestDimensions(width: size.width, height: size.height)
     }
 
@@ -60,7 +62,9 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
     }
 
     var description: String {
-        "origin: \((placement?.position.x).map { "\($0)" } ?? "nil")×\((placement?.position.y).map { "\($0)" } ?? "nil"), size: \(idealSize.width)×\(idealSize.height)"
+        let x = (placement?.position.x).map { "\($0)" } ?? "nil"
+        let y = (placement?.position.y).map { "\($0)" } ?? "nil"
+        return "origin: \(x)×\(y), size: \(idealSize.width)×\(idealSize.height)"
     }
 
     func flexibility(_ behavior: FlexibilityBehavior) -> Self {
@@ -175,15 +179,15 @@ func labeledRender(_ layout: LayoutDescription) -> String {
         let y0 = Int(placement.position.y)
         let w = Int(placement.size.width)
         let h = Int(placement.size.height)
-        for y in y0..<(y0 + h) where y >= 0 && y < height {
-            for x in x0..<(x0 + w) where x >= 0 && x < width {
+        for y in y0 ..< (y0 + h) where y >= 0 && y < height {
+            for x in x0 ..< (x0 + w) where x >= 0 && x < width {
                 grid[y][x] = label
             }
         }
     }
 
     var result = "+" + String(repeating: "-", count: width) + "+\n"
-    for y in 0..<height {
+    for y in 0 ..< height {
         result += "|" + String(grid[y]) + "|\n"
     }
     result += "+" + String(repeating: "-", count: width) + "+"

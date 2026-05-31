@@ -1,0 +1,128 @@
+# SwiftLint configuration for SwiftUI-Flow
+# See https://realm.github.io/SwiftLint/rule-directory.html for all rules.
+# Test-specific overrides live in Tests/.swiftlint.yml.
+
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+
+# ── Opt-in rules ────────────────────────────────────────────────────────────
+
+opt_in_rules:
+  - array_init
+  - closure_spacing
+  - collection_alignment
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - empty_collection_literal
+  - empty_string
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - flatmap_over_map_reduce
+  - identical_operands
+  - is_disjoint
+  - joined_default_parameter
+  - last_where
+  - literal_expression_end_indentation
+  - operator_usage_whitespace
+  - overridden_super_call
+  - prefer_self_type_over_type_of_self
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - shorthand_operator
+  - sorted_first_last
+  - toggle_bool
+  - unavailable_function
+  - yoda_condition
+
+analyzer_rules:
+  - unused_import
+
+# ── Rule configuration ────────────────────────────────────────────────────────
+
+file_length:
+  warning: 800
+  error: 1500
+
+type_body_length:
+  warning: 500
+  error: 1000
+
+function_body_length:
+  warning: 150
+  error: 300
+
+line_length:
+  warning: 160
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_name:
+  min_length:
+    warning: 1
+    error: 1
+  max_length:
+    warning: 60
+    error: 80
+
+# Layout math uses short coordinate/geometry names (x, y, w, h, dx, dy) and a few
+# single-letter generics. Allow them rather than forcing verbose renames.
+identifier_name:
+  min_length:
+    warning: 1
+    error: 1
+  max_length:
+    warning: 60
+    error: 80
+  allowed_symbols: ["_"]
+  excluded: [x, y, w, h, i, j, n, dx, dy, id, lhs, rhs, to, of]
+
+# Flow nests Cache/Line/Item helper types inside the layout types.
+nesting:
+  type_level:
+    warning: 3
+    error: 5
+
+function_parameter_count:
+  warning: 8
+  error: 12
+
+large_tuple:
+  warning: 4
+  error: 6
+
+# The line-breaking and flexibility distribution passes are inherently branchy.
+cyclomatic_complexity:
+  warning: 20
+  error: 40
+
+# ── Disabled rules ─────────────────────────────────────────────────────────
+
+disabled_rules:
+  # swift-format owns switch/case alignment — disabling prevents post-format churn.
+  - switch_case_alignment
+
+  # swift-format adds trailing commas to multi-line collections; having both tools
+  # disagree produces churn on every format pass.
+  - trailing_comma
+
+  # for_where overlaps with the UseWhereClausesInForLoops swift-format rule, which
+  # we've also disabled. Both styles are used deliberately in this codebase.
+  - for_where
+
+  # swift-format handles all whitespace and line formatting.
+  - trailing_whitespace
+  - vertical_whitespace
+  - opening_brace
+  - trailing_newline
+  - indentation_width
+
+  - todo
+  - no_magic_numbers
+  - no_extension_access_modifier

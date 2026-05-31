@@ -60,10 +60,10 @@ public struct FlowLayoutCache {
         }
     }
 
-    @usableFromInline 
+    @usableFromInline
     let subviewsCache: [SubviewCache]
 
-    @inlinable 
+    @inlinable
     init(_ subviews: some Subviews, axis: Axis) {
         subviewsCache = subviews.map {
             SubviewCache($0, axis: axis)

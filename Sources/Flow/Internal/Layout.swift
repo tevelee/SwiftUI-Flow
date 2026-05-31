@@ -85,7 +85,23 @@ struct FlowLayout: Sendable {
         bounds.origin = bounds.origin.finite(or: 0)
         var target = bounds.origin.size(on: axis)
 
-        let lines = calculateLayout(in: proposal, of: subviews, cache: cache)
+        // .frame(maxHeight:) passes the parent's nil proposal through unchanged but clips
+        // our reported size to maxHeight, so use bounds when the proposal is unbounded.
+        let proposedBreadth = proposal.value(on: axis)
+        let effectiveProposal: ProposedViewSize
+        if proposedBreadth.isFinite {
+            effectiveProposal = proposal
+        } else {
+            effectiveProposal = ProposedViewSize(
+                size: Size(
+                    breadth: bounds.size.value(on: axis),
+                    depth: proposal.value(on: axis.perpendicular)
+                ),
+                axis: axis
+            )
+        }
+
+        let lines = calculateLayout(in: effectiveProposal, of: subviews, cache: cache)
 
         for line in lines {
             adjust(&target, for: line, on: .vertical) { target in

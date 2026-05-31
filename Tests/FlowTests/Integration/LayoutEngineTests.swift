@@ -371,6 +371,50 @@ struct LayoutEngineTests {
         #expect(size.width.isFinite, "Justified width must stay finite under an unbounded proposal")
         #expect(size.width == 11, "Falls back to the natural width: three 3pt items plus two 1pt gaps")
     }
+
+    // MARK: - Unbounded proposal with finite bounds (issue #19)
+
+    @Test func VFlow_unboundedProposal_usesFiniteBoundsHeightForColumnBreaking() {
+        // Simulates VFlow inside .frame(maxHeight: 5) in a ScrollView.
+        // The frame passes nil height through to placeSubviews unchanged, but allocates
+        // bounds.height = 5 after clamping the reported natural height to maxHeight.
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0)
+        let subviews: [TestSubview] = repeated(2 × 1, times: 8)
+        var cache = sut.makeCache(subviews)
+        _ = sut.sizeThatFits(proposal: .unspecified, subviews: subviews, cache: &cache)
+        sut.placeSubviews(
+            in: CGRect(x: 0, y: 0, width: 2, height: 5),
+            proposal: .unspecified,
+            subviews: subviews,
+            cache: &cache
+        )
+        // Column 1: items 0–4 at x = 0
+        #expect(subviews[0].placement?.position == CGPoint(x: 0, y: 0))
+        #expect(subviews[4].placement?.position == CGPoint(x: 0, y: 4))
+        // Column 2: items 5–7 start at x = 2 (one column-width across)
+        #expect(subviews[5].placement?.position == CGPoint(x: 2, y: 0))
+        #expect(subviews[7].placement?.position == CGPoint(x: 2, y: 2))
+    }
+
+    @Test func HFlow_unboundedProposal_usesFiniteBoundsWidthForRowBreaking() {
+        // Simulates HFlow inside .frame(maxWidth: 5) in a ScrollView.
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
+        let subviews: [TestSubview] = repeated(1 × 2, times: 8)
+        var cache = sut.makeCache(subviews)
+        _ = sut.sizeThatFits(proposal: .unspecified, subviews: subviews, cache: &cache)
+        sut.placeSubviews(
+            in: CGRect(x: 0, y: 0, width: 5, height: 2),
+            proposal: .unspecified,
+            subviews: subviews,
+            cache: &cache
+        )
+        // Row 1: items 0–4 at y = 0
+        #expect(subviews[0].placement?.position == CGPoint(x: 0, y: 0))
+        #expect(subviews[4].placement?.position == CGPoint(x: 4, y: 0))
+        // Row 2: items 5–7 start at y = 2 (one row-height down)
+        #expect(subviews[5].placement?.position == CGPoint(x: 0, y: 2))
+        #expect(subviews[7].placement?.position == CGPoint(x: 2, y: 2))
+    }
 }
 
 private func lineBreakSubview() -> TestSubview {

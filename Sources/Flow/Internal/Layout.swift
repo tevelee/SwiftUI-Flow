@@ -41,6 +41,10 @@ struct FlowLayout: Sendable {
         var item: T
         var size: Size
         var leadingSpace: CGFloat = 0
+        /// Offset (from the leading depth edge) of the cross-axis alignment guide.
+        /// For an item this is e.g. its text baseline; for a line it is the line's
+        /// common guide (the max guide of its items, i.e. the ascent).
+        var depthAlignmentGuide: CGFloat = 0
     }
 
     private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
@@ -121,15 +125,11 @@ struct FlowLayout: Sendable {
         let lineDepth = line.size.depth
         let size = Size(breadth: item.size.breadth, depth: lineDepth)
         let proposedSize = ProposedViewSize(size: size, axis: axis)
-        let itemDepth = item.size.depth
-        if itemDepth > 0 {
-            let dimensions = item.item.subview.dimensions(proposedSize)
-            let alignedPosition = alignmentOnDepth(dimensions)
-            // Skip a non-finite offset (e.g. unbounded item/line depth).
-            let offset = (alignedPosition / itemDepth) * (lineDepth - itemDepth)
-            if offset.isFinite {
-                position.depth += offset
-            }
+        // Align the item's guide (e.g. its baseline) onto the line's common guide.
+        let offset = line.depthAlignmentGuide - item.depthAlignmentGuide
+        // Skip a non-finite offset (e.g. unbounded item/line depth).
+        if offset.isFinite {
+            position.depth += offset
         }
         // Never hand a non-finite coordinate to CoreGraphics.
         let point = CGPoint(size: position, axis: axis).finite(or: 0)
@@ -179,24 +179,33 @@ struct FlowLayout: Sendable {
         )
 
         var lines: Lines = wrapped.map { line in
-            let items = line.map { item in
-                Line.Element(
-                    item: (subview: subviews[item.index], cache: cache.subviewsCache[item.index]),
-                    size: subviews[item.index]
-                        .sizeThatFits(ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis))
-                        .size(on: axis),
-                    leadingSpace: item.leadingSpace
+            let items = line.map { item -> Line.Element in
+                let subview = subviews[item.index]
+                let proposal = ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis)
+                let dimensions = subview.dimensions(proposal)
+                return Line.Element(
+                    item: (subview: subview, cache: cache.subviewsCache[item.index]),
+                    size: dimensions.size(on: axis),
+                    leadingSpace: item.leadingSpace,
+                    depthAlignmentGuide: alignmentOnDepth(dimensions)
                 )
             }
+            // Depth is baseline-aware: enough room for the deepest guide (ascent)
+            // plus the deepest extent below it (descent). For top/center/bottom
+            // guides this reduces to the tallest item.
+            let ascent = items.map(\.depthAlignmentGuide).max() ?? 0
+            let descent = items.map { $0.size.depth - $0.depthAlignmentGuide }.max() ?? 0
             var size =
                 items
                 .map(\.size)
                 .reduce(.zero, breadth: +, depth: max)
+            size.depth = ascent + descent
             size.breadth += items.sum(of: \.leadingSpace)
             return Lines.Element(
                 item: items,
                 size: size,
-                leadingSpace: 0
+                leadingSpace: 0,
+                depthAlignmentGuide: ascent
             )
         }
 

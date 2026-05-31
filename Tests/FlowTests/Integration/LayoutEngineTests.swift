@@ -294,6 +294,51 @@ struct LayoutEngineTests {
         }
     }
 
+    // MARK: - Baseline Alignment
+
+    @Test func HFlow_firstTextBaseline_alignsBaselines() {
+        // Items of different heights with baselines at absolute (non-proportional)
+        // offsets must be placed so their first baselines coincide, like HStack.
+        let sut: FlowLayout = .horizontal(verticalAlignment: .firstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0)
+        let small = TestSubview(size: 3 × 4)
+        small.firstBaseline = 3
+        let large = TestSubview(size: 3 × 10)
+        large.firstBaseline = 8
+        let result = sut.layout([small, large], in: 100 × 100)
+        // ascent = max(3, 8) = 8; small.y = 8 - 3 = 5, large.y = 8 - 8 = 0.
+        #expect(result.subviews[0].placement?.position.y == 5, "small should drop so its baseline meets the line baseline")
+        #expect(result.subviews[1].placement?.position.y == 0, "large defines the line baseline and stays at the top")
+        // Baselines coincide at y = 8.
+        let smallBaseline = (result.subviews[0].placement?.position.y ?? 0) + 3
+        let largeBaseline = (result.subviews[1].placement?.position.y ?? 0) + 8
+        #expect(smallBaseline == largeBaseline)
+    }
+
+    @Test func HFlow_firstTextBaseline_reservesDescentBelowBaseline() {
+        // The line must be tall enough for the deepest descent below the common
+        // baseline, not merely the tallest item.
+        let sut: FlowLayout = .horizontal(verticalAlignment: .firstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0)
+        let a = TestSubview(size: 3 × 6)
+        a.firstBaseline = 5  // descent 1
+        let b = TestSubview(size: 3 × 6)
+        b.firstBaseline = 2  // descent 4
+        let size = sut.sizeThatFits(proposal: 100 × 100, subviews: [a, b])
+        // ascent = max(5, 2) = 5; descent = max(1, 4) = 4; height = 9.
+        #expect(size.height == 9)
+    }
+
+    @Test func HFlow_lastTextBaseline_alignsBaselines() {
+        let sut: FlowLayout = .horizontal(verticalAlignment: .lastTextBaseline, horizontalSpacing: 0, verticalSpacing: 0)
+        let small = TestSubview(size: 3 × 4)
+        small.lastBaseline = 3
+        let large = TestSubview(size: 3 × 10)
+        large.lastBaseline = 8
+        let result = sut.layout([small, large], in: 100 × 100)
+        // ascent = max(3, 8) = 8; small.y = 5, large.y = 0.
+        #expect(result.subviews[0].placement?.position.y == 5)
+        #expect(result.subviews[1].placement?.position.y == 0)
+    }
+
     // MARK: - Non-finite Arithmetic Safety
 
     @Test func HFlow_infiniteDepthItem_placesWithFiniteCoordinates() {

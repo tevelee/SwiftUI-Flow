@@ -18,6 +18,10 @@ import SwiftUI
 ///         }
 ///     }
 ///
+/// For large datasets where the eager per-item measurement of this view is
+/// too expensive, see ``LazyHFlow``, which provides lazy rendering at the cost
+/// of exact flow layout (items are placed in a uniform adaptive grid instead).
+///
 @frozen
 public struct HFlow<Content: View>: View {
     @usableFromInline

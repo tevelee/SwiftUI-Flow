@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  release:
+    name: Publish release ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Publish release draft
+        uses: release-drafter/release-drafter@v7
+        with:
+          config-name: release-drafter.yml
+          publish: true
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Append commit list
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+
+            // Find the previous tag.
+            const { data: tags } = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 20,
+            });
+            const idx = tags.findIndex(t => t.name === tag);
+            const prevTag = idx >= 0 && idx < tags.length - 1 ? tags[idx + 1].name : null;
+
+            // Fetch commits between the previous tag and this one.
+            const range = prevTag ? `${prevTag}...${tag}` : tag;
+            const { data: cmp } = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: range,
+            });
+
+            const lines = cmp.commits
+              .filter(c => !c.commit.message.startsWith('Merge '))
+              .map(c => `- ${c.commit.message.split('\n')[0]} ([\`${c.sha.slice(0, 7)}\`](${c.html_url}))`)
+              .reverse(); // chronological order
+
+            if (lines.length === 0) return;
+
+            const { data: release } = await github.rest.repos.getReleaseByTag({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag,
+            });
+
+            const newBody = (release.body || '').trimEnd()
+              + '\n\n## Commits\n\n'
+              + lines.join('\n');
+
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: release.id,
+              body: newBody,
+            });

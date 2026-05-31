@@ -1,0 +1,101 @@
+name: Bug report
+description: A layout renders incorrectly or something isn't working
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. A minimal reproduction — ideally the `HFlow`/`VFlow` snippet and what you expected it to look like — is the single most helpful thing you can provide.
+
+  - type: input
+    id: swift-version
+    attributes:
+      label: Swift / Xcode version
+      description: Output of `swift --version`, plus your Xcode version.
+      placeholder: "e.g. Swift 6.0, Xcode 16.2"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      multiple: true
+      options:
+        - iOS
+        - macOS
+        - tvOS
+        - watchOS
+        - visionOS
+    validations:
+      required: true
+
+  - type: dropdown
+    id: view
+    attributes:
+      label: Which view is affected?
+      multiple: true
+      options:
+        - HFlow
+        - VFlow
+        - HFlowLayout / VFlowLayout (Layout API)
+        - Other / not sure
+    validations:
+      required: true
+
+  - type: input
+    id: flow-version
+    attributes:
+      label: SwiftUI-Flow version
+      placeholder: "e.g. 3.1.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected layout
+      description: What should the layout have looked like? A sketch or description is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual layout
+      description: What happened instead? A screenshot is very helpful for layout issues.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: A self-contained `View` that demonstrates the issue. The simpler the better.
+      render: swift
+      placeholder: |
+        import SwiftUI
+        import Flow
+
+        struct Demo: View {
+            var body: some View {
+                HFlow(alignment: .top, spacing: 8) {
+                    ForEach(0..<10) { _ in
+                        Color.blue.frame(width: 40, height: 20)
+                    }
+                }
+                .frame(width: 200)
+            }
+        }
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this hasn't been reported before
+          required: true
+        - label: I can reproduce this on the latest `main` branch
+          required: false

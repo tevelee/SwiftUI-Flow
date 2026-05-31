@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  test-macos:
+    name: Test · macOS · Swift ${{ matrix.swift }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Build-only: Swift Testing is unavailable on this toolchain.
+          - os: macos-14
+            xcode: "15.4"
+            swift: "5.10"
+            build_only: true
+          # Build-only: the test deps need Swift 6.1 to compile.
+          - os: macos-15
+            xcode: "16.2"
+            swift: "6.0"
+            build_only: true
+          - os: macos-15
+            xcode: "16.4"
+            swift: "6.1"
+    steps:
+      - uses: actions/checkout@v6
+      - name: Select Xcode ${{ matrix.xcode }}
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ matrix.xcode }}
+      - name: Build
+        run: swift build
+      - name: Test
+        if: ${{ !matrix.build_only }}
+        # Image snapshot suites are host-bound pixel comparisons.
+        run: swift test --skip ImageSnapshots --skip ReadmeSnapshotTests
+
+  build-platforms:
+    name: Build · ${{ matrix.platform }}
+    runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [iOS, tvOS, watchOS, visionOS]
+    steps:
+      - uses: actions/checkout@v6
+      # Default Xcode only: a pinned Xcode lacks the platform components.
+      - name: Build for ${{ matrix.platform }}
+        run: |
+          xcodebuild build \
+            -scheme Flow \
+            -destination 'generic/platform=${{ matrix.platform }}' \
+            -skipMacroValidation
+
+  test-ios-simulator:
+    name: Test · iOS Simulator
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test on iOS Simulator
+        run: |
+          xcodebuild test \
+            -scheme Flow \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -skipMacroValidation

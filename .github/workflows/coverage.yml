@@ -1,0 +1,39 @@
+name: Code coverage
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  coverage:
+    name: Codecov
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      - name: Test with coverage
+        run: swift test --enable-code-coverage --skip ImageSnapshots --skip ReadmeSnapshotTests
+
+      - name: Convert to lcov
+        run: |
+          BINARY=$(find -L .build/debug -name "FlowPackageTests" -type f -not -path "*.dSYM/*" | head -1)
+          PROFDATA=$(find -L .build/debug/codecov -name "default.profdata" | head -1)
+          xcrun llvm-cov export \
+            -format=lcov \
+            "$BINARY" \
+            -instr-profile "$PROFDATA" \
+            -ignore-filename-regex=".build|Tests" \
+            > coverage.lcov
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v6
+        with:
+          files: coverage.lcov
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -1,0 +1,80 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Package*.swift"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build DocC
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.2"
+
+      - name: Resolve swift-docc-plugin
+        run: swift package resolve
+
+      - name: Build documentation
+        run: |
+          swift package \
+            --allow-writing-to-directory .build/docs \
+            generate-documentation \
+            --target Flow \
+            --output-path .build/docs \
+            --transform-for-static-hosting \
+            --hosting-base-path SwiftUI-Flow \
+            --warnings-as-errors
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: macos-15
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}documentation/flow
+    steps:
+      - uses: actions/checkout@v6
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.2"
+
+      - name: Resolve swift-docc-plugin
+        run: swift package resolve
+
+      - name: Build documentation
+        run: |
+          swift package \
+            --allow-writing-to-directory ./docs \
+            generate-documentation \
+            --target Flow \
+            --output-path ./docs \
+            --transform-for-static-hosting \
+            --hosting-base-path SwiftUI-Flow
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

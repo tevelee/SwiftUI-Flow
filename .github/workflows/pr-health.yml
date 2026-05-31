@@ -1,0 +1,68 @@
+name: PR health checks
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  missing-tests:
+    name: Missing tests check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for missing tests
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+
+            // Changes to library sources (excluding docs and the bundled Example).
+            const sourcesChanged = files.some(
+              f => f.filename.startsWith('Sources/')
+                && !f.filename.includes('.docc')
+                && !f.filename.includes('/Example/')
+            );
+            const testsChanged = files.some(f => f.filename.startsWith('Tests/'));
+
+            if (!sourcesChanged || testsChanged) return;
+
+            const MARKER = '<!-- pr-missing-tests -->';
+            const body = [
+              MARKER,
+              '> [!NOTE]',
+              '> **No test files were modified in this PR.** If existing tests cover the change that\'s fine — just something to double-check. See [CONTRIBUTING.md](https://github.com/tevelee/SwiftUI-Flow/blob/main/CONTRIBUTING.md#testing) for the testing guide.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const existing = comments.find(c => c.body.startsWith(MARKER));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }

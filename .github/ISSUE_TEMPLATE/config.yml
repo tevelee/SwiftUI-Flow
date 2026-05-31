@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & discussions
+    url: https://github.com/tevelee/SwiftUI-Flow/discussions
+    about: Ask questions, share ideas, and discuss usage of SwiftUI-Flow
+  - name: Swift Package Index documentation
+    url: https://swiftpackageindex.com/tevelee/SwiftUI-Flow/documentation/flow
+    about: Browse the full API reference and guides

@@ -1,0 +1,37 @@
+name: Feature request
+description: Propose a new layout capability, modifier, or API addition
+labels: ["enhancement"]
+body:
+  - type: input
+    id: feature-name
+    attributes:
+      label: What would you like added?
+      placeholder: "e.g. per-row alignment, vertical justification, a column-count limit"
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why do you need it?
+      description: Describe the use case. What layout are you trying to achieve that isn't possible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-sketch
+    attributes:
+      label: Proposed API (optional)
+      render: swift
+      placeholder: |
+        HFlow(alignment: .top, rowSpacing: 8, columnSpacing: 12, distributeItemsEvenly: true) {
+            // ...
+        }
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Would you like to contribute?
+      options:
+        - label: Yes, I'd like to implement this
+        - label: I can help with review or testing

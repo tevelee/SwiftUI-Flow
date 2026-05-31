@@ -10,6 +10,8 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
     var minSize: CGSize
     var idealSize: CGSize
     var maxSize: CGSize
+    var firstBaseline: CGFloat?
+    var lastBaseline: CGFloat?
     var layoutValues: [ObjectIdentifier: Any] = [:]
 
     init(size: CGSize) {
@@ -53,7 +55,7 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
                 case .infinity: maxSize
                 default: sizeThatFits(proposal)
             }
-        return TestDimensions(width: size.width, height: size.height)
+        return TestDimensions(width: size.width, height: size.height, firstBaseline: firstBaseline, lastBaseline: lastBaseline)
     }
 
     func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize) {
@@ -196,6 +198,8 @@ func labeledRender(_ layout: LayoutDescription) -> String {
 
 private struct TestDimensions: Dimensions {
     let width, height: CGFloat
+    var firstBaseline: CGFloat?
+    var lastBaseline: CGFloat?
 
     subscript(guide: HorizontalAlignment) -> CGFloat {
         switch guide {
@@ -209,6 +213,8 @@ private struct TestDimensions: Dimensions {
         switch guide {
             case .center: 0.5 * height
             case .bottom: height
+            case .firstTextBaseline: firstBaseline ?? 0
+            case .lastTextBaseline: lastBaseline ?? height
             default: 0
         }
     }

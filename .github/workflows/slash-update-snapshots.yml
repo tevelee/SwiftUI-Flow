@@ -1,0 +1,67 @@
+name: /update-snapshots
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  trigger:
+    name: Trigger snapshot update for PR
+    if: |
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/update-snapshots') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add rocket reaction
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'rocket'
+            });
+
+      - name: Get PR details
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            core.setOutput('ref', pr.data.head.ref);
+            core.setOutput('is_fork', pr.data.head.repo.fork);
+
+      - name: Dispatch update-snapshots workflow
+        if: steps.pr.outputs.is_fork != 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'update-snapshots.yml',
+              ref: '${{ steps.pr.outputs.ref }}'
+            });
+
+      - name: Comment — fork PR limitation
+        if: steps.pr.outputs.is_fork == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ `/update-snapshots` can only run for branches in this repository, not for forks. A maintainer can trigger it manually from the Actions tab.'
+            });

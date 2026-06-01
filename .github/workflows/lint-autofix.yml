@@ -1,0 +1,82 @@
+name: Lint auto-fix
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    name: Apply swift-format and SwiftLint fixes
+    # Forks don't have write access — skip silently; CI lint will catch issues.
+    if: github.event.pull_request.head.repo.fork == false
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install linters
+        run: brew install swift-format swiftlint
+
+      - name: swift-format auto-fix
+        run: swift-format format --recursive --in-place Sources Tests
+
+      - name: SwiftLint auto-fix
+        run: swiftlint --fix || true
+
+      - name: Commit fixes
+        id: commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Sources Tests
+          if git diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "Apply swift-format and SwiftLint auto-fixes"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment on PR
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const MARKER = '<!-- lint-autofix -->';
+            const body = [
+              MARKER,
+              '> [!NOTE]',
+              '> **Lint auto-fix applied.** `swift-format` and `swiftlint --fix` found issues and committed corrections to this branch. Pull the latest commit before pushing further changes.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const existing = comments.find(c => c.body.startsWith(MARKER));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }

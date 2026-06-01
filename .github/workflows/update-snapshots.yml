@@ -1,0 +1,44 @@
+name: Update Snapshots
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update:
+    name: Regenerate snapshot references
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Select Xcode 16.4
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      - name: Delete existing reference images
+        run: find Tests/FlowTests/Snapshot/__Snapshots__ -name "*.png" -delete
+
+      - name: Record new snapshots
+        run: |
+          swift test --filter ImageSnapshots || true
+          swift test --filter ReadmeSnapshotTests || true
+
+      - name: Verify new snapshots pass
+        run: |
+          swift test --filter ImageSnapshots
+          swift test --filter ReadmeSnapshotTests
+
+      - name: Commit updated references
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Tests/FlowTests/Snapshot/__Snapshots__/
+          git diff --staged --quiet && echo "Nothing to commit" || {
+            git commit -m "Update snapshot references"
+            git pull --rebase origin ${{ github.ref_name }}
+            git push
+          }

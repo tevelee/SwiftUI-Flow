@@ -170,4 +170,64 @@ struct FlexibilityTests {
                 """
         )
     }
+
+    // MARK: - Cross-axis (depth) expansion
+
+    @Test func VFlow_infiniteMaxDepth_fillsColumnNaturalWidth() {
+        // A 5pt-wide item anchors the column's natural width. An item with infinite max
+        // width should expand to fill that width (5pt), not grow without bound.
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0)
+        let fixed: TestSubview = 5 × 1
+        let expandable: TestSubview = 1 × 1 ... inf × 1
+        _ = sut.layout([fixed, expandable], in: 10 × 2)
+        #expect(expandable.placement?.size.width == 5)
+    }
+
+    @Test func VFlow_finiteMaxDepth_notConstrained() {
+        // An item with a finite max width is not affected — it still inflates the column
+        // to its max size (10pt), not the natural column width (5pt).
+        let sut: FlowLayout = .vertical(horizontalAlignment: .leading, horizontalSpacing: 0, verticalSpacing: 0)
+        let result = sut.layout([5 × 1, 1 × 1 ... 10 × 1], in: 10 × 2)
+        #expect(
+            render(result) == """
+                +----------+
+                |XXXXX     |
+                |XXXXXXXXXX|
+                +----------+
+                """
+        )
+    }
+
+    @Test func HFlow_infiniteMaxDepth_fillsRowNaturalHeight() {
+        // A 5pt-tall item anchors the row's natural height. An item with infinite max
+        // height should expand to fill that height (5pt), not grow without bound.
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
+        let fixed: TestSubview = 1 × 5
+        let expandable: TestSubview = 1 × 1 ... 1 × inf
+        _ = sut.layout([fixed, expandable], in: 2 × 10)
+        #expect(expandable.placement?.size.height == 5)
+    }
+
+    @Test func HFlow_finiteMaxDepth_notConstrained() {
+        // An item with a finite max height is not affected — it still inflates the row
+        // to its max size (10pt), not the natural row height (5pt).
+        let sut: FlowLayout = .horizontal(verticalAlignment: .top, horizontalSpacing: 0, verticalSpacing: 0)
+        let result = sut.layout([1 × 5, 1 × 1 ... 1 × 10], in: 2 × 10)
+        #expect(
+            render(result) == """
+                +--+
+                |XX|
+                |XX|
+                |XX|
+                |XX|
+                |XX|
+                | X|
+                | X|
+                | X|
+                | X|
+                | X|
+                +--+
+                """
+        )
+    }
 }

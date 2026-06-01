@@ -240,4 +240,38 @@
             assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 150)))
         }
     }
+
+    // MARK: - Issue #36: maxWidth: .infinity in VFlow
+
+    @Suite
+    @MainActor
+    struct Issue36ImageSnapshots {
+        @Test func vflow_maxWidthHeader() {
+            let items: [(CGFloat, Color)] = [
+                (120, .red), (80, .orange), (160, .yellow),
+                (100, .green), (140, .blue), (90, .purple),
+            ]
+            let view = VFlow(spacing: 8) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, pair in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Header")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(4)
+                            .background(Color.black.opacity(0.12))
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(pair.1)
+                            .frame(width: 80, height: pair.0)
+                    }
+                    .padding(6)
+                    .background(pair.1.opacity(0.15))
+                    .cornerRadius(8)
+                }
+            }
+            .frame(maxHeight: 320)
+            .padding(12)
+            .background(Color.white)
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 420, height: 360)))
+        }
+    }
 #endif

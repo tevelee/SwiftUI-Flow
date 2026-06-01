@@ -195,12 +195,16 @@ struct FlowLayout: Sendable {
         )
 
         var lines: Lines = wrapped.map { line in
+            let naturalDepth = line.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0
             let items = line.map { item -> Line.Element in
                 let subview = subviews[item.index]
-                let proposal = ProposedViewSize(size: Size(breadth: item.size, depth: .infinity), axis: axis)
+                let subviewCache = cache.subviewsCache[item.index]
+                let canExpandDepth = subviewCache.max.depth.isInfinite && subviewCache.ideal.depth.isFinite
+                let proposedDepth: CGFloat = canExpandDepth ? naturalDepth : .infinity
+                let proposal = ProposedViewSize(size: Size(breadth: item.size, depth: proposedDepth), axis: axis)
                 let dimensions = subview.dimensions(proposal)
                 return Line.Element(
-                    item: (subview: subview, cache: cache.subviewsCache[item.index]),
+                    item: (subview: subview, cache: subviewCache),
                     size: dimensions.size(on: axis),
                     leadingSpace: item.leadingSpace,
                     depthAlignmentGuide: alignmentOnDepth(dimensions)

@@ -9,8 +9,8 @@
 
     extension Snapshotting where Value: SwiftUI.View, Format == NSImage {
         @MainActor
-        static func image(precision: Float = 1, size: CGSize) -> Snapshotting {
-            Snapshotting<NSView, NSImage>.image(precision: precision, size: size).pullback { view in
+        static func image(precision: Float = 1, perceptualPrecision: Float = 1, size: CGSize) -> Snapshotting {
+            Snapshotting<NSView, NSImage>.image(precision: precision, perceptualPrecision: perceptualPrecision, size: size).pullback { view in
                 let hosting = NSHostingView(rootView: view)
                 hosting.frame.size = size
                 return hosting

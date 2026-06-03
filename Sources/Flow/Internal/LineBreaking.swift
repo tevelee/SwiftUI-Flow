@@ -102,16 +102,28 @@ struct KnuthPlassLineBreaker: LineBreaking {
 
         costs[0] = 0
 
+        // Memoize segment sizing: each `start ..< end` segment is sized once during the
+        // dynamic-programming sweep and reused when backtracking the chosen breaks.
+        var sizeCache: [Range<Int>: SizeCalculation?] = [:]
+        func cachedSizes(_ range: Range<Int>) -> SizeCalculation? {
+            if let cached = sizeCache[range] {
+                return cached
+            }
+            let segment: IndexedLineBreakingInput = range.map { ($0, items[$0]) }
+            let computed = sizes(of: segment, availableSpace: availableSpace)
+            sizeCache[range] = computed
+            return computed
+        }
+
         for end in 1 ... count {
             for start in (0 ..< end).reversed() {
-                let itemsToEvaluate: IndexedLineBreakingInput = (start ..< end).map { ($0, items[$0]) }
                 let spacePenalty: CGFloat
                 let stretchPenalty: CGFloat
-                if let calculation = sizes(of: itemsToEvaluate, availableSpace: availableSpace) {
+                if let calculation = cachedSizes(start ..< end) {
                     let remaining = calculation.remainingSpace
                     spacePenalty = remaining * remaining
-                    stretchPenalty = zip(itemsToEvaluate, calculation.items).sum { item, output in
-                        let deviation = output.size - item.element.size.lowerBound
+                    stretchPenalty = zip(start ..< end, calculation.items).sum { index, output in
+                        let deviation = output.size - items[index].size.lowerBound
                         return deviation * deviation
                     }
                 } else if end == start + 1 {
@@ -124,6 +136,11 @@ struct KnuthPlassLineBreaker: LineBreaking {
                 } else {
                     continue
                 }
+                // Bias toward fewer lines: every chosen break contributes this term, and
+                // earlier break points (smaller `start`, i.e. more items deferred to later
+                // lines) contribute more, nudging the solver to fill earlier lines first.
+                // The weight is a heuristic kept small relative to the squared space/stretch
+                // penalties so it mainly breaks ties between otherwise comparable layouts.
                 let bias = CGFloat(count - start) * 5
                 let cost = costs[start] + spacePenalty + stretchPenalty + bias
                 if cost < costs[end] {
@@ -136,8 +153,7 @@ struct KnuthPlassLineBreaker: LineBreaking {
         var result: LineBreakingOutput = []
         var end = items.count
         while let start = breaks[end] {
-            let segment: IndexedLineBreakingInput = (start ..< end).map { ($0, items[$0]) }
-            let line = sizes(of: segment, availableSpace: availableSpace)?.items ?? fallbackLine(segment)
+            let line = cachedSizes(start ..< end)?.items ?? fallbackLine((start ..< end).map { ($0, items[$0]) })
             result.insert(line, at: 0)
             end = start
         }

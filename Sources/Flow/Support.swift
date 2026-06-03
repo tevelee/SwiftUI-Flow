@@ -63,11 +63,37 @@ public struct FlowLayoutCache {
     @usableFromInline
     let subviewsCache: [SubviewCache]
 
+    /// Single-entry memo of the most recent line-breaking result. `sizeThatFits`
+    /// and `placeSubviews` run back-to-back with the same proposal, so caching the
+    /// last result lets the second pass skip the (potentially expensive) line
+    /// breaking. Keyed on the proposed breadth and depth — the only proposal inputs
+    /// the line-breaking step depends on. Cleared whenever the cache is rebuilt.
+    @usableFromInline
+    var lineBreaking: LineBreakingResult?
+
+    @usableFromInline
+    struct LineBreakingResult {
+        @usableFromInline
+        var breadth: CGFloat
+        @usableFromInline
+        var depth: CGFloat
+        @usableFromInline
+        var lines: LineBreakingOutput
+
+        @inlinable
+        init(breadth: CGFloat, depth: CGFloat, lines: LineBreakingOutput) {
+            self.breadth = breadth
+            self.depth = depth
+            self.lines = lines
+        }
+    }
+
     @inlinable
     init(_ subviews: some Subviews, axis: Axis) {
         subviewsCache = subviews.map {
             SubviewCache($0, axis: axis)
         }
+        lineBreaking = nil
     }
 }
 

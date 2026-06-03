@@ -59,7 +59,7 @@ struct FlowLayout: Sendable {
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
-        let lines = calculateLayout(in: proposedSize, of: subviews, cache: cache)
+        let lines = calculateLayout(in: proposedSize, of: subviews, cache: &cache)
         var size =
             lines
             .map(\.size)
@@ -101,7 +101,7 @@ struct FlowLayout: Sendable {
             )
         }
 
-        let lines = calculateLayout(in: effectiveProposal, of: subviews, cache: cache)
+        let lines = calculateLayout(in: effectiveProposal, of: subviews, cache: &cache)
 
         for line in lines {
             adjust(&target, for: line, on: .vertical) { target in
@@ -155,44 +155,53 @@ struct FlowLayout: Sendable {
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
-        cache: FlowLayoutCache
+        cache: inout FlowLayoutCache
     ) -> Lines {
-        let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
-            let minValue: CGFloat
-            let subviewCache = cache.subviewsCache[offset]
-            if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
-                minValue = subviewCache.ideal.breadth
-            } else {
-                minValue = subview.sizeThatFits(proposedSize).value(on: axis)
+        let breadthKey = proposedSize.value(on: axis)
+        let depthKey = proposedSize.value(on: axis.perpendicular)
+
+        let wrapped: LineBreakingOutput
+        if let cached = cache.lineBreaking, cached.breadth == breadthKey, cached.depth == depthKey {
+            wrapped = cached.lines
+        } else {
+            let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
+                let minValue: CGFloat
+                let subviewCache = cache.subviewsCache[offset]
+                if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
+                    minValue = subviewCache.ideal.breadth
+                } else {
+                    minValue = subview.sizeThatFits(proposedSize).value(on: axis)
+                }
+                let maxValue = subviewCache.max.breadth
+                let size = min(minValue, maxValue) ... max(minValue, maxValue)
+                let spacing =
+                    itemSpacing
+                    ?? (offset > cache.subviewsCache.startIndex
+                        ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
+                        : 0)
+                return .init(
+                    size: size,
+                    spacing: spacing,
+                    priority: subviewCache.priority,
+                    flexibility: subviewCache.layoutValues.flexibility,
+                    isLineBreakView: subviewCache.layoutValues.isLineBreak,
+                    shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
+                )
             }
-            let maxValue = subviewCache.max.breadth
-            let size = min(minValue, maxValue) ... max(minValue, maxValue)
-            let spacing =
-                itemSpacing
-                ?? (offset > cache.subviewsCache.startIndex
-                    ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
-                    : 0)
-            return .init(
-                size: size,
-                spacing: spacing,
-                priority: subviewCache.priority,
-                flexibility: subviewCache.layoutValues.flexibility,
-                isLineBreakView: subviewCache.layoutValues.isLineBreak,
-                shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
+
+            let lineBreaker: any LineBreaking =
+                if distributeItemsEvenly {
+                    KnuthPlassLineBreaker()
+                } else {
+                    FlowLineBreaker()
+                }
+
+            wrapped = lineBreaker.wrapItemsToLines(
+                items: items,
+                in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
             )
+            cache.lineBreaking = FlowLayoutCache.LineBreakingResult(breadth: breadthKey, depth: depthKey, lines: wrapped)
         }
-
-        let lineBreaker: any LineBreaking =
-            if distributeItemsEvenly {
-                KnuthPlassLineBreaker()
-            } else {
-                FlowLineBreaker()
-            }
-
-        let wrapped = lineBreaker.wrapItemsToLines(
-            items: items,
-            in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
-        )
 
         var lines: Lines = wrapped.map { line in
             let naturalDepth = line.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0

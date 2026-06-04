@@ -326,7 +326,7 @@ struct FlowLayout: Sendable {
             // Zero-size line-break markers get no share; justify across visible items.
             let visibleIndices = items.indices.filter { !items[$0].item.cache.layoutValues.isLineBreak }
             guard visibleIndices.count > 1 else { continue }
-            let usedSpace = items.sum { $0.size[axis] + $0.leadingSpace }
+            let usedSpace = items.sum { $0.size.breadth + $0.leadingSpace }
             let distributedSpace = (availableSpace - usedSpace) / Double(visibleIndices.count - 1)
             for itemIndex in visibleIndices.dropFirst() {
                 lines[lineIndex].item[itemIndex].leadingSpace += distributedSpace

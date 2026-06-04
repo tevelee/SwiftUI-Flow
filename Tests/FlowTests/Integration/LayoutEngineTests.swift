@@ -227,6 +227,22 @@ struct LayoutEngineTests {
         #expect(size.width == 1)
     }
 
+    @Test func VFlow_justified_usesItemHeightsForSpacing() {
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0, justified: true)
+        let result = sut.layout([2 × 1, 2 × 1], in: 2 × 5)
+        #expect(
+            render(result) == """
+                +--+
+                |XX|
+                |  |
+                |  |
+                |  |
+                |XX|
+                +--+
+                """
+        )
+    }
+
     // MARK: - Combined Modifiers
 
     @Test func HFlow_startInNewLine_withMaxFlex() {

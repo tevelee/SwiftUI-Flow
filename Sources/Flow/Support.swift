@@ -72,18 +72,29 @@ public struct FlowLayoutCache {
     var lineBreaking: LineBreakingResult?
 
     @usableFromInline
-    struct LineBreakingResult {
+    struct LineBreakingKey: Equatable {
         @usableFromInline
         var breadth: CGFloat
         @usableFromInline
         var depth: CGFloat
+
+        @usableFromInline
+        init(proposedSize: ProposedViewSize, axis: Axis) {
+            breadth = proposedSize.value(on: axis)
+            depth = proposedSize.value(on: axis.perpendicular)
+        }
+    }
+
+    @usableFromInline
+    struct LineBreakingResult {
+        @usableFromInline
+        var key: LineBreakingKey
         @usableFromInline
         var lines: LineBreakingOutput
 
         @inlinable
-        init(breadth: CGFloat, depth: CGFloat, lines: LineBreakingOutput) {
-            self.breadth = breadth
-            self.depth = depth
+        init(key: LineBreakingKey, lines: LineBreakingOutput) {
+            self.key = key
             self.lines = lines
         }
     }
@@ -94,6 +105,16 @@ public struct FlowLayoutCache {
             SubviewCache($0, axis: axis)
         }
         lineBreaking = nil
+    }
+
+    @inlinable
+    func cachedLineBreaking(for key: LineBreakingKey) -> LineBreakingOutput? {
+        lineBreaking?.key == key ? lineBreaking?.lines : nil
+    }
+
+    @inlinable
+    mutating func cacheLineBreaking(_ lines: LineBreakingOutput, for key: LineBreakingKey) {
+        lineBreaking = LineBreakingResult(key: key, lines: lines)
     }
 }
 

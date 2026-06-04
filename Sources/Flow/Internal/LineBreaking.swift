@@ -73,15 +73,11 @@ struct FlowLineBreaker: LineBreaking {
             if sizes(of: currentLine + [item], availableSpace: availableSpace) != nil {
                 currentLine.append(item)
             } else {
-                if !currentLine.isEmpty {
-                    lines.append(sizes(of: currentLine, availableSpace: availableSpace)?.items ?? fallbackLine(currentLine))
-                }
+                appendResolvedLine(currentLine, to: &lines, availableSpace: availableSpace)
                 currentLine = [item]
             }
         }
-        if !currentLine.isEmpty {
-            lines.append(sizes(of: currentLine, availableSpace: availableSpace)?.items ?? fallbackLine(currentLine))
-        }
+        appendResolvedLine(currentLine, to: &lines, availableSpace: availableSpace)
         return lines
     }
 }
@@ -93,71 +89,137 @@ struct KnuthPlassLineBreaker: LineBreaking {
 
     @inlinable
     func wrapItemsToLines(items: LineBreakingInput, in availableSpace: CGFloat) -> LineBreakingOutput {
-        if items.isEmpty {
+        var solver = KnuthPlassSolver(items: items, availableSpace: availableSpace)
+        return solver.solve()
+    }
+}
+
+@usableFromInline
+struct KnuthPlassSolver {
+    let items: LineBreakingInput
+    let availableSpace: CGFloat
+    var costs: [CGFloat]
+    var breaks: [Int?]
+    var sizeCache: SegmentSizingCache
+
+    @usableFromInline
+    init(items: LineBreakingInput, availableSpace: CGFloat) {
+        self.items = items
+        self.availableSpace = availableSpace
+        costs = Array(repeating: .infinity, count: items.count + 1)
+        breaks = Array(repeating: nil, count: items.count + 1)
+        sizeCache = SegmentSizingCache(items: items, availableSpace: availableSpace)
+    }
+
+    @usableFromInline
+    mutating func solve() -> LineBreakingOutput {
+        guard !items.isEmpty else {
             return []
         }
-        let count = items.count
-        var costs: [CGFloat] = Array(repeating: .infinity, count: count + 1)
-        var breaks: [Int?] = Array(repeating: nil, count: count + 1)
 
         costs[0] = 0
-
-        // Memoize segment sizing: each `start ..< end` segment is sized once during the
-        // dynamic-programming sweep and reused when backtracking the chosen breaks.
-        var sizeCache: [Range<Int>: SizeCalculation?] = [:]
-        func cachedSizes(_ range: Range<Int>) -> SizeCalculation? {
-            if let cached = sizeCache[range] {
-                return cached
-            }
-            let segment: IndexedLineBreakingInput = range.map { ($0, items[$0]) }
-            let computed = sizes(of: segment, availableSpace: availableSpace)
-            sizeCache[range] = computed
-            return computed
+        for end in 1 ... items.count {
+            chooseBestBreak(endingAt: end)
         }
+        return rebuildLines()
+    }
 
-        for end in 1 ... count {
-            for start in (0 ..< end).reversed() {
-                let spacePenalty: CGFloat
-                let stretchPenalty: CGFloat
-                if let calculation = cachedSizes(start ..< end) {
-                    let remaining = calculation.remainingSpace
-                    spacePenalty = remaining * remaining
-                    stretchPenalty = zip(start ..< end, calculation.items).sum { index, output in
-                        let deviation = output.size - items[index].size.lowerBound
-                        return deviation * deviation
-                    }
-                } else if end == start + 1 {
-                    // Single item that exceeds the available space: allow it on its own line
-                    // with an overflow penalty so it is only chosen as a last resort.
-                    let overflow = items[start].size.lowerBound - availableSpace
-                    guard overflow > 0 else { continue }
-                    spacePenalty = overflow * overflow
-                    stretchPenalty = 0
-                } else {
-                    continue
-                }
-                // Bias toward fewer lines: every chosen break contributes this term, and
-                // earlier break points (smaller `start`, i.e. more items deferred to later
-                // lines) contribute more, nudging the solver to fill earlier lines first.
-                // The weight is a heuristic kept small relative to the squared space/stretch
-                // penalties so it mainly breaks ties between otherwise comparable layouts.
-                let bias = CGFloat(count - start) * 5
-                let cost = costs[start] + spacePenalty + stretchPenalty + bias
-                if cost < costs[end] {
-                    costs[end] = cost
-                    breaks[end] = start
-                }
+    private mutating func chooseBestBreak(endingAt end: Int) {
+        for start in (0 ..< end).reversed() {
+            let range = start ..< end
+            guard let candidateCost = candidateCost(for: range) else {
+                continue
+            }
+            if candidateCost < costs[end] {
+                costs[end] = candidateCost
+                breaks[end] = start
             }
         }
+    }
 
+    private mutating func candidateCost(for range: Range<Int>) -> CGFloat? {
+        guard let penalties = penalties(for: range) else {
+            return nil
+        }
+        return costs[range.lowerBound] + penalties.space + penalties.stretch + lineCountBias(for: range.lowerBound)
+    }
+
+    private mutating func penalties(for range: Range<Int>) -> (space: CGFloat, stretch: CGFloat)? {
+        if let calculation = sizeCache.calculation(for: range) {
+            let remaining = calculation.remainingSpace
+            return (
+                space: remaining * remaining,
+                stretch: stretchPenalty(for: calculation, in: range)
+            )
+        }
+
+        guard range.count == 1, let overflow = overflowPenalty(for: items[range.lowerBound]) else {
+            return nil
+        }
+        return (space: overflow * overflow, stretch: 0)
+    }
+
+    private func lineCountBias(for start: Int) -> CGFloat {
+        // Bias toward fewer lines: every chosen break contributes this term, and
+        // earlier break points (smaller `start`, i.e. more items deferred to later
+        // lines) contribute more, nudging the solver to fill earlier lines first.
+        // The weight is a heuristic kept small relative to the squared space/stretch
+        // penalties so it mainly breaks ties between otherwise comparable layouts.
+        CGFloat(items.count - start) * 5
+    }
+
+    private func stretchPenalty(for calculation: SizeCalculation, in range: Range<Int>) -> CGFloat {
+        zip(range, calculation.items).sum { index, output in
+            let deviation = output.size - items[index].size.lowerBound
+            return deviation * deviation
+        }
+    }
+
+    private func overflowPenalty(for item: LineItemInput) -> CGFloat? {
+        let overflow = item.size.lowerBound - availableSpace
+        return overflow > 0 ? overflow : nil
+    }
+
+    private mutating func rebuildLines() -> LineBreakingOutput {
         var result: LineBreakingOutput = []
         var end = items.count
         while let start = breaks[end] {
-            let line = cachedSizes(start ..< end)?.items ?? fallbackLine((start ..< end).map { ($0, items[$0]) })
+            let range = start ..< end
+            let line = sizeCache.calculation(for: range)?.items ?? sizeCache.fallbackLineOutput(for: range)
             result.insert(line, at: 0)
             end = start
         }
         return result
+    }
+}
+
+@usableFromInline
+struct SegmentSizingCache {
+    let items: LineBreakingInput
+    let availableSpace: CGFloat
+    private var calculations: [Range<Int>: SizeCalculation?] = [:]
+
+    @usableFromInline
+    init(items: LineBreakingInput, availableSpace: CGFloat) {
+        self.items = items
+        self.availableSpace = availableSpace
+    }
+
+    mutating func calculation(for range: Range<Int>) -> SizeCalculation? {
+        if let cached = calculations[range] {
+            return cached
+        }
+        let computed = sizes(of: indexedItems(in: range), availableSpace: availableSpace)
+        calculations[range] = computed
+        return computed
+    }
+
+    func fallbackLineOutput(for range: Range<Int>) -> LineOutput {
+        fallbackLine(indexedItems(in: range))
+    }
+
+    private func indexedItems(in range: Range<Int>) -> IndexedLineBreakingInput {
+        range.map { ($0, items[$0]) }
     }
 }
 
@@ -171,52 +233,119 @@ func fallbackLine(_ items: IndexedLineBreakingInput) -> LineOutput {
 }
 
 @usableFromInline
+func appendResolvedLine(
+    _ items: IndexedLineBreakingInput,
+    to lines: inout LineBreakingOutput,
+    availableSpace: CGFloat
+) {
+    guard !items.isEmpty else {
+        return
+    }
+    lines.append(resolvedLine(items, availableSpace: availableSpace))
+}
+
+@usableFromInline
+func resolvedLine(
+    _ items: IndexedLineBreakingInput,
+    availableSpace: CGFloat
+) -> LineOutput {
+    sizes(of: items, availableSpace: availableSpace)?.items ?? fallbackLine(items)
+}
+
+@usableFromInline
 typealias SizeCalculation = (items: LineOutput, remainingSpace: CGFloat)
 
 @inlinable
 func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeCalculation? {
-    if items.isEmpty {
+    guard let items = normalizedItemsForSizing(items) else {
         return nil
     }
-    // Handle line break view
+
+    let totalMinimumSize = totalMinimumSize(of: items)
+    guard totalMinimumSize <= availableSpace + roundingTolerance(for: totalMinimumSize, availableSpace: availableSpace) else {
+        return nil
+    }
+
+    var remainingSpace = max(0, availableSpace - totalMinimumSize)
+    guard maximumFlexItemsFit(items, availableSpace: availableSpace, remainingSpace: remainingSpace) else {
+        return nil
+    }
+
+    let result = distributeRemainingSpace(in: items, remainingSpace: &remainingSpace)
+    return SizeCalculation(items: result, remainingSpace: remainingSpace)
+}
+
+@usableFromInline
+func normalizedItemsForSizing(_ items: IndexedLineBreakingInput) -> IndexedLineBreakingInput? {
+    guard !items.isEmpty else {
+        return nil
+    }
+
     let positionOfLineBreak = items.lastIndex(where: \.element.isLineBreakView)
     if let positionOfLineBreak, positionOfLineBreak > 0 {
         return nil
     }
-    var items = items
-    if let positionOfLineBreak, case let afterLineBreak = items.index(after: positionOfLineBreak), afterLineBreak < items.endIndex {
-        items[afterLineBreak].element.spacing = 0
-    }
-    // Handle manual new line modifier
+
     let numberOfNewLines = items.filter(\.element.shouldStartInNewLine).count
     if numberOfNewLines > 1 {
         return nil
-    } else if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {
+    }
+    if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {
         return nil
     }
-    // Calculate total size
-    let totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
-    let roundingTolerance = max(totalSizeOfItems.magnitude, availableSpace.magnitude, 1) * CGFloat.ulpOfOne
-    if totalSizeOfItems > availableSpace + roundingTolerance {
-        return nil
+
+    var normalized = items
+    if let positionOfLineBreak,
+       case let afterLineBreak = normalized.index(after: positionOfLineBreak),
+       afterLineBreak < normalized.endIndex {
+        normalized[afterLineBreak].element.spacing = 0
     }
-    // Clamp to zero: within the tolerance above the leftover can be a tiny negative.
-    var remainingSpace = max(0, availableSpace - totalSizeOfItems)
-    // Handle expanded items. Each `.maximum` item wants to grow toward filling the
-    // line; account for their growth cumulatively so several of them on one segment
-    // can't each independently claim the same remaining space.
+    return normalized
+}
+
+@usableFromInline
+func totalMinimumSize(of items: IndexedLineBreakingInput) -> CGFloat {
+    items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
+}
+
+@usableFromInline
+func roundingTolerance(for totalMinimumSize: CGFloat, availableSpace: CGFloat) -> CGFloat {
+    max(totalMinimumSize.magnitude, availableSpace.magnitude, 1) * CGFloat.ulpOfOne
+}
+
+@usableFromInline
+func maximumFlexItemsFit(
+    _ items: IndexedLineBreakingInput,
+    availableSpace: CGFloat,
+    remainingSpace: CGFloat
+) -> Bool {
+    // Each `.maximum` item wants to grow toward filling the line; account for their
+    // growth cumulatively so several of them on one segment cannot each claim the
+    // same remaining space independently.
     var remainingForMaximumItems = remainingSpace
     for item in items where item.element.flexibility == .maximum {
         let size = max(item.element.size.lowerBound, min(availableSpace, item.element.size.upperBound))
         let growth = size - item.element.size.lowerBound
         if growth > remainingForMaximumItems {
-            return nil
+            return false
         }
         remainingForMaximumItems -= growth
     }
-    // Layout according to priorities and proportionally distribute remaining space between flexible views
-    var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }
+    return true
+}
+
+@usableFromInline
+func distributeRemainingSpace(
+    in items: IndexedLineBreakingInput,
+    remainingSpace: inout CGFloat
+) -> LineOutput {
+    // Layout according to priorities and proportionally distribute remaining space
+    // between flexible views.
+    var result = items.map {
+        LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing)
+    }
     result[0].leadingSpace = 0
+
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)
     for priority in priorities where remainingSpace > 0 {
@@ -231,5 +360,5 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
             remainingItemCount -= 1
         }
     }
-    return SizeCalculation(items: result, remainingSpace: remainingSpace)
+    return result
 }

@@ -84,24 +84,7 @@ struct FlowLayout: Sendable {
         var bounds = bounds
         bounds.origin = bounds.origin.finite(or: 0)
         var target = bounds.origin.size(on: axis)
-
-        // .frame(maxHeight:) passes the parent's nil proposal through unchanged but clips
-        // our reported size to maxHeight, so use bounds when the proposal is unbounded.
-        let proposedBreadth = proposal.value(on: axis)
-        let effectiveProposal: ProposedViewSize
-        if proposedBreadth.isFinite {
-            effectiveProposal = proposal
-        } else {
-            effectiveProposal = ProposedViewSize(
-                size: Size(
-                    breadth: bounds.size.value(on: axis),
-                    depth: proposal.value(on: axis.perpendicular)
-                ),
-                axis: axis
-            )
-        }
-
-        let lines = calculateLayout(in: effectiveProposal, of: subviews, cache: &cache)
+        let lines = calculateLayout(in: effectiveProposal(for: proposal, in: bounds), of: subviews, cache: &cache)
 
         for line in lines {
             adjust(&target, for: line, on: .vertical) { target in
@@ -152,96 +135,186 @@ struct FlowLayout: Sendable {
         item.item.subview.place(at: point, anchor: .topLeading, proposal: proposedSize)
     }
 
+    private func effectiveProposal(for proposal: ProposedViewSize, in bounds: CGRect) -> ProposedViewSize {
+        // .frame(maxHeight:) passes the parent's nil proposal through unchanged but clips
+        // our reported size to maxHeight, so use bounds when the proposal is unbounded.
+        guard !proposal.value(on: axis).isFinite else {
+            return proposal
+        }
+        return ProposedViewSize(
+            size: Size(
+                breadth: bounds.size.value(on: axis),
+                depth: proposal.value(on: axis.perpendicular)
+            ),
+            axis: axis
+        )
+    }
+
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
         cache: inout FlowLayoutCache
     ) -> Lines {
-        let breadthKey = proposedSize.value(on: axis)
-        let depthKey = proposedSize.value(on: axis.perpendicular)
-
-        let wrapped: LineBreakingOutput
-        if let cached = cache.lineBreaking, cached.breadth == breadthKey, cached.depth == depthKey {
-            wrapped = cached.lines
-        } else {
-            let items: LineBreakingInput = subviews.enumerated().map { offset, subview in
-                let minValue: CGFloat
-                let subviewCache = cache.subviewsCache[offset]
-                if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
-                    minValue = subviewCache.ideal.breadth
-                } else {
-                    minValue = subview.sizeThatFits(proposedSize).value(on: axis)
-                }
-                let maxValue = subviewCache.max.breadth
-                let size = min(minValue, maxValue) ... max(minValue, maxValue)
-                let spacing =
-                    itemSpacing
-                    ?? (offset > cache.subviewsCache.startIndex
-                        ? cache.subviewsCache[offset - 1].spacing.distance(to: subviewCache.spacing, along: axis)
-                        : 0)
-                return .init(
-                    size: size,
-                    spacing: spacing,
-                    priority: subviewCache.priority,
-                    flexibility: subviewCache.layoutValues.flexibility,
-                    isLineBreakView: subviewCache.layoutValues.isLineBreak,
-                    shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
-                )
-            }
-
-            let lineBreaker: any LineBreaking =
-                if distributeItemsEvenly {
-                    KnuthPlassLineBreaker()
-                } else {
-                    FlowLineBreaker()
-                }
-
-            wrapped = lineBreaker.wrapItemsToLines(
-                items: items,
-                in: proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
-            )
-            cache.lineBreaking = FlowLayoutCache.LineBreakingResult(breadth: breadthKey, depth: depthKey, lines: wrapped)
-        }
-
-        var lines: Lines = wrapped.map { line in
-            let naturalDepth = line.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0
-            let items = line.map { item -> Line.Element in
-                let subview = subviews[item.index]
-                let subviewCache = cache.subviewsCache[item.index]
-                let canExpandDepth = subviewCache.max.depth.isInfinite && subviewCache.ideal.depth.isFinite
-                let proposedDepth: CGFloat = canExpandDepth ? naturalDepth : .infinity
-                let proposal = ProposedViewSize(size: Size(breadth: item.size, depth: proposedDepth), axis: axis)
-                let dimensions = subview.dimensions(proposal)
-                return Line.Element(
-                    item: (subview: subview, cache: subviewCache),
-                    size: dimensions.size(on: axis),
-                    leadingSpace: item.leadingSpace,
-                    depthAlignmentGuide: alignmentOnDepth(dimensions)
-                )
-            }
-            // Depth is baseline-aware: enough room for the deepest guide (ascent)
-            // plus the deepest extent below it (descent). For top/center/bottom
-            // guides this reduces to the tallest item.
-            let ascent = items.map(\.depthAlignmentGuide).max() ?? 0
-            let descent = items.map { $0.size.depth - $0.depthAlignmentGuide }.max() ?? 0
-            var size =
-                items
-                .map(\.size)
-                .reduce(.zero, breadth: +, depth: max)
-            size.depth = ascent + descent
-            size.breadth += items.sum(of: \.leadingSpace)
-            return Lines.Element(
-                item: items,
-                size: size,
-                leadingSpace: 0,
-                depthAlignmentGuide: ascent
-            )
-        }
+        let wrapped = wrappedLines(in: proposedSize, of: subviews, cache: &cache)
+        var lines = makeLines(from: wrapped, of: subviews, cache: cache)
 
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
         return lines
+    }
+
+    private func wrappedLines(
+        in proposedSize: ProposedViewSize,
+        of subviews: some Subviews,
+        cache: inout FlowLayoutCache
+    ) -> LineBreakingOutput {
+        let key = FlowLayoutCache.LineBreakingKey(proposedSize: proposedSize, axis: axis)
+        if let cached = cache.cachedLineBreaking(for: key) {
+            return cached
+        }
+
+        let wrapped = makeLineBreaker().wrapItemsToLines(
+            items: makeLineBreakingInput(in: proposedSize, of: subviews, cache: cache),
+            in: availableLineBreakingSpace(in: proposedSize)
+        )
+        cache.cacheLineBreaking(wrapped, for: key)
+        return wrapped
+    }
+
+    private func makeLineBreaker() -> any LineBreaking {
+        distributeItemsEvenly ? KnuthPlassLineBreaker() : FlowLineBreaker()
+    }
+
+    private func makeLineBreakingInput(
+        in proposedSize: ProposedViewSize,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache
+    ) -> LineBreakingInput {
+        subviews.enumerated().map { offset, subview in
+            makeLineBreakingInput(
+                for: subview,
+                at: offset,
+                in: proposedSize,
+                cache: cache
+            )
+        }
+    }
+
+    private func makeLineBreakingInput(
+        for subview: some Subview,
+        at offset: Int,
+        in proposedSize: ProposedViewSize,
+        cache: FlowLayoutCache
+    ) -> LineItemInput {
+        let subviewCache = cache.subviewsCache[offset]
+        let minimumBreadth = minimumBreadth(for: subview, cache: subviewCache, in: proposedSize)
+        let maximumBreadth = subviewCache.max.breadth
+        return LineItemInput(
+            size: min(minimumBreadth, maximumBreadth) ... max(minimumBreadth, maximumBreadth),
+            spacing: spacing(before: offset, cache: cache),
+            priority: subviewCache.priority,
+            flexibility: subviewCache.layoutValues.flexibility,
+            isLineBreakView: subviewCache.layoutValues.isLineBreak,
+            shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
+        )
+    }
+
+    private func minimumBreadth(
+        for subview: some Subview,
+        cache subviewCache: FlowLayoutCache.SubviewCache,
+        in proposedSize: ProposedViewSize
+    ) -> CGFloat {
+        if subviewCache.ideal.breadth <= proposedSize.value(on: axis) {
+            return subviewCache.ideal.breadth
+        }
+        return subview.sizeThatFits(proposedSize).value(on: axis)
+    }
+
+    private func spacing(before offset: Int, cache: FlowLayoutCache) -> CGFloat {
+        if let itemSpacing {
+            return itemSpacing
+        }
+        guard offset > cache.subviewsCache.startIndex else {
+            return 0
+        }
+        let previous = cache.subviewsCache[offset - 1].spacing
+        let current = cache.subviewsCache[offset].spacing
+        return previous.distance(to: current, along: axis)
+    }
+
+    private func availableLineBreakingSpace(in proposedSize: ProposedViewSize) -> CGFloat {
+        proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
+    }
+
+    private func makeLines(
+        from wrapped: LineBreakingOutput,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache
+    ) -> Lines {
+        wrapped.map { makeLine(from: $0, of: subviews, cache: cache) }
+    }
+
+    private func makeLine(
+        from wrappedLine: LineOutput,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache
+    ) -> Lines.Element {
+        let naturalDepth = wrappedLine.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0
+        let items = wrappedLine.map {
+            makeLineItem(from: $0, naturalDepth: naturalDepth, of: subviews, cache: cache)
+        }
+        let metrics = lineMetrics(for: items)
+        return Lines.Element(
+            item: items,
+            size: metrics.size,
+            leadingSpace: 0,
+            depthAlignmentGuide: metrics.depthAlignmentGuide
+        )
+    }
+
+    private func makeLineItem(
+        from wrappedItem: LineItemOutput,
+        naturalDepth: CGFloat,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache
+    ) -> Line.Element {
+        let subview = subviews[wrappedItem.index]
+        let subviewCache = cache.subviewsCache[wrappedItem.index]
+        let proposal = ProposedViewSize(
+            size: Size(
+                breadth: wrappedItem.size,
+                depth: proposedDepth(for: subviewCache, naturalDepth: naturalDepth)
+            ),
+            axis: axis
+        )
+        let dimensions = subview.dimensions(proposal)
+        return Line.Element(
+            item: (subview: subview, cache: subviewCache),
+            size: dimensions.size(on: axis),
+            leadingSpace: wrappedItem.leadingSpace,
+            depthAlignmentGuide: alignmentOnDepth(dimensions)
+        )
+    }
+
+    private func proposedDepth(
+        for subviewCache: FlowLayoutCache.SubviewCache,
+        naturalDepth: CGFloat
+    ) -> CGFloat {
+        let canExpandDepth = subviewCache.max.depth.isInfinite && subviewCache.ideal.depth.isFinite
+        return canExpandDepth ? naturalDepth : .infinity
+    }
+
+    private func lineMetrics(for items: Line) -> (size: Size, depthAlignmentGuide: CGFloat) {
+        // Depth is baseline-aware: enough room for the deepest guide (ascent)
+        // plus the deepest extent below it (descent). For top/center/bottom
+        // guides this reduces to the tallest item.
+        let ascent = items.map(\.depthAlignmentGuide).max() ?? 0
+        let descent = items.map { $0.size.depth - $0.depthAlignmentGuide }.max() ?? 0
+        var size = items.map(\.size).reduce(.zero, breadth: +, depth: max)
+        size.depth = ascent + descent
+        size.breadth += items.sum(of: \.leadingSpace)
+        return (size: size, depthAlignmentGuide: ascent)
     }
 
     private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {

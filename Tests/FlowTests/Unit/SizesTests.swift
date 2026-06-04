@@ -188,6 +188,28 @@ struct SizesTests {
         #expect(result?.remainingSpace == 0)
         #expect(result?.items.count == 3)
     }
+
+    @Test func exactFit_withFloatingPointError_stillFits() {
+        // 0.1 + 0.1 + 0.1 == 0.30000000000000004 in binary floating point, which is
+        // strictly greater than 0.3. A naive `>` comparison would wrap the last item.
+        let items = indexed([
+            LineItemInput(size: 0.1 ... 0.1, spacing: 0),
+            LineItemInput(size: 0.1 ... 0.1, spacing: 0),
+            LineItemInput(size: 0.1 ... 0.1, spacing: 0),
+        ])
+        let result = sizes(of: items, availableSpace: 0.3)
+        #expect(result != nil, "Items that fit exactly should not wrap due to float error")
+        #expect(result?.items.count == 3)
+    }
+
+    @Test func genuineOverflow_beyondTolerance_returnsNil() {
+        // Well above any floating-point tolerance: must still report as not fitting.
+        let items = indexed([
+            LineItemInput(size: 0.2 ... 0.2, spacing: 0),
+            LineItemInput(size: 0.2 ... 0.2, spacing: 0),
+        ])
+        #expect(sizes(of: items, availableSpace: 0.3) == nil)
+    }
 }
 
 private func indexed(_ items: [LineItemInput]) -> IndexedLineBreakingInput {

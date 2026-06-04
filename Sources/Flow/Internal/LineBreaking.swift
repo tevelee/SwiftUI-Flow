@@ -180,10 +180,12 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     }
     // Calculate total size
     let totalSizeOfItems = items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
-    if totalSizeOfItems > availableSpace {
+    let roundingTolerance = max(totalSizeOfItems.magnitude, availableSpace.magnitude, 1) * CGFloat.ulpOfOne
+    if totalSizeOfItems > availableSpace + roundingTolerance {
         return nil
     }
-    var remainingSpace = availableSpace - totalSizeOfItems
+    // Clamp to zero: within the tolerance above the leftover can be a tiny negative.
+    var remainingSpace = max(0, availableSpace - totalSizeOfItems)
     // Handle expanded items
     for item in items where item.element.flexibility == .maximum {
         let size = max(item.element.size.lowerBound, min(availableSpace, item.element.size.upperBound))

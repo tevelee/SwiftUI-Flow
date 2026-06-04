@@ -186,12 +186,17 @@ func sizes(of items: IndexedLineBreakingInput, availableSpace: CGFloat) -> SizeC
     }
     // Clamp to zero: within the tolerance above the leftover can be a tiny negative.
     var remainingSpace = max(0, availableSpace - totalSizeOfItems)
-    // Handle expanded items
+    // Handle expanded items. Each `.maximum` item wants to grow toward filling the
+    // line; account for their growth cumulatively so several of them on one segment
+    // can't each independently claim the same remaining space.
+    var remainingForMaximumItems = remainingSpace
     for item in items where item.element.flexibility == .maximum {
         let size = max(item.element.size.lowerBound, min(availableSpace, item.element.size.upperBound))
-        if size - item.element.size.lowerBound > remainingSpace {
+        let growth = size - item.element.size.lowerBound
+        if growth > remainingForMaximumItems {
             return nil
         }
+        remainingForMaximumItems -= growth
     }
     // Layout according to priorities and proportionally distribute remaining space between flexible views
     var result: LineOutput = items.map { LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing) }

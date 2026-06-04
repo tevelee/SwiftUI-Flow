@@ -210,6 +210,26 @@ struct SizesTests {
         ])
         #expect(sizes(of: items, availableSpace: 0.3) == nil)
     }
+
+    @Test func twoMaximumFlex_collectivelyExceedSpace_returnsNil() {
+        // Each item alone could grow to 60 within the 80pt of remaining space, but
+        // their combined growth (50 + 50) cannot, so they must not share a line.
+        let items = indexed([
+            LineItemInput(size: 10 ... 60, spacing: 0, flexibility: .maximum),
+            LineItemInput(size: 10 ... 60, spacing: 0, flexibility: .maximum),
+        ])
+        #expect(sizes(of: items, availableSpace: 100) == nil)
+    }
+
+    @Test func twoMaximumFlex_collectivelyFit_allowed() {
+        // Combined growth (20 + 20) fits within the 80pt of remaining space.
+        let items = indexed([
+            LineItemInput(size: 10 ... 30, spacing: 0, flexibility: .maximum),
+            LineItemInput(size: 10 ... 30, spacing: 0, flexibility: .maximum),
+        ])
+        let result = sizes(of: items, availableSpace: 100)
+        #expect(result != nil)
+    }
 }
 
 private func indexed(_ items: [LineItemInput]) -> IndexedLineBreakingInput {

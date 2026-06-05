@@ -21,7 +21,6 @@ let package = Package(
     targets: [
         .target(
             name: "Flow",
-            exclude: ["Example"],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
                 .swiftLanguageMode(.v6)

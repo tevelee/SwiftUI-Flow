@@ -296,8 +296,9 @@ func normalizedItemsForSizing(_ items: IndexedLineBreakingInput) -> IndexedLineB
 
     var normalized = items
     if let positionOfLineBreak,
-       case let afterLineBreak = normalized.index(after: positionOfLineBreak),
-       afterLineBreak < normalized.endIndex {
+        case let afterLineBreak = normalized.index(after: positionOfLineBreak),
+        afterLineBreak < normalized.endIndex
+    {
         normalized[afterLineBreak].element.spacing = 0
     }
     return normalized

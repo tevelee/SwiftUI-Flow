@@ -70,14 +70,18 @@ struct FlowLineBreaker: LineBreaking {
         var lines: LineBreakingOutput = []
 
         for item in items.enumerated() {
-            if sizes(of: currentLine + [item], availableSpace: availableSpace) != nil {
-                currentLine.append(item)
-            } else {
-                appendResolvedLine(currentLine, to: &lines, availableSpace: availableSpace)
+            currentLine.append(item)
+            if sizes(of: currentLine, availableSpace: availableSpace) == nil {
+                currentLine.removeLast()
+                if !currentLine.isEmpty {
+                    lines.append(resolvedLine(currentLine, availableSpace: availableSpace))
+                }
                 currentLine = [item]
             }
         }
-        appendResolvedLine(currentLine, to: &lines, availableSpace: availableSpace)
+        if !currentLine.isEmpty {
+            lines.append(resolvedLine(currentLine, availableSpace: availableSpace))
+        }
         return lines
     }
 }
@@ -128,6 +132,11 @@ struct KnuthPlassSolver {
         for start in (0 ..< end).reversed() {
             let range = start ..< end
             guard let candidateCost = candidateCost(for: range) else {
+                // A multi-item range that doesn't fit means all wider ranges (lower
+                // start values) also won't fit: overflow only grows, and structural
+                // violations (line-break / shouldStartInNewLine at non-first position)
+                // move further from position 0 as start decreases.
+                if range.count > 1 { break }
                 continue
             }
             if candidateCost < costs[end] {
@@ -186,9 +195,10 @@ struct KnuthPlassSolver {
         while let start = breaks[end] {
             let range = start ..< end
             let line = sizeCache.calculation(for: range)?.items ?? sizeCache.fallbackLineOutput(for: range)
-            result.insert(line, at: 0)
+            result.append(line)
             end = start
         }
+        result.reverse()
         return result
     }
 }
@@ -197,7 +207,8 @@ struct KnuthPlassSolver {
 struct SegmentSizingCache {
     let items: LineBreakingInput
     let availableSpace: CGFloat
-    private var calculations: [Range<Int>: SizeCalculation?] = [:]
+    private var computed: Set<Range<Int>> = []
+    private var calculations: [Range<Int>: SizeCalculation] = [:]
 
     @usableFromInline
     init(items: LineBreakingInput, availableSpace: CGFloat) {
@@ -206,12 +217,13 @@ struct SegmentSizingCache {
     }
 
     mutating func calculation(for range: Range<Int>) -> SizeCalculation? {
-        if let cached = calculations[range] {
-            return cached
+        if computed.contains(range) {
+            return calculations[range]
         }
-        let computed = sizes(of: indexedItems(in: range), availableSpace: availableSpace)
-        calculations[range] = computed
-        return computed
+        let result = sizes(of: indexedItems(in: range), availableSpace: availableSpace)
+        computed.insert(range)
+        calculations[range] = result
+        return result
     }
 
     func fallbackLineOutput(for range: Range<Int>) -> LineOutput {
@@ -223,6 +235,8 @@ struct SegmentSizingCache {
     }
 }
 
+// MARK: - Line sizing
+
 /// Places items at their minimum sizes when the normal sizing constraints cannot be satisfied
 /// (e.g. an item wider than the available space).
 @inlinable
@@ -230,18 +244,6 @@ func fallbackLine(_ items: IndexedLineBreakingInput) -> LineOutput {
     items.enumerated().map { i, item in
         LineItemOutput(index: item.offset, size: item.element.size.lowerBound, leadingSpace: i == 0 ? 0 : item.element.spacing)
     }
-}
-
-@usableFromInline
-func appendResolvedLine(
-    _ items: IndexedLineBreakingInput,
-    to lines: inout LineBreakingOutput,
-    availableSpace: CGFloat
-) {
-    guard !items.isEmpty else {
-        return
-    }
-    lines.append(resolvedLine(items, availableSpace: availableSpace))
 }
 
 @usableFromInline
@@ -286,20 +288,16 @@ func normalizedItemsForSizing(_ items: IndexedLineBreakingInput) -> IndexedLineB
         return nil
     }
 
-    let numberOfNewLines = items.filter(\.element.shouldStartInNewLine).count
-    if numberOfNewLines > 1 {
-        return nil
-    }
-    if numberOfNewLines == 1, !items[0].element.shouldStartInNewLine {
+    if items.dropFirst().contains(where: \.element.shouldStartInNewLine) {
         return nil
     }
 
     var normalized = items
-    if let positionOfLineBreak,
-        case let afterLineBreak = normalized.index(after: positionOfLineBreak),
-        afterLineBreak < normalized.endIndex
-    {
-        normalized[afterLineBreak].element.spacing = 0
+    if let positionOfLineBreak {
+        let afterLineBreak = normalized.index(after: positionOfLineBreak)
+        if afterLineBreak < normalized.endIndex {
+            normalized[afterLineBreak].element.spacing = 0
+        }
     }
     return normalized
 }
@@ -342,10 +340,9 @@ func distributeRemainingSpace(
 ) -> LineOutput {
     // Layout according to priorities and proportionally distribute remaining space
     // between flexible views.
-    var result = items.map {
-        LineItemOutput(index: $0.offset, size: $0.element.size.lowerBound, leadingSpace: $0.element.spacing)
+    var result = items.enumerated().map { i, item in
+        LineItemOutput(index: item.offset, size: item.element.size.lowerBound, leadingSpace: i == 0 ? 0 : item.element.spacing)
     }
-    result[0].leadingSpace = 0
 
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)

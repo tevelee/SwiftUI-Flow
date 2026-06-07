@@ -51,6 +51,8 @@ struct FlowLayout: Sendable {
     private typealias Line = [ItemWithSpacing<Item>]
     private typealias Lines = [ItemWithSpacing<Line>]
 
+    // MARK: - Layout protocol entry points
+
     @usableFromInline
     func sizeThatFits(
         proposal proposedSize: ProposedViewSize,
@@ -60,11 +62,9 @@ struct FlowLayout: Sendable {
         guard !subviews.isEmpty else { return .zero }
 
         let lines = calculateLayout(in: proposedSize, of: subviews, cache: &cache)
-        var size =
-            lines
-            .map(\.size)
-            .reduce(.zero, breadth: max, depth: +)
-        size.depth += lines.sum(of: \.leadingSpace)
+        var size = lines.reduce(Size.zero) { acc, line in
+            Size(breadth: max(acc.breadth, line.size.breadth), depth: acc.depth + line.size.depth + line.leadingSpace)
+        }
         // Justification needs a finite proposal to stretch to.
         if justified, proposedSize.value(on: axis).isFinite {
             size.breadth = proposedSize.value(on: axis)
@@ -87,11 +87,11 @@ struct FlowLayout: Sendable {
         let lines = calculateLayout(in: effectiveProposal(for: proposal, in: bounds), of: subviews, cache: &cache)
 
         for line in lines {
-            adjust(&target, for: line, on: .vertical) { target in
+            adjustDepth(&target, for: line) { target in
                 target.breadth = bounds.minimumValue(on: axis)
 
                 for item in line.item {
-                    adjust(&target, for: item, on: .horizontal) { target in
+                    adjustBreadth(&target, for: item) { target in
                         alignAndPlace(item, in: line, at: target)
                     }
                 }
@@ -104,15 +104,18 @@ struct FlowLayout: Sendable {
         FlowLayoutCache(subviews, axis: axis)
     }
 
-    private func adjust<T>(
-        _ target: inout Size,
-        for item: ItemWithSpacing<T>,
-        on axis: Axis,
-        body: (inout Size) -> Void
-    ) {
-        target[axis] += item.leadingSpace
+    // MARK: - Placement helpers
+
+    private func adjustDepth<T>(_ target: inout Size, for item: ItemWithSpacing<T>, body: (inout Size) -> Void) {
+        target.depth += item.leadingSpace
         body(&target)
-        target[axis] += item.size[axis]
+        target.depth += item.size.depth
+    }
+
+    private func adjustBreadth<T>(_ target: inout Size, for item: ItemWithSpacing<T>, body: (inout Size) -> Void) {
+        target.breadth += item.leadingSpace
+        body(&target)
+        target.breadth += item.size.breadth
     }
 
     private func alignAndPlace(
@@ -149,6 +152,8 @@ struct FlowLayout: Sendable {
             axis: axis
         )
     }
+
+    // MARK: - Layout pipeline
 
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
@@ -192,7 +197,7 @@ struct FlowLayout: Sendable {
         cache: FlowLayoutCache
     ) -> LineBreakingInput {
         subviews.enumerated().map { offset, subview in
-            makeLineBreakingInput(
+            lineBreakingItem(
                 for: subview,
                 at: offset,
                 in: proposedSize,
@@ -201,7 +206,7 @@ struct FlowLayout: Sendable {
         }
     }
 
-    private func makeLineBreakingInput(
+    private func lineBreakingItem(
         for subview: some Subview,
         at offset: Int,
         in proposedSize: ProposedViewSize,
@@ -246,6 +251,8 @@ struct FlowLayout: Sendable {
     private func availableLineBreakingSpace(in proposedSize: ProposedViewSize) -> CGFloat {
         proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
     }
+
+    // MARK: - Line construction
 
     private func makeLines(
         from wrapped: LineBreakingOutput,
@@ -311,11 +318,11 @@ struct FlowLayout: Sendable {
         // guides this reduces to the tallest item.
         let ascent = items.map(\.depthAlignmentGuide).max() ?? 0
         let descent = items.map { $0.size.depth - $0.depthAlignmentGuide }.max() ?? 0
-        var size = items.map(\.size).reduce(.zero, breadth: +, depth: max)
-        size.depth = ascent + descent
-        size.breadth += items.sum(of: \.leadingSpace)
-        return (size: size, depthAlignmentGuide: ascent)
+        let breadth = items.sum { $0.size.breadth + $0.leadingSpace }
+        return (size: Size(breadth: breadth, depth: ascent + descent), depthAlignmentGuide: ascent)
     }
+
+    // MARK: - Post-processing
 
     private func updateSpacesForJustifiedLayout(in lines: inout Lines, proposedSize: ProposedViewSize) {
         let availableSpace = proposedSize.value(on: axis)
@@ -336,34 +343,34 @@ struct FlowLayout: Sendable {
 
     private func updateLineSpacings(in lines: inout Lines) {
         if let lineSpacing {
-            for index in lines.indices.dropFirst() {
+            for index in lines.indices.dropFirst() where !isLineBreakLine(lines[index]) {
                 lines[index].leadingSpace = lineSpacing
             }
         } else {
             let lineSpacings = lines.map { line in
                 line.item.reduce(into: ViewSpacing()) { $0.formUnion($1.item.cache.spacing) }
             }
-            for (previous, index) in lines.indices.adjacentPairs() {
+            for (previous, index) in lines.indices.adjacentPairs() where !isLineBreakLine(lines[index]) {
                 let spacing = lineSpacings[index].distance(to: lineSpacings[previous], along: axis.perpendicular)
                 lines[index].leadingSpace = spacing
             }
         }
-        // remove space from empty lines (where the only item is a line break view)
-        for index in lines.indices where lines[index].item.count == 1 && lines[index].item[0].item.cache.layoutValues.isLineBreak {
-            lines[index].leadingSpace = 0
-        }
+    }
+
+    private func isLineBreakLine(_ line: Lines.Element) -> Bool {
+        line.item.count == 1 && line.item[0].item.cache.layoutValues.isLineBreak
     }
 
     private func updateAlignment(in lines: inout Lines) {
-        let breadth = lines.map { $0.item.sum { $0.leadingSpace + $0.size.breadth } }.max() ?? 0
+        let lineBreadths = lines.map { $0.item.sum { $0.leadingSpace + $0.size.breadth } }
+        let breadth = lineBreadths.max() ?? 0
         for index in lines.indices where !lines[index].item.isEmpty {
-            lines[index].item[0].leadingSpace += determineLeadingSpace(in: lines[index], breadth: breadth)
+            lines[index].item[0].leadingSpace += determineLeadingSpace(in: lines[index], lineSize: lineBreadths[index], breadth: breadth)
         }
     }
 
-    private func determineLeadingSpace(in line: Lines.Element, breadth: CGFloat) -> CGFloat {
+    private func determineLeadingSpace(in line: Lines.Element, lineSize: CGFloat, breadth: CGFloat) -> CGFloat {
         guard let item = line.item.first(where: { $0.item.cache.ideal.breadth > 0 })?.item else { return 0 }
-        let lineSize = line.item.sum { $0.leadingSpace + $0.size.breadth }
         let value = alignmentOnBreadth(item.subview.dimensions(.unspecified)) / item.cache.ideal.breadth
         let remainingSpace = breadth - lineSize
         let leadingSpace = value * remainingSpace
@@ -372,12 +379,9 @@ struct FlowLayout: Sendable {
     }
 }
 
-extension FlowLayout: Layout {
-    @inlinable
-    func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
-        makeCache(subviews)
-    }
+// MARK: - Factory
 
+extension FlowLayout {
     @inlinable
     static func vertical(
         horizontalAlignment: HorizontalAlignment = .center,
@@ -419,21 +423,15 @@ extension FlowLayout: Layout {
     }
 }
 
-extension Array where Element == Size {
+// MARK: - Layout protocol
+
+extension FlowLayout: Layout {
     @inlinable
-    func reduce(
-        _ initial: Size,
-        breadth: (CGFloat, CGFloat) -> CGFloat,
-        depth: (CGFloat, CGFloat) -> CGFloat
-    ) -> Size {
-        reduce(initial) { result, size in
-            Size(
-                breadth: breadth(result.breadth, size.breadth),
-                depth: depth(result.depth, size.depth)
-            )
-        }
+    func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
+        makeCache(subviews)
     }
 }
+
 
 extension CGFloat {
     /// The value if finite, else the fallback — keeps NaN/±∞ out of CoreGraphics.

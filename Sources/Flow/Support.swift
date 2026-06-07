@@ -21,8 +21,6 @@ public struct FlowLayoutCache {
         @usableFromInline
         var spacing: ViewSpacing
         @usableFromInline
-        var min: Size
-        @usableFromInline
         var ideal: Size
         @usableFromInline
         var max: Size
@@ -49,7 +47,6 @@ public struct FlowLayoutCache {
         init(_ subview: some Subview, axis: Axis) {
             priority = subview.priority
             spacing = subview.spacing
-            min = subview.dimensions(.zero).size(on: axis)
             ideal = subview.dimensions(.unspecified).size(on: axis)
             max = subview.dimensions(.infinity).size(on: axis)
             layoutValues = LayoutValues(
@@ -104,7 +101,6 @@ public struct FlowLayoutCache {
         subviewsCache = subviews.map {
             SubviewCache($0, axis: axis)
         }
-        lineBreaking = nil
     }
 
     @inlinable

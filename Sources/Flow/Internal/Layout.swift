@@ -69,6 +69,19 @@ struct FlowLayout: Sendable {
         if justified, proposedSize.value(on: axis).isFinite {
             size.breadth = proposedSize.value(on: axis)
         }
+        // When the proposal has infinite breadth, placeSubviews substitutes the actual
+        // bounds width (= size.breadth we just computed) as the effective proposal. Re-key
+        // the cached line-breaking result so the second pass finds it without recomputing.
+        if !proposedSize.value(on: axis).isFinite, size.breadth.isFinite {
+            let effectiveKey = FlowLayoutCache.LineBreakingKey(
+                proposedSize: ProposedViewSize(
+                    size: Size(breadth: size.breadth, depth: proposedSize.value(on: axis.perpendicular)),
+                    axis: axis
+                ),
+                axis: axis
+            )
+            cache.rekeyLineBreaking(to: effectiveKey)
+        }
         return CGSize(size: size, axis: axis)
     }
 

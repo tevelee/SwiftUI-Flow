@@ -112,6 +112,11 @@ public struct FlowLayoutCache {
     mutating func cacheLineBreaking(_ lines: LineBreakingOutput, for key: LineBreakingKey) {
         lineBreaking = LineBreakingResult(key: key, lines: lines)
     }
+
+    @inlinable
+    mutating func rekeyLineBreaking(to key: LineBreakingKey) {
+        lineBreaking?.key = key
+    }
 }
 
 /// A view to manually insert breaks into flow layout, allowing precise control over line breaking.

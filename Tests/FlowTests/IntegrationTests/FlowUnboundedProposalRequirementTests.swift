@@ -41,4 +41,24 @@ struct FlowUnboundedProposalRequirementTests {
         #expect(position?.x.isFinite == true, "x position must be finite")
         #expect(position?.y.isFinite == true, "y position must be finite")
     }
+
+    @Test(.tags(.regression)) func HFlow_distributed_unboundedProposal_reportsNonZeroSize() {
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 1, verticalSpacing: 0, distributeItemsEvenly: true),
+            subviews: [3 × 2, 4 × 2, 5 × 2],
+            proposal: ProposedViewSize(width: .infinity, height: 10)
+        )
+        .layoutThatFits()
+        #expect(result.reportedSize == (14 × 2), "Three items + two 1pt gaps on one line = 14 wide, 2 tall")
+    }
+
+    @Test(.tags(.regression)) func HFlow_distributed_unspecifiedProposal_reportsNonZeroSize() {
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 1, verticalSpacing: 0, distributeItemsEvenly: true),
+            subviews: [3 × 2, 4 × 2, 5 × 2],
+            proposal: .unspecified
+        )
+        .layoutThatFits()
+        #expect(result.reportedSize == (14 × 2))
+    }
 }

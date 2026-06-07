@@ -469,6 +469,33 @@ struct LineBreakingTests {
                 "shouldStartInNewLine should force a new line and clear the leading spacing"
             )
         }
+
+        @Test func knuth_plass_infiniteSpace_keepsAllItemsOnOneLine() {
+            let sut = KnuthPlassLineBreaker()
+            let result = sut.wrapItemsToLines(
+                items: [
+                    .init(size: 10 ... 50, spacing: 0),
+                    .init(size: 10 ... 50, spacing: 10),
+                    .init(size: .rigid(30), spacing: 10),
+                ],
+                in: .infinity
+            )
+            #expect(result.count == 1, "Unbounded space should keep everything on one line")
+            #expect(result.flatMap { $0 }.map(\.index) == [0, 1, 2])
+        }
+
+        @Test func knuth_plass_infiniteSpace_honorsManualBreaks() {
+            let sut = KnuthPlassLineBreaker()
+            let result = sut.wrapItemsToLines(
+                items: [
+                    .init(size: .rigid(20), spacing: 0),
+                    .init(size: .rigid(20), spacing: 10, shouldStartInNewLine: true),
+                ],
+                in: .infinity
+            )
+            #expect(result.count == 2, "Manual breaks must still split lines under unbounded space")
+            #expect(result.flatMap { $0 }.map(\.index) == [0, 1])
+        }
     }
 
     @Suite("Parity")

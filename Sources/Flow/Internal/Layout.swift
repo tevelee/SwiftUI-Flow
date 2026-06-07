@@ -445,7 +445,6 @@ extension FlowLayout: Layout {
     }
 }
 
-
 extension CGFloat {
     /// The value if finite, else the fallback — keeps NaN/±∞ out of CoreGraphics.
     fileprivate func finite(or fallback: CGFloat) -> CGFloat {

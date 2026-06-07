@@ -93,6 +93,13 @@ struct KnuthPlassLineBreaker: LineBreaking {
 
     @inlinable
     func wrapItemsToLines(items: LineBreakingInput, in availableSpace: CGFloat) -> LineBreakingOutput {
+        // With unbounded space there is nothing to optimize: wrapping never reduces
+        // the squared-leftover cost, so every candidate scores an infinite penalty and
+        // the solver would record no break points (dropping all items). Fall back to the
+        // greedy breaker, which keeps everything on one line (honoring manual breaks).
+        guard availableSpace.isFinite else {
+            return FlowLineBreaker().wrapItemsToLines(items: items, in: availableSpace)
+        }
         var solver = KnuthPlassSolver(items: items, availableSpace: availableSpace)
         return solver.solve()
     }

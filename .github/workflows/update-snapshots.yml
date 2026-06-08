@@ -9,6 +9,9 @@ jobs:
     runs-on: macos-15
     permissions:
       contents: write
+    # Snapshot suites require the snapshot-testing dependency.
+    env:
+      FLOW_SNAPSHOT_TESTING: "1"
     steps:
       - uses: actions/checkout@v6
         with:
@@ -20,12 +23,12 @@ jobs:
           xcode-version: "16.4"
 
       - name: Delete existing reference images
-        run: find Tests/FlowTests/Snapshot/__Snapshots__ -name "*.png" -delete
+        run: find Tests/FlowTests/SnapshotTests/Image/__Snapshots__ -name "*.png" -delete
 
       - name: Record new snapshots
         run: |
-          swift test --filter ImageSnapshots || true
-          swift test --filter ReadmeSnapshotTests || true
+          SNAPSHOT_TESTING_RECORD=all swift test --filter ImageSnapshots || true
+          SNAPSHOT_TESTING_RECORD=all swift test --filter ReadmeSnapshotTests || true
 
       - name: Verify new snapshots pass
         run: |
@@ -36,7 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Tests/FlowTests/Snapshot/__Snapshots__/
+          git add Tests/FlowTests/SnapshotTests/Image/__Snapshots__/
           git diff --staged --quiet && echo "Nothing to commit" || {
             git commit -m "Update snapshot references"
             git pull --rebase origin ${{ github.ref_name }}

@@ -1,7 +1,12 @@
 import SwiftUI
+import Testing
 import XCTest
 
 @testable import Flow
+
+#if FLOW_SNAPSHOT_TESTING
+    import InlineSnapshotTesting
+#endif
 
 class TestSubview: Flow.Subview, CustomStringConvertible {
     var spacing = ViewSpacing()
@@ -58,7 +63,7 @@ class TestSubview: Flow.Subview, CustomStringConvertible {
         return TestDimensions(width: size.width, height: size.height, firstBaseline: firstBaseline, lastBaseline: lastBaseline)
     }
 
-    func place(at position: CGPoint, anchor: UnitPoint, proposal: ProposedViewSize) {
+    func place(at position: CGPoint, anchor _: UnitPoint, proposal: ProposedViewSize) {
         let size = sizeThatFits(proposal)
         placement = (position, size)
     }
@@ -94,6 +99,116 @@ extension [TestSubview]: Flow.Subviews {}
 
 typealias LayoutDescription = (subviews: [TestSubview], reportedSize: CGSize)
 
+struct ExpectedPlacement: Equatable, CustomStringConvertible {
+    let position: CGPoint
+    let size: CGSize
+
+    init(at position: CGPoint, size: CGSize) {
+        self.position = position
+        self.size = size
+    }
+
+    init(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat) {
+        self.init(
+            at: CGPoint(x: x, y: y),
+            size: CGSize(width: width, height: height)
+        )
+    }
+
+    var description: String {
+        "origin: \(position.x)×\(position.y), size: \(size.width)×\(size.height)"
+    }
+}
+
+func placed(at x: CGFloat, _ y: CGFloat, size: CGSize) -> ExpectedPlacement {
+    ExpectedPlacement(at: CGPoint(x: x, y: y), size: size)
+}
+
+func placed(at position: CGPoint, size: CGSize) -> ExpectedPlacement {
+    ExpectedPlacement(at: position, size: size)
+}
+
+@resultBuilder
+enum ExpectedPlacementsBuilder {
+    static func buildExpression(_ expression: ExpectedPlacement) -> [ExpectedPlacement] {
+        [expression]
+    }
+
+    static func buildExpression(_ expression: [ExpectedPlacement]) -> [ExpectedPlacement] {
+        expression
+    }
+
+    static func buildBlock(_ components: [ExpectedPlacement]...) -> [ExpectedPlacement] {
+        components.flatMap { $0 }
+    }
+
+    static func buildOptional(_ component: [ExpectedPlacement]?) -> [ExpectedPlacement] {
+        component ?? []
+    }
+
+    static func buildEither(first component: [ExpectedPlacement]) -> [ExpectedPlacement] {
+        component
+    }
+
+    static func buildEither(second component: [ExpectedPlacement]) -> [ExpectedPlacement] {
+        component
+    }
+
+    static func buildArray(_ components: [[ExpectedPlacement]]) -> [ExpectedPlacement] {
+        components.flatMap { $0 }
+    }
+}
+
+struct FlowLayoutScenario {
+    let layout: FlowLayout
+    let subviews: [TestSubview]
+    let proposal: ProposedViewSize
+    let bounds: CGRect?
+
+    init(
+        layout: FlowLayout,
+        subviews: [TestSubview],
+        proposal: ProposedViewSize,
+        bounds: CGRect? = nil
+    ) {
+        self.layout = layout
+        self.subviews = subviews
+        self.proposal = proposal
+        self.bounds = bounds
+    }
+
+    @discardableResult
+    func layoutThatFits() -> LayoutDescription {
+        layout.layoutThatFits(subviews, proposal: proposal, in: bounds)
+    }
+
+    @discardableResult
+    func assertExpectedLayout(
+        size expectedSize: CGSize,
+        placements expectedPlacements: [ExpectedPlacement]
+    ) -> LayoutDescription {
+        let result = layoutThatFits()
+        expectLayout(result, size: expectedSize)
+        expectPlacements(result.subviews, expectedPlacements)
+        return result
+    }
+
+    @discardableResult
+    func assertExpectedLayout(
+        size expectedSize: CGSize,
+        @ExpectedPlacementsBuilder placements expectedPlacements: () -> [ExpectedPlacement]
+    ) -> LayoutDescription {
+        assertExpectedLayout(size: expectedSize, placements: expectedPlacements())
+    }
+
+    @discardableResult
+    func assertExpectedSize(_ expectedSize: CGSize) -> LayoutDescription {
+        let result = layoutThatFits()
+        expectLayout(result, size: expectedSize)
+        return result
+    }
+}
+
 extension FlowLayout {
     func layout(_ subviews: [TestSubview], in bounds: CGSize) -> LayoutDescription {
         var cache = makeCache(subviews)
@@ -114,56 +229,125 @@ extension FlowLayout {
         return (subviews, bounds)
     }
 
+    func layoutThatFits(
+        _ subviews: [TestSubview],
+        proposal: ProposedViewSize,
+        in bounds: CGRect? = nil
+    ) -> LayoutDescription {
+        var cache = makeCache(subviews)
+        let reportedSize = sizeThatFits(
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
+        placeSubviews(
+            in: bounds ?? CGRect(origin: .zero, size: reportedSize),
+            proposal: proposal,
+            subviews: subviews,
+            cache: &cache
+        )
+        return (subviews, reportedSize)
+    }
+
     func sizeThatFits(proposal: ProposedViewSize, subviews: [TestSubview]) -> CGSize {
         var cache = makeCache(subviews)
         return sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 }
 
-func render(_ layout: LayoutDescription, border: Bool = true) -> String {
-    struct Point: Hashable {
-        let x, y: Int
+func expectPlacements(
+    _ subviews: [TestSubview],
+    _ expected: [ExpectedPlacement]
+) {
+    #expect(subviews.count == expected.count, "Expected \(expected.count) placements, got \(subviews.count)")
+    guard subviews.count == expected.count else {
+        return
     }
-    let width = Int(layout.reportedSize.width)
-    let height = Int(layout.reportedSize.height)
+    for index in subviews.indices {
+        let actual = subviews[index].placement
+        let expected = expected[index]
+        #expect(
+            actual?.position == expected.position,
+            "Subview \(index) position: expected \(expected.position), got \(String(describing: actual?.position))"
+        )
+        #expect(
+            actual?.size == expected.size,
+            "Subview \(index) size: expected \(expected.size), got \(String(describing: actual?.size))"
+        )
+    }
+}
 
-    var positions: Set<Point> = []
-    for view in layout.subviews {
-        if let placement = view.placement {
-            let point = placement.position
-            for y in Int(point.y) ..< Int(point.y + placement.size.height) {
-                for x in Int(point.x) ..< Int(point.x + placement.size.width) {
-                    let result = positions.insert(Point(x: x, y: y))
-                    precondition(result.inserted, "Boxes should not overlap")
-                    precondition(x >= 0 && x < width && y >= 0 && y < height, "Out of bounds")
-                }
-            }
-        } else {
-            fatalError("Should be placed")
-        }
+func expectPlacements(
+    _ subviews: [TestSubview],
+    @ExpectedPlacementsBuilder _ expected: () -> [ExpectedPlacement]
+) {
+    expectPlacements(subviews, expected())
+}
+
+func expectLayout(
+    _ layout: LayoutDescription,
+    size expectedSize: CGSize
+) {
+    #expect(layout.reportedSize == expectedSize)
+}
+
+// Inline-snapshot assertions require swift-snapshot-testing. The transcript suites that
+// call these helpers are excluded from the test target unless FLOW_SNAPSHOT_TESTING is set
+// (see Package.swift), so these definitions are gated on the same condition.
+#if FLOW_SNAPSHOT_TESTING
+    func assertLayoutRendering(
+        _ layout: LayoutDescription,
+        matches expected: (() -> String)? = nil,
+        fileID: StaticString = #fileID,
+        filePath: StaticString = #filePath,
+        function: StaticString = #function,
+        line: UInt = #line,
+        column: UInt = #column
+    ) {
+        assertInlineSnapshot(
+            of: labeledRender(layout),
+            as: .lines,
+            matches: expected,
+            fileID: fileID,
+            file: filePath,
+            function: function,
+            line: line,
+            column: column
+        )
     }
-    var result = ""
-    if border {
-        result += "+" + String(repeating: "-", count: width) + "+\n"
+
+    func assertLayoutTranscript(
+        _ layout: LayoutDescription,
+        matches expected: (() -> String)? = nil,
+        fileID: StaticString = #fileID,
+        filePath: StaticString = #filePath,
+        function: StaticString = #function,
+        line: UInt = #line,
+        column: UInt = #column
+    ) {
+        assertInlineSnapshot(
+            of: layoutTranscript(layout),
+            as: .lines,
+            matches: expected,
+            fileID: fileID,
+            file: filePath,
+            function: function,
+            line: line,
+            column: column
+        )
     }
-    for y in 0 ... height - 1 {
-        if border {
-            result += "|"
-        }
-        for x in 0 ... width - 1 {
-            result += positions.contains(Point(x: x, y: y)) ? "X" : " "
-        }
-        if border {
-            result += "|"
-        } else {
-            result = result.trimmingCharacters(in: .whitespaces)
-        }
-        result += "\n"
-    }
-    if border {
-        result += "+" + String(repeating: "-", count: width) + "+\n"
-    }
-    return result.trimmingCharacters(in: .newlines)
+#endif
+
+func testLineBreakSubview() -> TestSubview {
+    let subview = TestSubview(size: .zero)
+    subview[IsLineBreakLayoutValueKey.self] = true
+    return subview
+}
+
+func testNewLineSubview(_ size: CGSize) -> TestSubview {
+    let subview = TestSubview(size: size)
+    subview[ShouldStartInNewLineLayoutValueKey.self] = true
+    return subview
 }
 
 func labeledRender(_ layout: LayoutDescription) -> String {
@@ -171,19 +355,23 @@ func labeledRender(_ layout: LayoutDescription) -> String {
     let height = Int(layout.reportedSize.height)
     guard width > 0 && height > 0 else { return "(empty)" }
 
-    let labels: [Character] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
     var grid = Array(repeating: Array(repeating: Character(" "), count: width), count: height)
 
     for (i, view) in layout.subviews.enumerated() {
-        guard let placement = view.placement else { continue }
-        let label = labels[i % labels.count]
+        guard let placement = view.placement else {
+            fatalError("Should be placed")
+        }
+        let label = layoutLabel(forSubviewAt: i)
         let x0 = Int(placement.position.x)
         let y0 = Int(placement.position.y)
         let w = Int(placement.size.width)
         let h = Int(placement.size.height)
-        for y in y0 ..< (y0 + h) where y >= 0 && y < height {
-            for x in x0 ..< (x0 + w) where x >= 0 && x < width {
-                grid[y][x] = label
+        for y in y0 ..< (y0 + h) {
+            for x in x0 ..< (x0 + w) {
+                guard y >= 0 && y < height && x >= 0 && x < width else {
+                    continue
+                }
+                grid[y][x] = grid[y][x] == " " ? label : "*"
             }
         }
     }
@@ -194,6 +382,53 @@ func labeledRender(_ layout: LayoutDescription) -> String {
     }
     result += "+" + String(repeating: "-", count: width) + "+"
     return result
+}
+
+func layoutTranscript(_ layout: LayoutDescription) -> String {
+    var lines = [
+        "reportedSize: \(format(layout.reportedSize))",
+        "placements:",
+    ]
+
+    for (index, view) in layout.subviews.enumerated() {
+        let label = layoutLabel(forSubviewAt: index)
+        let placement =
+            view.placement.map {
+                "origin: \(format($0.position)), size: \(format($0.size))"
+            } ?? "unplaced"
+        lines.append("\(label)[\(index)]: \(placement)")
+    }
+
+    return lines.joined(separator: "\n")
+}
+
+private let layoutLabels: [Character] = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
+private func layoutLabel(forSubviewAt index: Int) -> Character {
+    layoutLabels[index % layoutLabels.count]
+}
+
+private func format(_ point: CGPoint) -> String {
+    "\(format(point.x))×\(format(point.y))"
+}
+
+private func format(_ size: CGSize) -> String {
+    "\(format(size.width))×\(format(size.height))"
+}
+
+private func format(_ value: CGFloat) -> String {
+    if value == .infinity {
+        return "inf"
+    }
+    if value == -.infinity {
+        return "-inf"
+    }
+
+    let rounded = value.rounded()
+    if abs(value - rounded) < 0.000_001 {
+        return "\(Int(rounded))"
+    }
+    return "\(value)"
 }
 
 private struct TestDimensions: Dimensions {

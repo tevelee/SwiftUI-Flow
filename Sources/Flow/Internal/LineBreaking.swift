@@ -2,7 +2,7 @@ import CoreFoundation
 import Foundation
 
 @usableFromInline
-struct LineItemInput {
+struct LineItemInput: Sendable {
     @usableFromInline
     var size: ClosedRange<CGFloat>
     @usableFromInline

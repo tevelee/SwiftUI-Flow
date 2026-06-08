@@ -70,7 +70,7 @@ struct Colors: View {
 }
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow.1.png)
 
 ## VFlow
 
@@ -85,7 +85,7 @@ VFlow {
 .frame(maxHeight: 300)
 ```
 
-![VFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/vflow.1.png)
+![VFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/vflow.1.png)
 
 ## Alignment
 
@@ -102,7 +102,7 @@ HFlow(alignment: .top) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_top.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_top.1.png)
 
 Additionally, alignment can be specified on both axes. Ideal for tags.
 
@@ -117,7 +117,7 @@ HFlow(horizontalAlignment: .center, verticalAlignment: .top) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_tag.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_tag.1.png)
 
 ## Spacing
 
@@ -134,7 +134,7 @@ HFlow(itemSpacing: 4, rowSpacing: 20) {
 .frame(maxWidth: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_spacing.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_spacing.1.png)
 
 ## Distribute items
 
@@ -153,7 +153,7 @@ HFlow(distributeItemsEvenly: true) {
 .border(.gray)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_distributed_evenly.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_distributed_evenly.1.png)
 
 ## Justified
 
@@ -168,7 +168,7 @@ HFlow(justified: true) {
 .frame(width: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_justified.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_justified.1.png)
 
 ## Flexibility
 
@@ -198,7 +198,7 @@ HFlow { // distributes flexible items proportionally
 .frame(width: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_flexibility.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_flexibility.1.png)
 
 ## Line breaks
 
@@ -221,7 +221,7 @@ HFlow {
 .frame(width: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_linebreak.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_linebreak.1.png)
 
 ```swift
 HFlow {
@@ -242,7 +242,7 @@ HFlow {
 .frame(width: 300)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_newline.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_newline.1.png)
 
 ## RTL
 
@@ -260,4 +260,4 @@ HFlow {
 .environment(\.layoutDirection, .rightToLeft)
 ```
 
-![HFlow](Tests/FlowTests/Snapshot/__Snapshots__/ReadmeSnapshotTests/hflow_rtl.1.png)
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_rtl.1.png)

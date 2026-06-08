@@ -1,6 +1,14 @@
 // swift-tools-version: 5.9
 
+import Foundation
 import PackageDescription
+
+func isEnabled(_ name: String) -> Bool {
+    guard let value = ProcessInfo.processInfo.environment[name] else { return false }
+    return !value.isEmpty && value != "0" && value.lowercased() != "false"
+}
+let doccPlugin = isEnabled("FLOW_DOCC")
+let snapshotTesting = isEnabled("FLOW_SNAPSHOT_TESTING")
 
 let package = Package(
     name: "Flow",
@@ -13,10 +21,7 @@ let package = Package(
     products: [
         .library(name: "Flow", targets: ["Flow"])
     ],
-    dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.0"),
-        .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0")
-    ],
+    dependencies: [],
     targets: [
         .target(
             name: "Flow",
@@ -27,10 +32,10 @@ let package = Package(
         ),
         .testTarget(
             name: "FlowTests",
-            dependencies: [
-                "Flow",
-                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
-                .product(name: "InlineSnapshotTesting", package: "swift-snapshot-testing")
+            dependencies: ["Flow"],
+            exclude: [
+                "README.md",
+                "PropertyTests"
             ],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),
@@ -39,3 +44,19 @@ let package = Package(
         )
     ]
 )
+
+let testTarget = package.targets.last!
+
+if doccPlugin {
+    package.dependencies.append(.package(url: "https://github.com/apple/swift-docc-plugin", from: "1.4.0"))
+}
+
+if snapshotTesting {
+    package.dependencies.append(.package(url: "https://github.com/pointfreeco/swift-snapshot-testing", from: "1.19.0"))
+    testTarget.dependencies.append(.product(name: "SnapshotTesting", package: "swift-snapshot-testing"))
+    testTarget.dependencies.append(.product(name: "InlineSnapshotTesting", package: "swift-snapshot-testing"))
+    testTarget.swiftSettings?.append(.define("FLOW_SNAPSHOT_TESTING"))
+    testTarget.exclude.append("SnapshotTests/Image/__Snapshots__")
+} else {
+    testTarget.exclude.append("SnapshotTests")
+}

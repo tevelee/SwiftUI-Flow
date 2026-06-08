@@ -10,6 +10,10 @@ jobs:
   coverage:
     name: Codecov
     runs-on: macos-15
+    # Opt into the test-only dependencies (snapshot + property based).
+    env:
+      FLOW_SNAPSHOT_TESTING: "1"
+      FLOW_PROPERTY_TESTING: "1"
     steps:
       - uses: actions/checkout@v6
       - uses: maxim-lobanov/setup-xcode@v1

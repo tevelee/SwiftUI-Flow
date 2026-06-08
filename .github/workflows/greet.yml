@@ -35,7 +35,7 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: `👋 Thanks for your first pull request to SwiftUI-Flow, @${sender}!\n\nA maintainer will review it shortly. While you wait, please make sure:\n- [ ] \`swift test\` passes locally (the deterministic suite; image snapshots are environment-sensitive — see CONTRIBUTING.md)\n- [ ] New public API has \`///\` doc comments\n- [ ] The PR has a label set (helps the automated release notes)\n\nSee [CONTRIBUTING.md](https://github.com/tevelee/SwiftUI-Flow/blob/main/CONTRIBUTING.md) for the full guide.`,
+                body: `👋 Thanks for your first pull request to SwiftUI-Flow, @${sender}!\n\nA maintainer will review it shortly. While you wait, please make sure:\n- [ ] \`FLOW_SNAPSHOT_TESTING=1 FLOW_PROPERTY_TESTING=1 swift test\` passes locally (the test-only deps are opt-in; image snapshots are environment-sensitive — see CONTRIBUTING.md)\n- [ ] New public API has \`///\` doc comments\n- [ ] The PR has a label set (helps the automated release notes)\n\nSee [CONTRIBUTING.md](https://github.com/tevelee/SwiftUI-Flow/blob/main/CONTRIBUTING.md) for the full guide.`,
               });
             } else {
               const issues = await github.paginate(github.rest.issues.listForRepo, {

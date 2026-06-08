@@ -1,13 +1,30 @@
 import SwiftUI
 
 /// The way line breaking treats flexible items. The default behavior is `.natural`.
-public enum FlexibilityBehavior: Sendable {
+public enum FlexibilityBehavior: Sendable, Equatable {
     /// The layout chooses the minimum space for the view, regardless of how much it can expand
     case minimum
     /// The layout allows the views to expand as they naturally do.
     case natural
     /// If a view can expand, it allows to "push" out other views and fill a whole row on its own.
     case maximum
+    /// The view grows to fill the leftover space on its line in proportion to `weight`, relative to
+    /// the other growing items sharing that line. `.natural` is equivalent to `.grow(1)` and
+    /// `.minimum` to `.grow(0)`; a larger weight claims a larger share of the slack.
+    case grow(Double)
+}
+
+extension FlexibilityBehavior {
+    /// The relative share of leftover line space this behavior claims. `.minimum` (and `.grow(0)`)
+    /// claim none; `.natural`/`.maximum` default to `1`. Negative weights are clamped to `0`.
+    @usableFromInline
+    var growWeight: Double {
+        switch self {
+            case .minimum: 0
+            case .natural, .maximum: 1
+            case .grow(let weight): max(0, weight)
+        }
+    }
 }
 
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).

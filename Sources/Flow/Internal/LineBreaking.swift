@@ -354,16 +354,54 @@ func distributeRemainingSpace(
     let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
     let priorities = itemsInPriorityOrder.keys.sorted(by: >)
     for priority in priorities where remainingSpace > 0 {
-        let items = itemsInPriorityOrder[priority] ?? []
-        let itemsInFlexibilityOrder = items.sorted(using: KeyPathComparator(\.element.element.growingPotential))
-        var remainingItemCount = items.count
-        for (index, item) in itemsInFlexibilityOrder {
-            let offer = remainingSpace / CGFloat(remainingItemCount)
-            let allocation = min(item.element.growingPotential, offer)
-            result[index].size += allocation
-            remainingSpace -= allocation
-            remainingItemCount -= 1
-        }
+        distributeByWeight(within: itemsInPriorityOrder[priority] ?? [], into: &result, remainingSpace: &remainingSpace)
     }
     return result
+}
+
+/// Hands out `remainingSpace` to the items in one priority group in proportion to each item's grow
+/// weight, capping every item at its growth headroom and redistributing the freed share — a weighted
+/// water-fill. With equal weights and no cap binding, this reduces to an even split.
+private func distributeByWeight(
+    within group: [(offset: Int, element: IndexedLineBreakingInput.Element)],
+    into result: inout LineOutput,
+    remainingSpace: inout CGFloat
+) {
+    let epsilon: CGFloat = 1e-9
+    // Keyed by line position (the index into `result`): the item's grow weight and its remaining
+    // headroom (how much more it may grow before hitting its upper bound).
+    var weights: [Int: Double] = [:]
+    var headroom: [Int: CGFloat] = [:]
+    for (position, item) in group where item.element.growingPotential > 0 && item.element.flexibility.growWeight > 0 {
+        weights[position] = item.element.flexibility.growWeight
+        headroom[position] = item.element.growingPotential
+    }
+
+    while remainingSpace > epsilon, !weights.isEmpty {
+        let totalWeight = weights.values.reduce(0, +)
+        guard totalWeight > 0 else { break }
+        // Largest fraction of a full proportional pass we can make before some item caps out.
+        var scale: CGFloat = 1
+        for (position, weight) in weights {
+            let fullShare = remainingSpace * CGFloat(weight / totalWeight)
+            if fullShare > headroom[position]! {
+                scale = min(scale, headroom[position]! / fullShare)
+            }
+        }
+        var distributed: CGFloat = 0
+        for (position, weight) in weights {
+            let grant = scale * remainingSpace * CGFloat(weight / totalWeight)
+            result[position].size += grant
+            headroom[position]! -= grant
+            distributed += grant
+        }
+        remainingSpace -= distributed
+        for position in headroom.filter({ $0.value <= epsilon }).map(\.key) {
+            weights[position] = nil
+            headroom[position] = nil
+        }
+        if scale >= 1 {
+            break
+        }
+    }
 }

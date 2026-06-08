@@ -133,15 +133,28 @@ enum ExampleLayoutDirection: String, CaseIterable, CustomStringConvertible, Iden
 enum ItemFlexibility: String, CaseIterable, CustomStringConvertible, Identifiable {
     case minimum
     case natural
+    case grow2
+    case grow3
     case maximum
 
     var id: Self { self }
-    var description: String { rawValue.capitalized }
+
+    var description: String {
+        switch self {
+            case .minimum: "Minimum"
+            case .natural: "Natural"
+            case .grow2: "Grow ×2"
+            case .grow3: "Grow ×3"
+            case .maximum: "Maximum"
+        }
+    }
 
     var value: FlexibilityBehavior {
         switch self {
             case .minimum: .minimum
             case .natural: .natural
+            case .grow2: .grow(2)
+            case .grow3: .grow(3)
             case .maximum: .maximum
         }
     }

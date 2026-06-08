@@ -8,31 +8,29 @@
 
     // MARK: - Shared fixtures
 
-    private let lazyColors: [Color] = [.blue, .orange, .green, .yellow, .brown, .mint, .indigo, .cyan, .gray, .pink]
-
-    private struct LazyColorItem: Identifiable {
+    private struct ColorItem: Identifiable {
         let id: Int
         let color: Color
         let width: CGFloat
     }
 
-    private let lazyColorItemWidths: [CGFloat] = [45, 55, 50, 40, 60, 48, 52, 58, 42, 46]
+    private let lazyColors: [Color] = [.blue, .orange, .green, .yellow, .brown, .mint, .indigo, .cyan, .gray, .pink]
+    private let itemWidths: [CGFloat] = [45, 55, 50, 40, 60, 48, 52, 58, 42, 46]
+    private let itemHeights: [CGFloat] = [45, 55, 50, 40, 60, 48, 52, 58, 42, 46]
 
-    private let lazyHFlowItems: [LazyColorItem] = zip(lazyColors, lazyColorItemWidths)
+    private let hFlowItems: [ColorItem] = zip(lazyColors, itemWidths)
         .enumerated()
-        .map { LazyColorItem(id: $0.offset, color: $0.element.0, width: $0.element.1) }
+        .map { ColorItem(id: $0.offset, color: $0.element.0, width: $0.element.1) }
 
-    private struct LazyHeightItem: Identifiable {
+    private struct HeightItem: Identifiable {
         let id: Int
         let color: Color
         let height: CGFloat
     }
 
-    private let lazyColorItemHeights: [CGFloat] = [45, 55, 50, 40, 60, 48, 52, 58, 42, 46]
-
-    private let lazyVFlowItems: [LazyHeightItem] = zip(lazyColors, lazyColorItemHeights)
+    private let vFlowItems: [HeightItem] = zip(lazyColors, itemHeights)
         .enumerated()
-        .map { LazyHeightItem(id: $0.offset, color: $0.element.0, height: $0.element.1) }
+        .map { HeightItem(id: $0.offset, color: $0.element.0, height: $0.element.1) }
 
     private struct TagItem: Identifiable {
         let id: Int
@@ -45,69 +43,80 @@
     @MainActor
     struct LazyHFlowImageSnapshots {
         @Test func lazyHFlow_default() {
-            let view = LazyHFlow(data: lazyHFlowItems) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyHFlow(data: hFlowItems) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(height: 50)
-            }
-            .padding(12)
-            .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
-        }
-
-        @Test func lazyHFlow_narrowMinimumWidth() {
-            let view = LazyHFlow(data: lazyHFlowItems, minimumItemWidth: 40) { item in
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(item.color)
-                    .frame(height: 50)
+                    .frame(width: item.width, height: 44)
             }
             .padding(12)
             .background(Color.white)
             assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
         }
 
-        @Test func lazyHFlow_wideMinimumWidth() {
-            let view = LazyHFlow(data: lazyHFlowItems, minimumItemWidth: 120) { item in
-                RoundedRectangle(cornerRadius: 10)
+        @Test func lazyHFlow_alignmentTop() {
+            let view = LazyHFlow(data: hFlowItems, alignment: .top) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(height: 50)
+                    .frame(width: item.width, height: item.width)
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 300)))
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+        }
+
+        @Test func lazyHFlow_alignmentBottom() {
+            let view = LazyHFlow(data: hFlowItems, alignment: .bottom) { item in
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(item.color)
+                    .frame(width: item.width, height: item.width)
+            }
+            .padding(12)
+            .background(Color.white)
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
         }
 
         @Test func lazyHFlow_compactSpacing() {
-            let view = LazyHFlow(data: lazyHFlowItems, spacing: 2) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyHFlow(data: hFlowItems, spacing: 2) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(height: 50)
+                    .frame(width: item.width, height: 44)
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_spaciousSpacing() {
-            let view = LazyHFlow(data: lazyHFlowItems, spacing: 20) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyHFlow(data: hFlowItems, spacing: 20) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(height: 50)
-            }
-            .padding(12)
-            .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 300)))
-        }
-
-        @Test func lazyHFlow_cappedMaximumWidth() {
-            let view = LazyHFlow(data: lazyHFlowItems, minimumItemWidth: 60, maximumItemWidth: 80) { item in
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(item.color)
-                    .frame(height: 50)
+                    .frame(width: item.width, height: 44)
             }
             .padding(12)
             .background(Color.white)
             assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+        }
+
+        @Test func lazyHFlow_justified() {
+            let view = LazyHFlow(data: hFlowItems, justified: true) { item in
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(item.color)
+                    .frame(width: item.width, height: 44)
+            }
+            .padding(12)
+            .background(Color.white)
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
+        }
+
+        @Test func lazyHFlow_distributeItemsEvenly() {
+            let view = LazyHFlow(data: hFlowItems, spacing: 8, distributeItemsEvenly: true) { item in
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(item.color)
+                    .frame(width: item.width, height: 44)
+            }
+            .padding(12)
+            .background(Color.white)
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_tagCloud() {
@@ -118,7 +127,7 @@
             ]
             .enumerated()
             .map { TagItem(id: $0.offset, text: $0.element) }
-            let view = LazyHFlow(data: tags, minimumItemWidth: 60) { tag in
+            let view = LazyHFlow(data: tags, spacing: 8) { tag in
                 Text(tag.text)
                     .font(.callout)
                     .foregroundStyle(.black)
@@ -138,43 +147,32 @@
     @MainActor
     struct LazyVFlowImageSnapshots {
         @Test func lazyVFlow_default() {
-            let view = LazyVFlow(data: lazyVFlowItems) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyVFlow(data: vFlowItems) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(width: 50)
+                    .frame(width: 44, height: item.height)
             }
             .padding(12)
             .background(Color.white)
             assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
         }
 
-        @Test func lazyVFlow_shortMinimumHeight() {
-            let view = LazyVFlow(data: lazyVFlowItems, minimumItemHeight: 20) { item in
-                RoundedRectangle(cornerRadius: 10)
+        @Test func lazyVFlow_alignmentLeading() {
+            let view = LazyVFlow(data: vFlowItems, alignment: .leading) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(width: 50)
+                    .frame(width: item.height, height: item.height)
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 200)))
+            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
         }
 
-        @Test func lazyVFlow_tallMinimumHeight() {
-            let view = LazyVFlow(data: lazyVFlowItems, minimumItemHeight: 80) { item in
-                RoundedRectangle(cornerRadius: 10)
+        @Test func lazyVFlow_alignmentTrailing() {
+            let view = LazyVFlow(data: vFlowItems, alignment: .trailing) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(width: 50)
-            }
-            .padding(12)
-            .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 250, height: 320)))
-        }
-
-        @Test func lazyVFlow_cappedMaximumHeight() {
-            let view = LazyVFlow(data: lazyVFlowItems, minimumItemHeight: 30, maximumItemHeight: 45) { item in
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(item.color)
-                    .frame(width: 50)
+                    .frame(width: item.height, height: item.height)
             }
             .padding(12)
             .background(Color.white)
@@ -182,10 +180,10 @@
         }
 
         @Test func lazyVFlow_compactSpacing() {
-            let view = LazyVFlow(data: lazyVFlowItems, spacing: 2) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyVFlow(data: vFlowItems, spacing: 2) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(width: 50)
+                    .frame(width: 44, height: item.height)
             }
             .padding(12)
             .background(Color.white)
@@ -193,10 +191,10 @@
         }
 
         @Test func lazyVFlow_spaciousSpacing() {
-            let view = LazyVFlow(data: lazyVFlowItems, spacing: 20) { item in
-                RoundedRectangle(cornerRadius: 10)
+            let view = LazyVFlow(data: vFlowItems, spacing: 20) { item in
+                RoundedRectangle(cornerRadius: 8)
                     .fill(item.color)
-                    .frame(width: 50)
+                    .frame(width: 44, height: item.height)
             }
             .padding(12)
             .background(Color.white)

@@ -1,19 +1,17 @@
 import SwiftUI
 
-/// A lazy-loading approximation of ``HFlow`` backed by `LazyVGrid`.
+/// A view that arranges its children in a horizontal flow layout, loading items
+/// lazily as they become visible in a scroll view.
 ///
-/// Unlike ``HFlow``, items are arranged in an adaptive grid where each column
-/// is at least `minimumItemWidth` points wide. Items are not placed to exactly
-/// fit their natural sizes — all columns share the same width calculated from
-/// the available space — but rendering is lazy: SwiftUI only instantiates and
-/// renders the items that are currently visible on screen.
+/// The layout is identical to ``HFlow``: each item is measured at its natural
+/// size and rows break based on actual content widths. Items are loaded
+/// incrementally as the user scrolls, making this suitable for large datasets.
 ///
-/// Use this view instead of ``HFlow`` when your dataset is large enough that
-/// the eager, per-item measurement performed by the `Layout`-protocol-based
-/// ``HFlow`` becomes too expensive.
+/// When used without a `ScrollView` ancestor, all items are rendered eagerly,
+/// matching the behaviour of ``HFlow``.
 ///
 ///     ScrollView {
-///         LazyHFlow(data: myItems, minimumItemWidth: 80, spacing: 8) { item in
+///         LazyHFlow(data: myItems, spacing: 8) { item in
 ///             Text(item.title)
 ///                 .padding(8)
 ///                 .background(Color.accentColor.opacity(0.2))
@@ -21,52 +19,257 @@ import SwiftUI
 ///         }
 ///     }
 ///
-/// - Note: Because this view relies on `LazyVGrid`, it requires a `ScrollView`
-///   ancestor to actually defer rendering. Without one, all items are rendered
-///   eagerly just like ``HFlow``.
-public struct LazyHFlow<Data: RandomAccessCollection, Content: View>: View
-where Data.Element: Identifiable {
-    private let data: Data
-    private let minimumItemWidth: CGFloat
-    private let maximumItemWidth: CGFloat
-    private let spacing: CGFloat
-    private let content: (Data.Element) -> Content
+@available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
+@frozen
+public struct LazyHFlow<LayoutContent: View>: View {
+    @usableFromInline
+    let count: Int
+    @usableFromInline
+    let layout: HFlowLayout
+    @usableFromInline
+    let makeContent: (Int) -> LayoutContent
 
-    /// Creates a lazy horizontal flow backed by `LazyVGrid`.
+    @usableFromInline
+    @Environment(\.flexibility) var flexibility
+
+    @usableFromInline
+    init(count: Int, layout: HFlowLayout, makeContent: @escaping (Int) -> LayoutContent) {
+        self.count = count
+        self.layout = layout
+        self.makeContent = makeContent
+    }
+
+    // MARK: - Data-driven initialisers
+
+    /// Creates a lazy horizontal flow with the given spacing and vertical alignment.
     ///
     /// - Parameters:
     ///   - data: The collection of identified data to display.
-    ///   - minimumItemWidth: The minimum width for each grid cell. SwiftUI
-    ///     fills the available horizontal space with as many columns as
-    ///     possible while respecting this minimum. Defaults to `80`.
-    ///   - maximumItemWidth: The maximum width each grid cell may grow to.
-    ///     Use this to cap how wide columns become when few items share a row.
-    ///     Defaults to `.infinity` (uncapped).
-    ///   - spacing: The distance between adjacent cells, both horizontally and
-    ///     vertically. Defaults to `8`.
+    ///   - alignment: The vertical alignment of items within each row.
+    ///   - itemSpacing: The distance between adjacent items, or `nil` for the default.
+    ///   - rowSpacing: The distance between rows, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
     ///   - content: A view builder that produces a view for each element.
-    public init(
+    @inlinable
+    public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
-        minimumItemWidth: CGFloat = 80,
-        maximumItemWidth: CGFloat = .infinity,
-        spacing: CGFloat = 8,
-        @ViewBuilder content: @escaping (Data.Element) -> Content
-    ) {
-        self.data = data
-        self.minimumItemWidth = minimumItemWidth
-        self.maximumItemWidth = maximumItemWidth
-        self.spacing = spacing
-        self.content = content
+        alignment: VerticalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        rowSpacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content: @escaping (Data.Element) -> ElementContent
+    ) where Data.Element: Identifiable, LayoutContent == ForEach<[Data.Element], Data.Element.ID, ElementContent> {
+        self.init(
+            count: data.count,
+            layout: HFlowLayout(
+                alignment: alignment,
+                itemSpacing: itemSpacing,
+                rowSpacing: rowSpacing,
+                justified: justified,
+                distributeItemsEvenly: distributeItemsEvenly
+            ),
+            makeContent: { n in ForEach(Array(data.prefix(n)), content: content) }
+        )
     }
 
+    /// Creates a lazy horizontal flow with uniform spacing and a vertical alignment.
+    ///
+    /// - Parameters:
+    ///   - data: The collection of identified data to display.
+    ///   - alignment: The vertical alignment of items within each row.
+    ///   - spacing: The distance between adjacent items and between rows, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
+    ///   - content: A view builder that produces a view for each element.
+    @inlinable
+    public init<Data: RandomAccessCollection, ElementContent: View>(
+        data: Data,
+        alignment: VerticalAlignment = .center,
+        spacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content: @escaping (Data.Element) -> ElementContent
+    ) where Data.Element: Identifiable, LayoutContent == ForEach<[Data.Element], Data.Element.ID, ElementContent> {
+        self.init(
+            data: data,
+            alignment: alignment,
+            itemSpacing: spacing,
+            rowSpacing: spacing,
+            justified: justified,
+            distributeItemsEvenly: distributeItemsEvenly,
+            content: content
+        )
+    }
+
+    /// Creates a lazy horizontal flow with independent axis alignment and spacing.
+    ///
+    /// - Parameters:
+    ///   - data: The collection of identified data to display.
+    ///   - horizontalAlignment: The guide for aligning items horizontally within each row.
+    ///   - verticalAlignment: The guide for aligning items vertically within each row.
+    ///   - horizontalSpacing: The distance between adjacent items on the horizontal axis.
+    ///   - verticalSpacing: The distance between rows on the vertical axis.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
+    ///   - content: A view builder that produces a view for each element.
+    @inlinable
+    public init<Data: RandomAccessCollection, ElementContent: View>(
+        data: Data,
+        horizontalAlignment: HorizontalAlignment,
+        verticalAlignment: VerticalAlignment,
+        horizontalSpacing: CGFloat? = nil,
+        verticalSpacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content: @escaping (Data.Element) -> ElementContent
+    ) where Data.Element: Identifiable, LayoutContent == ForEach<[Data.Element], Data.Element.ID, ElementContent> {
+        self.init(
+            count: data.count,
+            layout: HFlowLayout(
+                horizontalAlignment: horizontalAlignment,
+                verticalAlignment: verticalAlignment,
+                horizontalSpacing: horizontalSpacing,
+                verticalSpacing: verticalSpacing,
+                justified: justified,
+                distributeItemsEvenly: distributeItemsEvenly
+            ),
+            makeContent: { n in ForEach(Array(data.prefix(n)), content: content) }
+        )
+    }
+
+    // MARK: - ViewBuilder initialisers
+
+    /// Creates a lazy horizontal flow with free-form view-builder content.
+    ///
+    /// Content is rendered eagerly regardless of scroll position, matching the
+    /// behaviour of ``HFlow``.
+    ///
+    /// - Parameters:
+    ///   - alignment: The vertical alignment of items within each row.
+    ///   - itemSpacing: The distance between adjacent items, or `nil` for the default.
+    ///   - rowSpacing: The distance between rows, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
+    ///   - contentBuilder: A view builder that creates the content of this flow.
+    @inlinable
+    public init(
+        alignment: VerticalAlignment = .center,
+        itemSpacing: CGFloat? = nil,
+        rowSpacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content contentBuilder: () -> LayoutContent
+    ) {
+        let content = contentBuilder()
+        self.init(
+            count: 1,
+            layout: HFlowLayout(
+                alignment: alignment,
+                itemSpacing: itemSpacing,
+                rowSpacing: rowSpacing,
+                justified: justified,
+                distributeItemsEvenly: distributeItemsEvenly
+            ),
+            makeContent: { _ in content }
+        )
+    }
+
+    /// Creates a lazy horizontal flow with uniform spacing and free-form view-builder content.
+    ///
+    /// Content is rendered eagerly regardless of scroll position, matching the
+    /// behaviour of ``HFlow``.
+    ///
+    /// - Parameters:
+    ///   - alignment: The vertical alignment of items within each row.
+    ///   - spacing: The distance between adjacent items and between rows, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
+    ///   - contentBuilder: A view builder that creates the content of this flow.
+    @inlinable
+    public init(
+        alignment: VerticalAlignment = .center,
+        spacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content contentBuilder: () -> LayoutContent
+    ) {
+        self.init(
+            alignment: alignment,
+            itemSpacing: spacing,
+            rowSpacing: spacing,
+            justified: justified,
+            distributeItemsEvenly: distributeItemsEvenly,
+            content: contentBuilder
+        )
+    }
+
+    /// Creates a lazy horizontal flow with independent axis alignment and free-form view-builder content.
+    ///
+    /// Content is rendered eagerly regardless of scroll position, matching the
+    /// behaviour of ``HFlow``.
+    ///
+    /// - Parameters:
+    ///   - horizontalAlignment: The guide for aligning items horizontally within each row.
+    ///   - verticalAlignment: The guide for aligning items vertically within each row.
+    ///   - horizontalSpacing: The distance between adjacent items on the horizontal axis.
+    ///   - verticalSpacing: The distance between rows on the vertical axis.
+    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
+    ///     filling earlier rows first.
+    ///   - contentBuilder: A view builder that creates the content of this flow.
+    @inlinable
+    public init(
+        horizontalAlignment: HorizontalAlignment,
+        verticalAlignment: VerticalAlignment,
+        horizontalSpacing: CGFloat? = nil,
+        verticalSpacing: CGFloat? = nil,
+        justified: Bool = false,
+        distributeItemsEvenly: Bool = false,
+        @ViewBuilder content contentBuilder: () -> LayoutContent
+    ) {
+        let content = contentBuilder()
+        self.init(
+            count: 1,
+            layout: HFlowLayout(
+                horizontalAlignment: horizontalAlignment,
+                verticalAlignment: verticalAlignment,
+                horizontalSpacing: horizontalSpacing,
+                verticalSpacing: verticalSpacing,
+                justified: justified,
+                distributeItemsEvenly: distributeItemsEvenly
+            ),
+            makeContent: { _ in content }
+        )
+    }
+
+    // MARK: - Body
+
     public var body: some View {
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: minimumItemWidth, maximum: maximumItemWidth), spacing: spacing)],
-            spacing: spacing
-        ) {
-            ForEach(data) { item in
-                content(item)
+        let flexibility = flexibility
+        LazyFlowBody(
+            count: count,
+            geometryTransform: { LazyFlowGeometry(scrollMax: $0.bounds(of: .scrollView)?.maxY ?? .infinity, contentExtent: $0.size.height) },
+            makeSizeModifier: LazyHFlowSizeModifier.init,
+            makeContent: { [flexibility] n in
+                layout {
+                    makeContent(n)
+                        .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
+                }
             }
-        }
+        )
+    }
+}
+
+private struct LazyHFlowSizeModifier: ViewModifier {
+    let minHeight: CGFloat?
+    func body(content: Content) -> some View {
+        content.frame(minHeight: minHeight, alignment: .top)
     }
 }

@@ -116,9 +116,20 @@ struct FlowTweaksSidebar: View {
                 }
 
                 SidebarGroup("Alignment", systemImage: "align.horizontal.left") {
-                    SidebarSegmentedPickerRow("Horizontal", selection: $settings.horizontalAlignment)
-                    SidebarSegmentedPickerRow("Vertical", selection: $settings.verticalAlignment)
+                    if settings.mode.usesHorizontalAlignment {
+                        SidebarSegmentedPickerRow("Horizontal", selection: $settings.horizontalAlignment)
+                    }
+                    if settings.mode.usesVerticalAlignment {
+                        SidebarSegmentedPickerRow("Vertical", selection: $settings.verticalAlignment)
+                    }
                     SidebarSegmentedPickerRow("Direction", selection: $settings.layoutDirection)
+
+                    if let note = settings.mode.alignmentNote {
+                        Text(note)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 SidebarGroup("Spacing", systemImage: "arrow.left.and.right") {
@@ -133,24 +144,6 @@ struct FlowTweaksSidebar: View {
                     }
                 }
 
-                if settings.mode.isLazy {
-                    SidebarGroup("Lazy Bounds", systemImage: "rectangle.grid.2x2") {
-                        SidebarPointControl(
-                            title: settings.mode.isHorizontal ? "Min width" : "Min height",
-                            value: $settings.lazyMinimumItemSize,
-                            range: 1...420
-                        )
-                        Toggle("Infinite max", isOn: $settings.lazyMaximumIsInfinite)
-                        if !settings.lazyMaximumIsInfinite {
-                            SidebarPointControl(
-                                title: settings.mode.isHorizontal ? "Max width" : "Max height",
-                                value: $settings.lazyMaximumItemSize,
-                                range: 1...700
-                            )
-                        }
-                        SidebarPointControl(title: "Spacing", value: $settings.lazySpacing, range: 0...160)
-                    }
-                }
 
                 SidebarGroup("Guides", systemImage: "eye") {
                     SidebarToggleGrid {
@@ -528,7 +521,7 @@ struct FlowCanvas: View {
 
     @ViewBuilder
     private var preview: some View {
-        if settings.mode.isLazy {
+        if settings.mode.isLazy, #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
             lazyPreview
         } else {
             eagerLayout {
@@ -539,15 +532,18 @@ struct FlowCanvas: View {
         }
     }
 
+    @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
     @ViewBuilder
     private var lazyPreview: some View {
         if settings.mode == .lazyHorizontal {
             ScrollView {
                 LazyHFlow(
                     data: items,
-                    minimumItemWidth: settings.lazyMinimumItemSizeValue,
-                    maximumItemWidth: settings.lazyMaximumItemSizeValue,
-                    spacing: settings.lazySpacingValue
+                    alignment: settings.verticalAlignment.value,
+                    itemSpacing: settings.itemSpacingValue,
+                    rowSpacing: settings.lineSpacingValue,
+                    justified: settings.justified,
+                    distributeItemsEvenly: settings.distributeItemsEvenly
                 ) { item in
                     renderedItem(item, lineBreaksAffectLayout: false)
                 }
@@ -556,9 +552,11 @@ struct FlowCanvas: View {
             ScrollView(.horizontal) {
                 LazyVFlow(
                     data: items,
-                    minimumItemHeight: settings.lazyMinimumItemSizeValue,
-                    maximumItemHeight: settings.lazyMaximumItemSizeValue,
-                    spacing: settings.lazySpacingValue
+                    alignment: settings.horizontalAlignment.value,
+                    itemSpacing: settings.itemSpacingValue,
+                    columnSpacing: settings.lineSpacingValue,
+                    justified: settings.justified,
+                    distributeItemsEvenly: settings.distributeItemsEvenly
                 ) { item in
                     renderedItem(item, lineBreaksAffectLayout: false)
                 }
@@ -1625,7 +1623,7 @@ private struct LazyLayoutBadge: View {
     let mode: FlowLayoutMode
 
     var body: some View {
-        Label(mode.isHorizontal ? "Lazy grid" : "Lazy columns", systemImage: "square.grid.2x2")
+        Label(mode.isHorizontal ? "LazyHFlow" : "LazyVFlow", systemImage: "square.grid.2x2")
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 4)

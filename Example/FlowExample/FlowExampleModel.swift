@@ -26,6 +26,37 @@ enum FlowLayoutMode: String, CaseIterable, CustomStringConvertible, Identifiable
     var isHorizontal: Bool {
         self == .horizontal || self == .lazyHorizontal
     }
+
+    /// Whether the horizontal alignment control affects this layout.
+    ///
+    /// Eager flows honor both axes. Lazy flows only support the cross-axis
+    /// alignment, which is horizontal for `LazyVFlow` (items within a column).
+    var usesHorizontalAlignment: Bool {
+        switch self {
+            case .horizontal, .vertical, .lazyVertical: true
+            case .lazyHorizontal: false
+        }
+    }
+
+    /// Whether the vertical alignment control affects this layout.
+    ///
+    /// The cross-axis of `LazyHFlow` is vertical (items within a row); eager
+    /// flows honor both axes.
+    var usesVerticalAlignment: Bool {
+        switch self {
+            case .horizontal, .vertical, .lazyHorizontal: true
+            case .lazyVertical: false
+        }
+    }
+
+    /// A short explanation of how alignment applies to lazy layouts.
+    var alignmentNote: String? {
+        switch self {
+            case .lazyHorizontal: "LazyHFlow aligns items vertically within each row."
+            case .lazyVertical: "LazyVFlow aligns items horizontally within each column."
+            case .horizontal, .vertical: nil
+        }
+    }
 }
 
 enum CanvasFrameMode: String, CaseIterable, CustomStringConvertible, Identifiable {
@@ -286,10 +317,6 @@ struct FlowLabSettings: Equatable {
     var distributeItemsEvenly = false
     var horizontalAlignment: ExampleHorizontalAlignment = .leading
     var verticalAlignment: ExampleVerticalAlignment = .center
-    var lazyMinimumItemSize: Double = 96
-    var lazyMaximumItemSize: Double = 220
-    var lazyMaximumIsInfinite = true
-    var lazySpacing: Double = 10
     var layoutDirection: ExampleLayoutDirection = .leftToRight
     var showsCanvasBorder = false
     var showsItemOutlines = false
@@ -304,18 +331,6 @@ struct FlowLabSettings: Equatable {
 
     var lineSpacingValue: CGFloat? {
         lineSpacing.map { CGFloat($0) }
-    }
-
-    var lazyMinimumItemSizeValue: CGFloat {
-        CGFloat(lazyMinimumItemSize)
-    }
-
-    var lazyMaximumItemSizeValue: CGFloat {
-        lazyMaximumIsInfinite ? .infinity : CGFloat(lazyMaximumItemSize)
-    }
-
-    var lazySpacingValue: CGFloat {
-        CGFloat(lazySpacing)
     }
 
     var frameSummary: String {
@@ -518,10 +533,8 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
                     canvasWidth: 560,
                     canvasHeight: 300,
                     canvasFrameMode: .fixed,
-                    lazyMinimumItemSize: 112,
-                    lazyMaximumItemSize: 160,
-                    lazyMaximumIsInfinite: false,
-                    lazySpacing: 12
+                    itemSpacing: 12,
+                    lineSpacing: 12
                 )
             case .edgeCases:
                 return FlowLabSettings(

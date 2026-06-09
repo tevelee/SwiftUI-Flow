@@ -15,6 +15,12 @@ protocol Subview {
     subscript<K: LayoutValueKey>(key: K.Type) -> K.Value { get }
 }
 
+// SwiftUI also defines a `Subview` type starting in newer SDK versions. Tests should
+// use these typealiases to avoid ambiguity when `@testable import Flow` is combined with
+// `import SwiftUI`.
+@usableFromInline typealias FlowSubview = Subview
+@usableFromInline typealias FlowSubviews = Subviews
+
 extension LayoutSubview: Subview {
     @usableFromInline
     func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {

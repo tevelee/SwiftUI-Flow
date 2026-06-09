@@ -70,6 +70,20 @@ public struct VFlowLayout {
     }
 }
 
+extension VFlowLayout {
+    @usableFromInline
+    init(layout: FlowLayout) {
+        self.layout = layout
+    }
+
+    /// Returns a copy of this layout capped to `maxLines` columns.
+    /// Items beyond the limit are hidden; pass `nil` to remove any cap.
+    @inlinable
+    public func withMaxLines(_ maxLines: Int?) -> VFlowLayout {
+        VFlowLayout(layout: layout.withMaxLines(maxLines))
+    }
+}
+
 extension VFlowLayout: Layout {
     @inlinable
     public func sizeThatFits(

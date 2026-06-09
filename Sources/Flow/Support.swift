@@ -36,12 +36,19 @@ public struct FlowLayoutCache {
             var flexibility: FlexibilityBehavior
 
             @inlinable
-            init(shouldStartInNewLine: Bool, isLineBreak: Bool, flexibility: FlexibilityBehavior) {
+            init(
+                shouldStartInNewLine: Bool,
+                isLineBreak: Bool,
+                flexibility: FlexibilityBehavior
+            ) {
                 self.shouldStartInNewLine = shouldStartInNewLine
                 self.isLineBreak = isLineBreak
                 self.flexibility = flexibility
             }
         }
+
+        @usableFromInline
+        var overflowReporter: (@Sendable (Int) -> Void)?
 
         @inlinable
         init(_ subview: some Subview, axis: Axis) {
@@ -54,11 +61,17 @@ public struct FlowLayoutCache {
                 isLineBreak: subview[IsLineBreakLayoutValueKey.self],
                 flexibility: subview[FlexibilityLayoutValueKey.self]
             )
+            overflowReporter = subview[OverflowReporterKey.self]
         }
     }
 
     @usableFromInline
     let subviewsCache: [SubviewCache]
+
+    /// Index of the overflow-indicator subview (the last subview if it carries `IsOverflowLayoutValueKey`),
+    /// or `nil` when no overflow indicator is present. Computed once during `makeCache`.
+    @usableFromInline
+    let overflowSubviewIndex: Int?
 
     /// Single-entry memo of the most recent line-breaking result. `sizeThatFits`
     /// and `placeSubviews` run back-to-back with the same proposal, so caching the
@@ -98,8 +111,9 @@ public struct FlowLayoutCache {
 
     @inlinable
     init(_ subviews: some Subviews, axis: Axis) {
-        subviewsCache = subviews.map {
-            SubviewCache($0, axis: axis)
+        subviewsCache = subviews.map { SubviewCache($0, axis: axis) }
+        overflowSubviewIndex = subviews.indices.last.flatMap {
+            subviews[$0][IsOverflowLayoutValueKey.self] ? $0 : nil
         }
     }
 
@@ -165,9 +179,27 @@ struct FlexibilityLayoutValueKey: LayoutValueKey {
 }
 
 @usableFromInline
+struct IsOverflowLayoutValueKey: LayoutValueKey {
+    @usableFromInline
+    static let defaultValue = false
+}
+
+@usableFromInline
+struct OverflowReporterKey: LayoutValueKey {
+    @usableFromInline
+    static let defaultValue: (@Sendable (Int) -> Void)? = nil
+}
+
+@usableFromInline
 struct FlexibilityEnvironmentKey: EnvironmentKey {
     @usableFromInline
     static let defaultValue: FlexibilityBehavior = .natural
+}
+
+@usableFromInline
+struct MaxLinesEnvironmentKey: EnvironmentKey {
+    @usableFromInline
+    static let defaultValue: Int? = nil
 }
 
 extension EnvironmentValues {
@@ -175,5 +207,26 @@ extension EnvironmentValues {
     var flexibility: FlexibilityBehavior {
         get { self[FlexibilityEnvironmentKey.self] }
         set { self[FlexibilityEnvironmentKey.self] = newValue }
+    }
+
+    @usableFromInline
+    var maxLines: Int? {
+        get { self[MaxLinesEnvironmentKey.self] }
+        set { self[MaxLinesEnvironmentKey.self] = newValue }
+    }
+}
+
+extension View {
+    /// Caps the nearest enclosing ``HFlow`` or ``VFlow`` to `limit` lines.
+    ///
+    /// Items beyond the limit are hidden from view but still participate in
+    /// line-breaking so the layout remains consistent.  Pass `nil` to remove
+    /// any previously set limit.
+    ///
+    /// - Parameter limit: Maximum number of lines (rows for `HFlow`, columns
+    ///   for `VFlow`). `nil` keeps every line.
+    @inlinable
+    public func maxLines(_ limit: Int?) -> some View {
+        environment(\.maxLines, limit)
     }
 }

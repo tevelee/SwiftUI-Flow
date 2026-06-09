@@ -4,19 +4,23 @@ import SwiftUI
 @usableFromInline
 struct FlowLayout: Sendable {
     @usableFromInline
-    let axis: Axis
+    var axis: Axis
     @usableFromInline
-    let itemSpacing: CGFloat?
+    var itemSpacing: CGFloat?
     @usableFromInline
-    let lineSpacing: CGFloat?
+    var lineSpacing: CGFloat?
     @usableFromInline
-    let justified: Bool
+    var justified: Bool
     @usableFromInline
-    let distributeItemsEvenly: Bool
+    var distributeItemsEvenly: Bool
     @usableFromInline
-    let alignmentOnBreadth: @Sendable (any Dimensions) -> CGFloat
+    var alignmentOnBreadth: @Sendable (any Dimensions) -> CGFloat
     @usableFromInline
-    let alignmentOnDepth: @Sendable (any Dimensions) -> CGFloat
+    var alignmentOnDepth: @Sendable (any Dimensions) -> CGFloat
+    /// When set, caps the layout to `lineCap.maxLines` lines and optionally reports the overflow count.
+    /// Nil means unlimited lines (no capping, no reporting).
+    @usableFromInline
+    var lineCap: LineCap?
 
     @inlinable
     init(
@@ -26,7 +30,8 @@ struct FlowLayout: Sendable {
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         alignmentOnBreadth: @escaping @Sendable (any Dimensions) -> CGFloat,
-        alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat
+        alignmentOnDepth: @escaping @Sendable (any Dimensions) -> CGFloat,
+        lineCap: LineCap? = nil
     ) {
         self.axis = axis
         self.itemSpacing = itemSpacing
@@ -35,6 +40,14 @@ struct FlowLayout: Sendable {
         self.distributeItemsEvenly = distributeItemsEvenly
         self.alignmentOnBreadth = alignmentOnBreadth
         self.alignmentOnDepth = alignmentOnDepth
+        self.lineCap = lineCap
+    }
+
+    @inlinable
+    func withMaxLines(_ maxLines: Int?) -> FlowLayout {
+        var copy = self
+        copy.lineCap = maxLines.map { LineCap(maxLines: $0) }
+        return copy
     }
 
     private struct ItemWithSpacing<T> {
@@ -61,7 +74,7 @@ struct FlowLayout: Sendable {
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
-        let lines = calculateLayout(in: proposedSize, of: subviews, cache: &cache)
+        let lines = calculateLayout(in: proposedSize, of: subviews, cache: &cache).lines
         var size = lines.reduce(Size.zero) { acc, line in
             Size(breadth: max(acc.breadth, line.size.breadth), depth: acc.depth + line.size.depth + line.leadingSpace)
         }
@@ -97,18 +110,37 @@ struct FlowLayout: Sendable {
         var bounds = bounds
         bounds.origin = bounds.origin.finite(or: 0)
         var target = bounds.origin.size(on: axis)
-        let lines = calculateLayout(in: effectiveProposal(for: proposal, in: bounds), of: subviews, cache: &cache)
+        let result = calculateLayout(in: effectiveProposal(for: proposal, in: bounds), of: subviews, cache: &cache)
 
-        for line in lines {
-            adjustDepth(&target, for: line) { target in
+        for line in result.lines {
+            advance(&target, \.depth, for: line) { target in
                 target.breadth = bounds.minimumValue(on: axis)
 
                 for item in line.item {
-                    adjustBreadth(&target, for: item) { target in
+                    advance(&target, \.breadth, for: item) { target in
                         alignAndPlace(item, in: line, at: target)
                     }
                 }
             }
+        }
+        placeHiddenSubviews(result.hidden, of: subviews, in: bounds)
+        notifyOverflowReporter(hidden: result.hidden, cache: cache)
+    }
+
+    private func notifyOverflowReporter(hidden: [Int], cache: FlowLayoutCache) {
+        guard let overflowIdx = cache.overflowSubviewIndex,
+            let reporter = cache.subviewsCache[overflowIdx].overflowReporter
+        else { return }
+        reporter(hidden.filter { $0 != overflowIdx }.count)
+    }
+
+    /// Places truncated subviews. SwiftUI requires every subview be placed exactly once, so collapse
+    /// them with a zero proposal and park them well outside the visible bounds where they won't draw.
+    private func placeHiddenSubviews(_ indices: [Int], of subviews: some Subviews, in bounds: CGRect) {
+        guard !indices.isEmpty else { return }
+        let sentinel = CGPoint(x: bounds.minX, y: bounds.maxY + hiddenSubviewOffset).finite(or: 0)
+        for index in indices {
+            subviews[index].place(at: sentinel, anchor: .topLeading, proposal: .zero)
         }
     }
 
@@ -119,16 +151,15 @@ struct FlowLayout: Sendable {
 
     // MARK: - Placement helpers
 
-    private func adjustDepth<T>(_ target: inout Size, for item: ItemWithSpacing<T>, body: (inout Size) -> Void) {
-        target.depth += item.leadingSpace
+    private func advance<T>(
+        _ target: inout Size,
+        _ axis: WritableKeyPath<Size, CGFloat>,
+        for item: ItemWithSpacing<T>,
+        body: (inout Size) -> Void
+    ) {
+        target[keyPath: axis] += item.leadingSpace
         body(&target)
-        target.depth += item.size.depth
-    }
-
-    private func adjustBreadth<T>(_ target: inout Size, for item: ItemWithSpacing<T>, body: (inout Size) -> Void) {
-        target.breadth += item.leadingSpace
-        body(&target)
-        target.breadth += item.size.breadth
+        target[keyPath: axis] += item.size[keyPath: axis]
     }
 
     private func alignAndPlace(
@@ -168,18 +199,41 @@ struct FlowLayout: Sendable {
 
     // MARK: - Layout pipeline
 
+    private struct LayoutResult {
+        var lines: Lines
+        var hidden: [Int]
+    }
+
+    /// Core pipeline: line-break → (optional) cap → build lines → post-process.
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
         cache: inout FlowLayoutCache
-    ) -> Lines {
-        let wrapped = wrappedLines(in: proposedSize, of: subviews, cache: &cache)
-        var lines = makeLines(from: wrapped, of: subviews, cache: cache)
-
+    ) -> LayoutResult {
+        let rawLines = wrappedLines(in: proposedSize, of: subviews, cache: &cache)
+        let (visible, hidden) = cappedLines(from: rawLines, in: proposedSize, cache: cache)
+        var lines = makeLines(from: visible, of: subviews, cache: cache)
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
-        return lines
+        return LayoutResult(lines: lines, hidden: hidden)
+    }
+
+    /// Applies the line cap (if any), returning the visible lines and hidden subview indices.
+    private func cappedLines(
+        from rawLines: LineBreakingOutput,
+        in proposedSize: ProposedViewSize,
+        cache: FlowLayoutCache
+    ) -> (visible: LineBreakingOutput, hidden: [Int]) {
+        guard let lineCap else { return (rawLines, []) }
+        let result = lineCap.apply(
+            to: rawLines,
+            overflowIndex: cache.overflowSubviewIndex,
+            available: availableLineBreakingSpace(in: proposedSize),
+            spacingBefore: { spacing(before: $0, cache: cache) },
+            sizeOf: { cache.subviewsCache[$0].ideal.breadth }
+        )
+        return (result.visible, result.hidden)
     }
 
     private func wrappedLines(
@@ -192,7 +246,7 @@ struct FlowLayout: Sendable {
             return cached
         }
 
-        let wrapped = makeLineBreaker().wrapItemsToLines(
+        let wrapped = lineBreaker.wrapItemsToLines(
             items: makeLineBreakingInput(in: proposedSize, of: subviews, cache: cache),
             in: availableLineBreakingSpace(in: proposedSize)
         )
@@ -200,7 +254,7 @@ struct FlowLayout: Sendable {
         return wrapped
     }
 
-    private func makeLineBreaker() -> any LineBreaking {
+    private var lineBreaker: any LineBreaking {
         distributeItemsEvenly ? KnuthPlassLineBreaker() : FlowLineBreaker()
     }
 
@@ -209,8 +263,11 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> LineBreakingInput {
-        subviews.enumerated().map { offset, subview in
-            lineBreakingItem(
+        // When a lineCap is active the overflow indicator is placed separately by LineCap —
+        // exclude it so it doesn't consume space or affect where items wrap.
+        subviews.enumerated().compactMap { offset, subview in
+            if lineCap != nil, offset == cache.overflowSubviewIndex { return nil }
+            return lineBreakingItem(
                 for: subview,
                 at: offset,
                 in: proposedSize,
@@ -321,6 +378,9 @@ struct FlowLayout: Sendable {
         for subviewCache: FlowLayoutCache.SubviewCache,
         naturalDepth: CGFloat
     ) -> CGFloat {
+        // Propose the line's natural depth to views that can expand (max=∞, ideal finite),
+        // so they fill the line. Propose .infinity to everything else so they report their
+        // natural size (identical to an unspecified proposal for non-expandable views).
         let canExpandDepth = subviewCache.max.depth.isInfinite && subviewCache.ideal.depth.isFinite
         return canExpandDepth ? naturalDepth : .infinity
     }
@@ -402,7 +462,8 @@ extension FlowLayout {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxLines: Int? = nil
     ) -> FlowLayout {
         self.init(
             axis: .vertical,
@@ -411,7 +472,8 @@ extension FlowLayout {
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[verticalAlignment] },
-            alignmentOnDepth: { $0[horizontalAlignment] }
+            alignmentOnDepth: { $0[horizontalAlignment] },
+            lineCap: maxLines.map { LineCap(maxLines: $0) }
         )
     }
 
@@ -422,7 +484,8 @@ extension FlowLayout {
         horizontalSpacing: CGFloat? = nil,
         verticalSpacing: CGFloat? = nil,
         justified: Bool = false,
-        distributeItemsEvenly: Bool = false
+        distributeItemsEvenly: Bool = false,
+        maxLines: Int? = nil
     ) -> FlowLayout {
         self.init(
             axis: .horizontal,
@@ -431,7 +494,8 @@ extension FlowLayout {
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             alignmentOnBreadth: { $0[horizontalAlignment] },
-            alignmentOnDepth: { $0[verticalAlignment] }
+            alignmentOnDepth: { $0[verticalAlignment] },
+            lineCap: maxLines.map { LineCap(maxLines: $0) }
         )
     }
 }
@@ -444,6 +508,9 @@ extension FlowLayout: Layout {
         makeCache(subviews)
     }
 }
+
+/// Far enough outside any realistic layout that truncated (hidden) subviews never draw.
+private let hiddenSubviewOffset: CGFloat = 1_000_000
 
 extension CGFloat {
     /// The value if finite, else the fallback — keeps NaN/±∞ out of CoreGraphics.

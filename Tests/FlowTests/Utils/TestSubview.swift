@@ -7,7 +7,7 @@ import Testing
     import InlineSnapshotTesting
 #endif
 
-class TestSubview: Flow.Subview, CustomStringConvertible {
+class TestSubview: FlowSubview, CustomStringConvertible {
     var spacing = ViewSpacing()
     var priority: Double = 1
     var placement: (position: CGPoint, size: CGSize)?
@@ -94,7 +94,7 @@ final class WrappingText: TestSubview {
     }
 }
 
-extension [TestSubview]: Flow.Subviews {}
+extension [TestSubview]: FlowSubviews {}
 
 typealias LayoutDescription = (subviews: [TestSubview], reportedSize: CGSize)
 

@@ -18,6 +18,7 @@ Arranges views in lines and cuts new lines accordingly (if elements don't fit th
 - ⚖️ **Even distribution** — balance items across lines with the Knuth–Plass algorithm.
 - ↔️ **Justified lines** — stretch lines to fill the available space.
 - 🪗 **Flexibility model** — let items grow, stay rigid, or claim a whole line.
+- 📏 **Line limits** — cap a flow to *N* lines with an optional "+N more" overflow indicator.
 - ✂️ **Manual line breaks** — force breaks with `LineBreak()` or `.startInNewLine()`.
 - 🌍 **RTL support** — adapts to the environment's layout direction.
 - 🧱 **`Layout` conformance** — `HFlowLayout` / `VFlowLayout` for use anywhere a `Layout` is expected.
@@ -202,6 +203,42 @@ HFlow { // distributes flexible items proportionally
 ```
 
 ![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_flexibility.1.png)
+
+Use `.grow(_:)` to distribute leftover space proportionally by weight:
+
+```swift
+HFlow {
+    RoundedRectangle(cornerRadius: 8).fill(.orange)
+        .frame(minWidth: 40, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
+        .flexibility(.grow(2))  // takes 2/3 of leftover space
+
+    RoundedRectangle(cornerRadius: 8).fill(.teal)
+        .frame(minWidth: 40, maxWidth: .infinity, minHeight: 44, maxHeight: 44)
+        .flexibility(.grow(1))  // takes 1/3 of leftover space
+}
+```
+
+## Line limits
+
+Cap a flow to a maximum number of lines with `.maxLines(_:)`:
+
+```swift
+HFlow {
+    ForEach(tags) { tag in TagView(tag) }
+}
+.maxLines(2)
+```
+
+Add a trailing overflow indicator using the closure overload (available on `HFlow` and `VFlow`):
+
+```swift
+HFlow {
+    ForEach(tags) { tag in TagView(tag) }
+}
+.maxLines(2) { hidden in
+    Text("+\(hidden) more").foregroundStyle(.secondary)
+}
+```
 
 ## Line breaks
 

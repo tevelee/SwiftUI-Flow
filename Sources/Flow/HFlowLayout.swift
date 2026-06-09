@@ -70,6 +70,20 @@ public struct HFlowLayout: Sendable {
     }
 }
 
+extension HFlowLayout {
+    @usableFromInline
+    init(layout: FlowLayout) {
+        self.layout = layout
+    }
+
+    /// Returns a copy of this layout capped to `maxLines` rows.
+    /// Items beyond the limit are hidden; pass `nil` to remove any cap.
+    @inlinable
+    public func withMaxLines(_ maxLines: Int?) -> HFlowLayout {
+        HFlowLayout(layout: layout.withMaxLines(maxLines))
+    }
+}
+
 extension HFlowLayout: Layout {
     @inlinable
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {

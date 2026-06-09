@@ -142,6 +142,7 @@ struct FlowTweaksSidebar: View {
                         SidebarToggleChip("Justify", systemImage: "text.alignjustify", isOn: $settings.justified)
                         SidebarToggleChip("Even", systemImage: "rectangle.split.3x1", isOn: $settings.distributeItemsEvenly)
                     }
+                    SidebarMaxLinesControl(maxLines: $settings.maxLines)
                 }
 
 
@@ -301,6 +302,43 @@ private struct SidebarOptionalPointControl: View {
         Binding(
             get: { value ?? defaultValue },
             set: { value = min(max($0, range.lowerBound), range.upperBound) }
+        )
+    }
+}
+
+private struct SidebarMaxLinesControl: View {
+    @Binding var maxLines: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                maxLines = maxLines == nil ? 2 : nil
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: maxLines == nil ? "circle" : "checkmark.circle.fill")
+                    Text("Max lines")
+                    Spacer()
+                    Text(maxLines.map { "\($0)" } ?? "Off")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 7)
+                .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+
+            if maxLines != nil {
+                SingleTrackSlider(value: unwrappedValue, range: 1...10, step: 1)
+            }
+        }
+    }
+
+    private var unwrappedValue: Binding<Double> {
+        Binding(
+            get: { Double(maxLines ?? 2) },
+            set: { maxLines = max(1, Int($0)) }
         )
     }
 }
@@ -601,25 +639,25 @@ struct FlowCanvas: View {
         switch settings.mode {
             case .horizontal, .lazyHorizontal:
                 AnyLayout(
-                    HFlow(
+                    HFlowLayout(
                         horizontalAlignment: settings.horizontalAlignment.value,
                         verticalAlignment: settings.verticalAlignment.value,
                         horizontalSpacing: settings.itemSpacingValue,
                         verticalSpacing: settings.lineSpacingValue,
                         justified: settings.justified,
                         distributeItemsEvenly: settings.distributeItemsEvenly
-                    )
+                    ).withMaxLines(settings.maxLines)
                 )
             case .vertical, .lazyVertical:
                 AnyLayout(
-                    VFlow(
+                    VFlowLayout(
                         horizontalAlignment: settings.horizontalAlignment.value,
                         verticalAlignment: settings.verticalAlignment.value,
                         horizontalSpacing: settings.lineSpacingValue,
                         verticalSpacing: settings.itemSpacingValue,
                         justified: settings.justified,
                         distributeItemsEvenly: settings.distributeItemsEvenly
-                    )
+                    ).withMaxLines(settings.maxLines)
                 )
         }
     }

@@ -42,6 +42,7 @@ lines, a flexibility model for stretching items, and manual line breaks.
 
 - <doc:Flexibility>
 - <doc:LineBreaks>
+- <doc:LineLimits>
 - ``FlexibilityBehavior``
 - ``LineBreak``
 

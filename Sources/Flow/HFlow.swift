@@ -130,12 +130,16 @@ public struct HFlow<Content: View>: View {
 
     @usableFromInline
     @Environment(\.flexibility) var flexibility
+    @usableFromInline
+    @Environment(\.maxLines) var _maxLinesCap
 
     @inlinable
     public var body: some View {
-        layout {
+        let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
+        effectiveLayout {
             content
                 .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
+                .environment(\.maxLines, nil)
         }
     }
 }

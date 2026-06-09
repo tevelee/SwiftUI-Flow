@@ -1,4 +1,5 @@
 import SwiftUI
+import Flow
 
 public struct ContentView: View {
     @State private var useCase: FlowUseCase = .wordCloud
@@ -212,4 +213,30 @@ private enum FlowSheet: Identifiable {
 
 #Preview {
     ContentView()
+}
+
+#Preview {
+    HFlow {
+        Box()
+        Box()
+        Box()
+        Box()
+        Box()
+        Box()
+        Box()
+        Box()
+        Box()
+    }
+    .maxLines(2) { count in
+        Text("+\(count) more...")
+    }
+    .frame(minWidth: 200, minHeight: 200, alignment: .top)
+}
+
+private struct Box: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.blue)
+            .frame(width: 40, height: 40)
+    }
 }

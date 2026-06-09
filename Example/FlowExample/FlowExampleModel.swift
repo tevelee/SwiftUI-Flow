@@ -324,6 +324,7 @@ struct FlowLabSettings: Equatable {
     var showsBreakMarkers = true
     var showsFlexHints = true
     var animationsEnabled = true
+    var maxLines: Int? = nil
 
     var itemSpacingValue: CGFloat? {
         itemSpacing.map { CGFloat($0) }

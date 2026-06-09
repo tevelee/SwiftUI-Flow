@@ -1,7 +1,10 @@
 # SwiftUI Flow Layout
 
+[![CI](https://github.com/tevelee/SwiftUI-Flow/actions/workflows/ci.yml/badge.svg)](https://github.com/tevelee/SwiftUI-Flow/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/tevelee/SwiftUI-Flow/branch/main/graph/badge.svg)](https://codecov.io/gh/tevelee/SwiftUI-Flow)
 [![Swift Package Index versions](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftevelee%2FSwiftUI-Flow%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/tevelee/SwiftUI-Flow)
 [![Supported platforms](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Ftevelee%2FSwiftUI-Flow%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/tevelee/SwiftUI-Flow)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE.txt)
 
 Introduces `HFlow` and `VFlow` similar to `HStack` and `VStack`. 
 Arranges views in lines and cuts new lines accordingly (if elements don't fit the bounding space).

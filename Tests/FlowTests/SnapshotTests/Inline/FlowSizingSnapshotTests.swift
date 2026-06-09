@@ -21,11 +21,14 @@ extension FlowSizingRequirementTests {
             """
         }
         #expect(result.reportedSize == (8 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 4, 1, size: .zero)
-            placed(at: 5, 0, size: 3 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (4, 1), size: .zero),
+                .init(position: (5, 0), size: 3 × 2),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 8×2
@@ -60,11 +63,14 @@ extension FlowSizingRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 8))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 1, 4, size: .zero)
-            placed(at: 0, 5, size: 2 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (1, 4), size: .zero),
+                .init(position: (0, 5), size: 2 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2×8

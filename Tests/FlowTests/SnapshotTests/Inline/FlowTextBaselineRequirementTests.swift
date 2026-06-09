@@ -23,12 +23,15 @@ struct FlowTextBaselineRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 2)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-            placed(at: 4, 2, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 2),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+                .init(position: (4, 2), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_wrappingText_reflowsIntoProposedHeight() {
@@ -51,12 +54,15 @@ struct FlowTextBaselineRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 5)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-            placed(at: 2, 4, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 5),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+                .init(position: (2, 4), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_firstTextBaseline_alignsExactPlacements() {
@@ -89,10 +95,13 @@ struct FlowTextBaselineRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 5, size: 3 × 4)
-            placed(at: 3, 0, size: 3 × 10)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 5), size: 3 × 4),
+                .init(position: (3, 0), size: 3 × 10),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 6×10
@@ -132,10 +141,13 @@ struct FlowTextBaselineRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 9))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 6)
-            placed(at: 3, 3, size: 3 × 6)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 6),
+                .init(position: (3, 3), size: 3 × 6),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 6×9
@@ -176,9 +188,12 @@ struct FlowTextBaselineRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 5, size: 3 × 4)
-            placed(at: 3, 0, size: 3 × 10)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 5), size: 3 × 4),
+                .init(position: (3, 0), size: 3 × 10),
+            ]
+        )
     }
 }

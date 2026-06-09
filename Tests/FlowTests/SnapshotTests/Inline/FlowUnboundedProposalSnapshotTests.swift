@@ -21,11 +21,14 @@ extension FlowUnboundedProposalRequirementTests {
             """
         }
         #expect(result.reportedSize == (14 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 4, 0, size: 4 × 2)
-            placed(at: 9, 0, size: 5 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (4, 0), size: 4 × 2),
+                .init(position: (9, 0), size: 5 × 2),
+            ]
+        )
     }
 
     @Test func VFlow_finiteWidthNilHeight_placesItemsInOneUnboundedColumn() {
@@ -57,11 +60,14 @@ extension FlowUnboundedProposalRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 14))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 0, 4, size: 2 × 4)
-            placed(at: 0, 9, size: 2 × 5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (0, 4), size: 2 × 4),
+                .init(position: (0, 9), size: 2 × 5),
+            ]
+        )
     }
 
     @Test(.tags(.regression)) func VFlow_unboundedProposal_usesFiniteBoundsHeightForColumnBreaking() {
@@ -88,16 +94,19 @@ extension FlowUnboundedProposalRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 8))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 0, 1, size: 2 × 1)
-            placed(at: 0, 2, size: 2 × 1)
-            placed(at: 0, 3, size: 2 × 1)
-            placed(at: 0, 4, size: 2 × 1)
-            placed(at: 2, 0, size: 2 × 1)
-            placed(at: 2, 1, size: 2 × 1)
-            placed(at: 2, 2, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (0, 1), size: 2 × 1),
+                .init(position: (0, 2), size: 2 × 1),
+                .init(position: (0, 3), size: 2 × 1),
+                .init(position: (0, 4), size: 2 × 1),
+                .init(position: (2, 0), size: 2 × 1),
+                .init(position: (2, 1), size: 2 × 1),
+                .init(position: (2, 2), size: 2 × 1),
+            ]
+        )
     }
 
     @Test(.tags(.regression)) func HFlow_unboundedProposal_usesFiniteBoundsWidthForRowBreaking() {
@@ -118,15 +127,18 @@ extension FlowUnboundedProposalRequirementTests {
             """
         }
         #expect(result.reportedSize == (8 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 2)
-            placed(at: 1, 0, size: 1 × 2)
-            placed(at: 2, 0, size: 1 × 2)
-            placed(at: 3, 0, size: 1 × 2)
-            placed(at: 4, 0, size: 1 × 2)
-            placed(at: 0, 2, size: 1 × 2)
-            placed(at: 1, 2, size: 1 × 2)
-            placed(at: 2, 2, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 2),
+                .init(position: (1, 0), size: 1 × 2),
+                .init(position: (2, 0), size: 1 × 2),
+                .init(position: (3, 0), size: 1 × 2),
+                .init(position: (4, 0), size: 1 × 2),
+                .init(position: (0, 2), size: 1 × 2),
+                .init(position: (1, 2), size: 1 × 2),
+                .init(position: (2, 2), size: 1 × 2),
+            ]
+        )
     }
 }

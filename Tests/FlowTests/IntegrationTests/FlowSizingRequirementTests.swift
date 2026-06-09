@@ -11,9 +11,12 @@ struct FlowSizingRequirementTests {
             subviews: [50 × 50],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: 50 × 50) {
-            placed(at: 0, 0, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 50 × 50,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50)
+            ]
+        )
     }
 
     @Test func VFlow_singleElement_reportsElementSize() {
@@ -22,9 +25,12 @@ struct FlowSizingRequirementTests {
             subviews: [50 × 50],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: 50 × 50) {
-            placed(at: 0, 0, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 50 × 50,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50)
+            ]
+        )
     }
 
     @Test func HFlow_multipleElements_wrapIntoRowsAndReportNaturalSize() {
@@ -33,11 +39,14 @@ struct FlowSizingRequirementTests {
             subviews: repeated(50 × 50, times: 3),
             proposal: 130 × 130
         )
-        .assertExpectedLayout(size: 110 × 120) {
-            placed(at: 0, 0, size: 50 × 50)
-            placed(at: 60, 0, size: 50 × 50)
-            placed(at: 0, 70, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 110 × 120,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50),
+                .init(position: (60, 0), size: 50 × 50),
+                .init(position: (0, 70), size: 50 × 50),
+            ]
+        )
     }
 
     @Test func VFlow_multipleElements_wrapIntoColumnsAndReportNaturalSize() {
@@ -46,11 +55,14 @@ struct FlowSizingRequirementTests {
             subviews: repeated(50 × 50, times: 3),
             proposal: 130 × 130
         )
-        .assertExpectedLayout(size: 120 × 110) {
-            placed(at: 0, 0, size: 50 × 50)
-            placed(at: 0, 60, size: 50 × 50)
-            placed(at: 70, 0, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 120 × 110,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50),
+                .init(position: (0, 60), size: 50 × 50),
+                .init(position: (70, 0), size: 50 × 50),
+            ]
+        )
     }
 
     @Test func HFlow_justifiedSize_fillsProposedWidth() {
@@ -59,10 +71,13 @@ struct FlowSizingRequirementTests {
             subviews: [50 × 50, 50 × 50],
             proposal: 1000 × 1000
         )
-        .assertExpectedLayout(size: 1000 × 50) {
-            placed(at: 0, 0, size: 50 × 50)
-            placed(at: 950, 0, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 1000 × 50,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50),
+                .init(position: (950, 0), size: 50 × 50),
+            ]
+        )
     }
 
     @Test func VFlow_justifiedSize_fillsProposedHeight() {
@@ -71,10 +86,13 @@ struct FlowSizingRequirementTests {
             subviews: [50 × 50, 50 × 50],
             proposal: 1000 × 1000
         )
-        .assertExpectedLayout(size: 50 × 1000) {
-            placed(at: 0, 0, size: 50 × 50)
-            placed(at: 0, 950, size: 50 × 50)
-        }
+        .assertExpectedLayout(
+            size: 50 × 1000,
+            placements: [
+                .init(position: (0, 0), size: 50 × 50),
+                .init(position: (0, 950), size: 50 × 50),
+            ]
+        )
     }
 
     @Test func HFlow_emptySubviews_reportsZeroSize() {
@@ -83,7 +101,7 @@ struct FlowSizingRequirementTests {
             subviews: [],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: .zero) {}
+        .assertExpectedLayout(size: .zero, placements: [])
     }
 
     @Test func HFlow_nilLineSpacing_usesNaturalViewSpacingBetweenRows() {
@@ -95,11 +113,14 @@ struct FlowSizingRequirementTests {
             subviews: [3 × 1, 3 × 1, 3 × 1],
             proposal: 8 × 100
         )
-        .assertExpectedLayout(size: 7 × 10) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-            placed(at: 0, 9, size: 3 × 1)
-        }
+        .assertExpectedLayout(
+            size: 7 × 10,
+            placements: [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+                .init(position: (0, 9), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_nonZeroBoundsOrigin_offsetsAllPlacements() {
@@ -109,10 +130,13 @@ struct FlowSizingRequirementTests {
             proposal: 10 × 1,
             bounds: CGRect(origin: CGPoint(x: 5, y: 3), size: CGSize(width: 10, height: 1))
         )
-        .assertExpectedLayout(size: 7 × 1) {
-            placed(at: 5, 3, size: 3 × 1)
-            placed(at: 9, 3, size: 3 × 1)
-        }
+        .assertExpectedLayout(
+            size: 7 × 1,
+            placements: [
+                .init(position: (5, 3), size: 3 × 1),
+                .init(position: (9, 3), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_zeroSizeSubviews_reportZeroSizeAndFinitePlacements() {
@@ -121,9 +145,12 @@ struct FlowSizingRequirementTests {
             subviews: [TestSubview(size: .zero), TestSubview(size: .zero)],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: .zero) {
-            placed(at: 0, 0, size: .zero)
-            placed(at: 0, 0, size: .zero)
-        }
+        .assertExpectedLayout(
+            size: .zero,
+            placements: [
+                .init(position: (0, 0), size: .zero),
+                .init(position: (0, 0), size: .zero),
+            ]
+        )
     }
 }

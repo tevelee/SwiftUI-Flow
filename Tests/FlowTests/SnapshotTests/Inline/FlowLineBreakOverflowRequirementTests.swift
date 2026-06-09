@@ -23,9 +23,12 @@ struct FlowLineBreakOverflowRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 10 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 10 × 3)
+            ]
+        )
     }
 
     @Test func HFlow_startInNewLineWithMaximumFlex_reportsExactPlacements() {
@@ -50,11 +53,14 @@ struct FlowLineBreakOverflowRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 10 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 10 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_startInNewLineWithMaximumFlex_reportsExactPlacements() {
@@ -87,11 +93,14 @@ struct FlowLineBreakOverflowRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 4, size: 1 × 3)
-            placed(at: 1, 0, size: 1 × 10)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 4), size: 1 × 3),
+                .init(position: (1, 0), size: 1 × 10),
+            ]
+        )
     }
 
     @Test(.tags(.regression)) func HFlow_oversizedItem_doesNotDropNeighbours_reportsExactLayout() {
@@ -113,12 +122,15 @@ struct FlowLineBreakOverflowRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 10 × 1)
-            placed(at: 0, 2, size: 3 × 1)
-            placed(at: 0, 3, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 10 × 1),
+                .init(position: (0, 2), size: 3 × 1),
+                .init(position: (0, 3), size: 3 × 1),
+            ]
+        )
     }
 
     @Test(.tags(.regression)) func VFlow_oversizedItem_doesNotDropNeighbours_reportsExactLayout() {
@@ -146,11 +158,14 @@ struct FlowLineBreakOverflowRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 1, 0, size: 1 × 10)
-            placed(at: 2, 0, size: 1 × 3)
-            placed(at: 3, 0, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (1, 0), size: 1 × 10),
+                .init(position: (2, 0), size: 1 × 3),
+                .init(position: (3, 0), size: 1 × 3),
+            ]
+        )
     }
 }

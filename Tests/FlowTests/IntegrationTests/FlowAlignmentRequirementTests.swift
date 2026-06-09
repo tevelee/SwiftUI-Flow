@@ -66,10 +66,13 @@ struct FlowAlignmentRequirementTests {
             subviews: [small, large],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: 6 × 10) {
-            placed(at: 0, 5, size: 3 × 4)
-            placed(at: 3, 0, size: 3 × 10)
-        }
+        .assertExpectedLayout(
+            size: 6 × 10,
+            placements: [
+                .init(position: (0, 5), size: 3 × 4),
+                .init(position: (3, 0), size: 3 × 10),
+            ]
+        )
     }
 
     @Test func HFlow_lastTextBaseline_alignsItemsToCommonBaseline() {
@@ -85,10 +88,13 @@ struct FlowAlignmentRequirementTests {
             subviews: [small, large],
             proposal: 100 × 100
         )
-        .assertExpectedLayout(size: 6 × 10) {
-            placed(at: 0, 6, size: 3 × 4)
-            placed(at: 3, 0, size: 3 × 10)
-        }
+        .assertExpectedLayout(
+            size: 6 × 10,
+            placements: [
+                .init(position: (0, 6), size: 3 × 4),
+                .init(position: (3, 0), size: 3 × 10),
+            ]
+        )
     }
 
     @Test(arguments: VFlowCombinedAlignmentCase.allCases)
@@ -103,11 +109,14 @@ struct FlowAlignmentRequirementTests {
             subviews: [3 × 2, 1 × 2, 3 × 2],
             proposal: 10 × 5
         )
-        .assertExpectedLayout(size: 7 × 5) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: testCase.narrowItemX, 3, size: 1 × 2)
-            placed(at: 4, testCase.finalColumnY, size: 3 × 2)
-        }
+        .assertExpectedLayout(
+            size: 7 × 5,
+            placements: [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (testCase.narrowItemX, 3), size: 1 × 2),
+                .init(position: (4, testCase.finalColumnY), size: 3 × 2),
+            ]
+        )
     }
 }
 
@@ -158,10 +167,13 @@ private func assertHFlowVerticalAlignment(_ alignment: VerticalAlignment, shortI
         subviews: [3 × 3, 1 × 1],
         proposal: 5 × 3
     )
-    .assertExpectedLayout(size: 5 × 3) {
-        placed(at: 0, 0, size: 3 × 3)
-        placed(at: 4, shortItemY, size: 1 × 1)
-    }
+    .assertExpectedLayout(
+        size: 5 × 3,
+        placements: [
+            .init(position: (0, 0), size: 3 × 3),
+            .init(position: (4, shortItemY), size: 1 × 1),
+        ]
+    )
 }
 
 private func assertHFlowHorizontalAlignment(_ alignment: HorizontalAlignment, finalRowX: CGFloat) {
@@ -175,11 +187,14 @@ private func assertHFlowHorizontalAlignment(_ alignment: HorizontalAlignment, fi
         subviews: [2 × 1, 2 × 1, 2 × 1],
         proposal: 5 × 10
     )
-    .assertExpectedLayout(size: 5 × 3) {
-        placed(at: 0, 0, size: 2 × 1)
-        placed(at: 3, 0, size: 2 × 1)
-        placed(at: finalRowX, 2, size: 2 × 1)
-    }
+    .assertExpectedLayout(
+        size: 5 × 3,
+        placements: [
+            .init(position: (0, 0), size: 2 × 1),
+            .init(position: (3, 0), size: 2 × 1),
+            .init(position: (finalRowX, 2), size: 2 × 1),
+        ]
+    )
 }
 
 private func assertVFlowHorizontalAlignment(_ alignment: HorizontalAlignment, narrowItemX: CGFloat) {
@@ -188,10 +203,13 @@ private func assertVFlowHorizontalAlignment(_ alignment: HorizontalAlignment, na
         subviews: [3 × 2, 1 × 2],
         proposal: 3 × 5
     )
-    .assertExpectedLayout(size: 3 × 5) {
-        placed(at: 0, 0, size: 3 × 2)
-        placed(at: narrowItemX, 3, size: 1 × 2)
-    }
+    .assertExpectedLayout(
+        size: 3 × 5,
+        placements: [
+            .init(position: (0, 0), size: 3 × 2),
+            .init(position: (narrowItemX, 3), size: 1 × 2),
+        ]
+    )
 }
 
 private func assertVFlowVerticalAlignment(_ alignment: VerticalAlignment, finalColumnY: CGFloat) {
@@ -205,9 +223,12 @@ private func assertVFlowVerticalAlignment(_ alignment: VerticalAlignment, finalC
         subviews: [1 × 2, 1 × 2, 1 × 2],
         proposal: 10 × 5
     )
-    .assertExpectedLayout(size: 3 × 5) {
-        placed(at: 0, 0, size: 1 × 2)
-        placed(at: 0, 3, size: 1 × 2)
-        placed(at: 2, finalColumnY, size: 1 × 2)
-    }
+    .assertExpectedLayout(
+        size: 3 × 5,
+        placements: [
+            .init(position: (0, 0), size: 1 × 2),
+            .init(position: (0, 3), size: 1 × 2),
+            .init(position: (2, finalColumnY), size: 1 × 2),
+        ]
+    )
 }

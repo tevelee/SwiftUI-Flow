@@ -61,11 +61,14 @@ struct FlowUnboundedProposalRequirementTests {
             proposal: ProposedViewSize(width: .infinity, height: 1)
         )
         .layoutThatFits()
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-            placed(at: 8, 0, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+                .init(position: (8, 0), size: 3 × 1),
+            ]
+        )
     }
 
     @Test(.tags(.regression)) func HFlow_distributed_unspecifiedProposal_reportsNonZeroSize() {

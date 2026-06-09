@@ -21,10 +21,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 3, 0, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (3, 0), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_minimumFlexItem_doesNotConsumeRemainingWidth() {
@@ -46,10 +49,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (7 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 1)
-            placed(at: 6, 0, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 1),
+                .init(position: (6, 0), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_maximumFlexItem_movesToOwnRowWhenItCannotFullyExpandInCurrentRow() {
@@ -74,11 +80,14 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 10 × 1)
-            placed(at: 0, 2, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 10 × 1),
+                .init(position: (0, 2), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_multipleMaximumFlexItems_eachTakeTheirOwnRow() {
@@ -101,10 +110,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 10 × 1)
-            placed(at: 0, 1, size: 10 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 10 × 1),
+                .init(position: (0, 1), size: 10 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_higherPriorityFlexItem_consumesRemainingWidthFirst() {
@@ -127,10 +139,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (7 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 2, 0, size: 5 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (2, 0), size: 5 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_higherPriorityFlexItem_consumesRemainingHeightFirst() {
@@ -159,10 +174,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 7))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 5),
+            ]
+        )
     }
 
     @Test func VFlow_naturalFlexItems_shareRemainingHeight() {
@@ -186,10 +204,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 6))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 3, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 3), size: 1 × 3),
+            ]
+        )
     }
 
     @Test func VFlow_maximumFlexItem_movesToOwnColumnWhenItCannotFullyExpandInCurrentColumn() {
@@ -219,11 +240,14 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 8))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 1, 0, size: 1 × 8)
-            placed(at: 2, 0, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (1, 0), size: 1 × 8),
+                .init(position: (2, 0), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_minimumFlexItem_doesNotConsumeRemainingHeight() {
@@ -254,13 +278,16 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 7))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 0, 4, size: 1 × 1)
-            placed(at: 0, 6, size: 1 × 1)
-            placed(at: 1, 0, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (0, 4), size: 1 × 1),
+                .init(position: (0, 6), size: 1 × 1),
+                .init(position: (1, 0), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_infiniteMaxWidthItem_fillsColumnNaturalWidth() {
@@ -280,10 +307,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 1)
-            placed(at: 0, 1, size: 5 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 1),
+                .init(position: (0, 1), size: 5 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_finiteMaxWidthItem_canExpandBeyondColumnNaturalWidth() {
@@ -303,10 +333,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 1)
-            placed(at: 0, 1, size: 10 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 1),
+                .init(position: (0, 1), size: 10 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_infiniteMaxHeightItem_fillsRowNaturalHeight() {
@@ -329,10 +362,13 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 5)
-            placed(at: 1, 0, size: 1 × 5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 5),
+                .init(position: (1, 0), size: 1 × 5),
+            ]
+        )
     }
 
     @Test func HFlow_finiteMaxHeightItem_canExpandBeyondRowNaturalHeight() {
@@ -360,9 +396,12 @@ struct FlowFlexibilityRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 5)
-            placed(at: 1, 0, size: 1 × 10)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 5),
+                .init(position: (1, 0), size: 1 × 10),
+            ]
+        )
     }
 }

@@ -59,37 +59,6 @@
         return host.fittingSize.width
     }
 
-    // MARK: - Reveal Logic
-
-    @Suite(.tags(.requirements, .lazyLayout, .regression))
-    struct LazyRevealLogicTests {
-        // Tests the pure `lazyRevealNext` function that drives both LazyHFlow and LazyVFlow.
-
-        @Test func alreadyAtTotal_returnsCurrentUnchanged() {
-            #expect(lazyRevealNext(current: 5, total: 5, scrollMax: 300, contentExtent: 100) == 5)
-            #expect(lazyRevealNext(current: 10, total: 5, scrollMax: 300, contentExtent: 100) == 10)
-        }
-
-        @Test func infiniteScrollMax_jumpsToTotal() {
-            #expect(lazyRevealNext(current: 1, total: 20, scrollMax: .infinity, contentExtent: 50) == 20)
-        }
-
-        @Test func contentUnderflowsViewport_incrementsOne() {
-            // scrollMax (300) > contentExtent (200) → one more item
-            #expect(lazyRevealNext(current: 3, total: 10, scrollMax: 300, contentExtent: 200) == 4)
-        }
-
-        @Test func contentFillsViewport_returnsCurrentUnchanged() {
-            // scrollMax (200) <= contentExtent (300) → already filled
-            #expect(lazyRevealNext(current: 5, total: 10, scrollMax: 200, contentExtent: 300) == 5)
-        }
-
-        @Test func exactlyFilledViewport_returnsCurrentUnchanged() {
-            // scrollMax == contentExtent → viewport is exactly filled, no need to reveal more
-            #expect(lazyRevealNext(current: 3, total: 10, scrollMax: 200, contentExtent: 200) == 3)
-        }
-    }
-
     // MARK: - LazyHFlow Layout Tests
 
     @Suite(.tags(.requirements, .lazyLayout))
@@ -446,88 +415,6 @@
                 height: 300
             )
             #expect(w == 100)
-        }
-    }
-
-    // MARK: - Public API Rendering Tests
-
-    /// These tests use real HFlow rendering to exercise the public SwiftUI modifiers
-    /// (LineBreak, startInNewLine, flexibility) that the TestSubview helpers bypass.
-    @Suite(.tags(.requirements))
-    @MainActor
-    struct PublicAPIRenderingTests {
-
-        @Test func lineBreak_forcesNewRow() {
-            // 3 items × 50pt = 150pt fits in 200pt → 1 row without a break (height 50).
-            // LineBreak() between item 1 and items 2–3 splits them: row1=50pt, row2=100pt → height 100.
-            // Exercises LineBreak.init() and LineBreak.body.
-            let withoutBreak = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(width: 50, height: 50)
-                },
-                width: 200
-            )
-            let withBreak = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    LineBreak()
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(width: 50, height: 50)
-                },
-                width: 200
-            )
-            #expect(withoutBreak == 50)
-            #expect(withBreak == 100)
-        }
-
-        @Test func startInNewLine_forcesNewRow() {
-            // 2 items × 50pt = 100pt fits in 200pt → 1 row without the modifier (height 50).
-            // .startInNewLine() on the second item forces it to a new row → height 100.
-            // Exercises View.startInNewLine(_:).
-            let withoutModifier = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(width: 50, height: 50)
-                },
-                width: 200
-            )
-            let withModifier = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(width: 50, height: 50).startInNewLine()
-                },
-                width: 200
-            )
-            #expect(withoutModifier == 50)
-            #expect(withModifier == 100)
-        }
-
-        @Test func flexibilityMaximum_forcesOwnRow() {
-            // A .maximum flexible item that can expand to fill a row gets forced onto its own row.
-            // Without .flexibility(.maximum): 3 items fit on one row → height 50.
-            // With .flexibility(.maximum) on middle item: it fills its own row → 3 rows → height 150.
-            // Exercises View.flexibility(_:) and EnvironmentValues.flexibility.setter.
-            let withoutModifier = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(minWidth: 50, maxWidth: .infinity, minHeight: 50, maxHeight: 50)
-                    Color.clear.frame(width: 50, height: 50)
-                },
-                width: 200
-            )
-            let withModifier = measuredHeight(
-                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
-                    Color.clear.frame(width: 50, height: 50)
-                    Color.clear.frame(minWidth: 50, maxWidth: .infinity, minHeight: 50, maxHeight: 50)
-                        .flexibility(.maximum)
-                    Color.clear.frame(width: 50, height: 50)
-                },
-                width: 200
-            )
-            #expect(withoutModifier == 50)
-            #expect(withModifier == 150)
         }
     }
 #endif

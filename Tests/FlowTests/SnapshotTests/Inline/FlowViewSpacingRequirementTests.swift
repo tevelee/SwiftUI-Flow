@@ -32,11 +32,14 @@ struct FlowViewSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (14 × 12))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 11, 0, size: 3 × 2)
-            placed(at: 0, 10, size: 3 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (11, 0), size: 3 × 2),
+                .init(position: (0, 10), size: 3 × 2),
+            ]
+        )
     }
 
     @Test func HFlow_nilSpacing_usesZeroSubviewSpacingBetweenItemsAndRows() {
@@ -58,11 +61,14 @@ struct FlowViewSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 3, 0, size: 3 × 2)
-            placed(at: 0, 2, size: 3 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (3, 0), size: 3 × 2),
+                .init(position: (0, 2), size: 3 × 2),
+            ]
+        )
     }
 
     @Test func VFlow_nilSpacing_usesSubviewSpacingBetweenItemsAndColumns() {
@@ -94,11 +100,14 @@ struct FlowViewSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (12 × 14))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 0, 11, size: 2 × 3)
-            placed(at: 10, 0, size: 2 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (0, 11), size: 2 × 3),
+                .init(position: (10, 0), size: 2 × 3),
+            ]
+        )
     }
 
     @Test func VFlow_nilSpacing_usesZeroSubviewSpacingBetweenItemsAndColumns() {
@@ -122,11 +131,14 @@ struct FlowViewSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 6))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 0, 3, size: 2 × 3)
-            placed(at: 2, 0, size: 2 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (0, 3), size: 2 × 3),
+                .init(position: (2, 0), size: 2 × 3),
+            ]
+        )
     }
 }
 

@@ -22,10 +22,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [3 × 1, 1 × 1 ... 6 × 1],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 10 × 1) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 4, 0, size: 6 × 1)
-            }
+            .assertExpectedLayout(
+                size: 10 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (4, 0), size: 6 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_minimumFlexItem_doesNotGrow_whileNaturalFlexItemFills() {
@@ -37,10 +40,13 @@ struct FlowItemBehaviorRequirementTests {
                 ],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 8 × 1) {
-                placed(at: 0, 0, size: 6 × 1)
-                placed(at: 7, 0, size: 1 × 1)
-            }
+            .assertExpectedLayout(
+                size: 8 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 6 × 1),
+                    .init(position: (7, 0), size: 1 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_maximumFlexItem_forcedToOwnRow_whenFullGrowthDoesNotFit() {
@@ -58,11 +64,14 @@ struct FlowItemBehaviorRequirementTests {
                 ],
                 proposal: 10 × 3
             )
-            .assertExpectedLayout(size: 10 × 3) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 0, 1, size: 10 × 1)
-                placed(at: 0, 2, size: 3 × 1)
-            }
+            .assertExpectedLayout(
+                size: 10 × 3,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (0, 1), size: 10 × 1),
+                    .init(position: (0, 2), size: 3 × 1),
+                ]
+            )
         }
 
         @Test func VFlow_naturalFlexItem_expandsToFillRemainingColumnHeight() {
@@ -71,10 +80,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [1 × 3, 1 × 1 ... 1 × 6],
                 proposal: 1 × 10
             )
-            .assertExpectedLayout(size: 1 × 10) {
-                placed(at: 0, 0, size: 1 × 3)
-                placed(at: 0, 4, size: 1 × 6)
-            }
+            .assertExpectedLayout(
+                size: 1 × 10,
+                placements: [
+                    .init(position: (0, 0), size: 1 × 3),
+                    .init(position: (0, 4), size: 1 × 6),
+                ]
+            )
         }
 
         @Test func VFlow_maximumFlexItem_forcedToOwnColumn_whenFullGrowthDoesNotFit() {
@@ -92,11 +104,14 @@ struct FlowItemBehaviorRequirementTests {
                 ],
                 proposal: 3 × 10
             )
-            .assertExpectedLayout(size: 3 × 10) {
-                placed(at: 0, 0, size: 1 × 3)
-                placed(at: 1, 0, size: 1 × 10)
-                placed(at: 2, 0, size: 1 × 3)
-            }
+            .assertExpectedLayout(
+                size: 3 × 10,
+                placements: [
+                    .init(position: (0, 0), size: 1 × 3),
+                    .init(position: (1, 0), size: 1 × 10),
+                    .init(position: (2, 0), size: 1 × 3),
+                ]
+            )
         }
     }
 
@@ -116,11 +131,14 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [3 × 1, testLineBreakSubview(), 3 × 1],
                 proposal: 10 × 2
             )
-            .assertExpectedLayout(size: 3 × 2) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 0, 1.5, size: .zero)
-                placed(at: 0, 1, size: 3 × 1)
-            }
+            .assertExpectedLayout(
+                size: 3 × 2,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (0, 1.5), size: .zero),
+                    .init(position: (0, 1), size: 3 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_lineBreakAtStart_placesMarkerOnSameLineAsFollowingItem() {
@@ -134,10 +152,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [testLineBreakSubview(), 3 × 1],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 3 × 1) {
-                placed(at: 0, 0.5, size: .zero)
-                placed(at: 0, 0, size: 3 × 1)
-            }
+            .assertExpectedLayout(
+                size: 3 × 1,
+                placements: [
+                    .init(position: (0, 0.5), size: .zero),
+                    .init(position: (0, 0), size: 3 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_lineBreakAtEnd_doesNotIncreaseReportedSize() {
@@ -154,10 +175,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [3 × 1, testLineBreakSubview()],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 3 × 1) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 0, 1, size: .zero)
-            }
+            .assertExpectedLayout(
+                size: 3 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (0, 1), size: .zero),
+                ]
+            )
         }
 
         @Test func VFlow_lineBreakMarker_forcesNewColumn() {
@@ -174,11 +198,14 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [1 × 3, testLineBreakSubview(), 1 × 3],
                 proposal: 2 × 10
             )
-            .assertExpectedLayout(size: 2 × 3) {
-                placed(at: 0, 0, size: 1 × 3)
-                placed(at: 1.5, 0, size: .zero)
-                placed(at: 1, 0, size: 1 × 3)
-            }
+            .assertExpectedLayout(
+                size: 2 × 3,
+                placements: [
+                    .init(position: (0, 0), size: 1 × 3),
+                    .init(position: (1.5, 0), size: .zero),
+                    .init(position: (1, 0), size: 1 × 3),
+                ]
+            )
         }
     }
 
@@ -198,10 +225,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [3 × 1, testNewLineSubview(2 × 1)],
                 proposal: 10 × 2
             )
-            .assertExpectedLayout(size: 3 × 2) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 0, 1, size: 2 × 1)
-            }
+            .assertExpectedLayout(
+                size: 3 × 2,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (0, 1), size: 2 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_shouldStartInNewLineAtFirstItem_allowsFollowingItemsOnSameLine() {
@@ -215,10 +245,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [testNewLineSubview(2 × 1), 2 × 1],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 5 × 1) {
-                placed(at: 0, 0, size: 2 × 1)
-                placed(at: 3, 0, size: 2 × 1)
-            }
+            .assertExpectedLayout(
+                size: 5 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 2 × 1),
+                    .init(position: (3, 0), size: 2 × 1),
+                ]
+            )
         }
 
         @Test func VFlow_shouldStartInNewLine_forcesItemToNewColumn() {
@@ -232,10 +265,13 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [1 × 3, testNewLineSubview(1 × 2)],
                 proposal: 2 × 10
             )
-            .assertExpectedLayout(size: 2 × 3) {
-                placed(at: 0, 0, size: 1 × 3)
-                placed(at: 1, 0, size: 1 × 2)
-            }
+            .assertExpectedLayout(
+                size: 2 × 3,
+                placements: [
+                    .init(position: (0, 0), size: 1 × 3),
+                    .init(position: (1, 0), size: 1 × 2),
+                ]
+            )
         }
     }
 
@@ -257,12 +293,15 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [WrappingText(size: 6 × 1), 1 × 1, 1 × 1, 1 × 1],
                 proposal: 5 × 3
             )
-            .assertExpectedLayout(size: 5 × 3) {
-                placed(at: 0, 0, size: 5 × 2)
-                placed(at: 0, 2, size: 1 × 1)
-                placed(at: 2, 2, size: 1 × 1)
-                placed(at: 4, 2, size: 1 × 1)
-            }
+            .assertExpectedLayout(
+                size: 5 × 3,
+                placements: [
+                    .init(position: (0, 0), size: 5 × 2),
+                    .init(position: (0, 2), size: 1 × 1),
+                    .init(position: (2, 2), size: 1 × 1),
+                    .init(position: (4, 2), size: 1 × 1),
+                ]
+            )
         }
 
         @Test func VFlow_wrappingText_reflowsIntoProposedHeight() {
@@ -276,12 +315,15 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [WrappingText(size: 1 × 6), 1 × 1, 1 × 1, 1 × 1],
                 proposal: 3 × 5
             )
-            .assertExpectedLayout(size: 3 × 5) {
-                placed(at: 0, 0, size: 2 × 5)
-                placed(at: 2, 0, size: 1 × 1)
-                placed(at: 2, 2, size: 1 × 1)
-                placed(at: 2, 4, size: 1 × 1)
-            }
+            .assertExpectedLayout(
+                size: 3 × 5,
+                placements: [
+                    .init(position: (0, 0), size: 2 × 5),
+                    .init(position: (2, 0), size: 1 × 1),
+                    .init(position: (2, 2), size: 1 × 1),
+                    .init(position: (2, 4), size: 1 × 1),
+                ]
+            )
         }
     }
 
@@ -298,11 +340,14 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [2 × 1, 2 × 1, 2 × 1],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 10 × 1) {
-                placed(at: 0, 0, size: 2 × 1)
-                placed(at: 4, 0, size: 2 × 1)
-                placed(at: 8, 0, size: 2 × 1)
-            }
+            .assertExpectedLayout(
+                size: 10 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 2 × 1),
+                    .init(position: (4, 0), size: 2 × 1),
+                    .init(position: (8, 0), size: 2 × 1),
+                ]
+            )
         }
 
         @Test func HFlow_justified_singleItemLine_notDistributed() {
@@ -312,9 +357,12 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [5 × 1],
                 proposal: 10 × 1
             )
-            .assertExpectedLayout(size: 10 × 1) {
-                placed(at: 0, 0, size: 5 × 1)
-            }
+            .assertExpectedLayout(
+                size: 10 × 1,
+                placements: [
+                    .init(position: (0, 0), size: 5 × 1)
+                ]
+            )
         }
 
         @Test func HFlow_justified_lineBreakMarker_doesNotReceiveDistributedSpace() {
@@ -327,12 +375,15 @@ struct FlowItemBehaviorRequirementTests {
             .layoutThatFits()
 
             #expect(result.reportedSize == (10 × 2))
-            expectPlacements(result.subviews) {
-                placed(at: 0, 0, size: 3 × 1)
-                placed(at: 0, 1.5, size: .zero)
-                placed(at: 0, 1, size: 3 × 1)
-                placed(at: 7, 1, size: 3 × 1)
-            }
+            expectPlacements(
+                result.subviews,
+                [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (0, 1.5), size: .zero),
+                    .init(position: (0, 1), size: 3 × 1),
+                    .init(position: (7, 1), size: 3 × 1),
+                ]
+            )
         }
 
         @Test func VFlow_justified_distributesRemainingSpaceBetweenItems() {
@@ -341,11 +392,14 @@ struct FlowItemBehaviorRequirementTests {
                 subviews: [1 × 2, 1 × 2, 1 × 2],
                 proposal: 1 × 10
             )
-            .assertExpectedLayout(size: 1 × 10) {
-                placed(at: 0, 0, size: 1 × 2)
-                placed(at: 0, 4, size: 1 × 2)
-                placed(at: 0, 8, size: 1 × 2)
-            }
+            .assertExpectedLayout(
+                size: 1 × 10,
+                placements: [
+                    .init(position: (0, 0), size: 1 × 2),
+                    .init(position: (0, 4), size: 1 × 2),
+                    .init(position: (0, 8), size: 1 × 2),
+                ]
+            )
         }
     }
 }

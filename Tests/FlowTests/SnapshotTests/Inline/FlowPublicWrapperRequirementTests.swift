@@ -24,12 +24,15 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 3, 0, size: 1 × 1)
-            placed(at: 0, 3, size: 1 × 1)
-            placed(at: 3, 3, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (3, 0), size: 1 × 1),
+                .init(position: (0, 3), size: 1 × 1),
+                .init(position: (3, 3), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlowLayout_convenienceInitializer_mapsItemColumnSpacingAndJustification() {
@@ -51,12 +54,15 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 3, size: 1 × 1)
-            placed(at: 3, 0, size: 1 × 1)
-            placed(at: 3, 3, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 3), size: 1 × 1),
+                .init(position: (3, 0), size: 1 × 1),
+                .init(position: (3, 3), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func HFlowLayout_fullInitializer_mapsHorizontalAlignment() {
@@ -83,11 +89,14 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 3, 0, size: 2 × 1)
-            placed(at: 1.5, 2, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (3, 0), size: 2 × 1),
+                .init(position: (1.5, 2), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func VFlowLayout_fullInitializer_mapsVerticalAlignment() {
@@ -116,11 +125,14 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 2)
-            placed(at: 0, 3, size: 1 × 2)
-            placed(at: 2, 1.5, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 2),
+                .init(position: (0, 3), size: 1 × 2),
+                .init(position: (2, 1.5), size: 1 × 2),
+            ]
+        )
     }
 
     @MainActor
@@ -142,12 +154,15 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 3, 0, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 3, 2, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (3, 0), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (3, 2), size: 1 × 1),
+            ]
+        )
     }
 
     @MainActor
@@ -170,12 +185,15 @@ struct FlowPublicWrapperRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 3, size: 1 × 1)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 2, 3, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 3), size: 1 × 1),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (2, 3), size: 1 × 1),
+            ]
+        )
     }
 
 }

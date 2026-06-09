@@ -29,12 +29,15 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1.5, size: .zero)
-            placed(at: 0, 1, size: 3 × 1)
-            placed(at: 7, 1, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1.5), size: .zero),
+                .init(position: (0, 1), size: 3 × 1),
+                .init(position: (7, 1), size: 3 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 10×2
@@ -79,12 +82,15 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 1.5, 0, size: .zero)
-            placed(at: 1, 0, size: 1 × 3)
-            placed(at: 1, 7, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (1.5, 0), size: .zero),
+                .init(position: (1, 0), size: 1 × 3),
+                .init(position: (1, 7), size: 1 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2×10
@@ -113,11 +119,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 4, 0, size: 2 × 1)
-            placed(at: 8, 0, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (4, 0), size: 2 × 1),
+                .init(position: (8, 0), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_justifiedSingleItemLine_keepsItemAtLeadingEdge() {
@@ -136,9 +145,12 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 1)
+            ]
+        )
     }
 
     @Test func HFlow_justifiedFlexibleItem_consumesRemainingRowWidth() {
@@ -158,11 +170,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (9 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 5 × 1)
-            placed(at: 0, 1, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 5 × 1),
+                .init(position: (0, 1), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_justifiedFlexibleItem_consumesRemainingColumnHeight() {
@@ -189,11 +204,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 9))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 4, size: 1 × 5)
-            placed(at: 1, 0, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 4), size: 1 × 5),
+                .init(position: (1, 0), size: 1 × 2),
+            ]
+        )
     }
 
     @Test func HFlow_justifiedSingleItemLine_keepsOversizedLineNaturalWidth() {
@@ -213,11 +231,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (8 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 5, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 8 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (5, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 8 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_justifiedSingleItemColumn_keepsOversizedColumnNaturalHeight() {
@@ -243,11 +264,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 8))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 5, size: 1 × 3)
-            placed(at: 1, 0, size: 1 × 8)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 5), size: 1 × 3),
+                .init(position: (1, 0), size: 1 × 8),
+            ]
+        )
     }
 
     @Test func VFlow_justifiedRigidColumn_distributesRemainingSpaceBetweenVisibleItems() {
@@ -275,11 +299,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 2)
-            placed(at: 0, 4, size: 1 × 2)
-            placed(at: 0, 8, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 2),
+                .init(position: (0, 4), size: 1 × 2),
+                .init(position: (0, 8), size: 1 × 2),
+            ]
+        )
     }
 
     @Test func VFlow_justifiedTwoItemColumn_usesItemHeightsForDistributedSpacing() {
@@ -302,10 +329,13 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 0, 4, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (0, 4), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_distributedFlexibleItem_balancesRowsAfterFlexMeasurement() {
@@ -324,11 +354,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (12 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 4 × 1)
-            placed(at: 9, 0, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 4 × 1),
+                .init(position: (9, 0), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_distributedFractionalSpacing_balancesRowsWithExactGeometry() {
@@ -340,16 +373,19 @@ struct FlowDistributionRequirementTests {
         .layoutThatFits()
 
         #expect(result.reportedSize == (4.25 × 2.25))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 0.5 × 1)
-            placed(at: 0.75, 0, size: 0.5 × 1)
-            placed(at: 1.5, 0, size: 0.5 × 1)
-            placed(at: 2.25, 0, size: 0.5 × 1)
-            placed(at: 3, 0, size: 0.5 × 1)
-            placed(at: 3.75, 0, size: 0.5 × 1)
-            placed(at: 0, 1.25, size: 0.5 × 1)
-            placed(at: 0.75, 1.25, size: 0.5 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 0.5 × 1),
+                .init(position: (0.75, 0), size: 0.5 × 1),
+                .init(position: (1.5, 0), size: 0.5 × 1),
+                .init(position: (2.25, 0), size: 0.5 × 1),
+                .init(position: (3, 0), size: 0.5 × 1),
+                .init(position: (3.75, 0), size: 0.5 × 1),
+                .init(position: (0, 1.25), size: 0.5 × 1),
+                .init(position: (0.75, 1.25), size: 0.5 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 4.25×2.25
@@ -384,15 +420,18 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (7 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 2, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 3 × 1)
-            placed(at: 2, 1, size: 3 × 1)
-            placed(at: 0, 2, size: 3 × 1)
-            placed(at: 2, 2, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (2, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 3 × 1),
+                .init(position: (2, 1), size: 3 × 1),
+                .init(position: (0, 2), size: 3 × 1),
+                .init(position: (2, 2), size: 3 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 7×3
@@ -435,11 +474,14 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 12))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 4, size: 1 × 4)
-            placed(at: 0, 9, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 4), size: 1 × 4),
+                .init(position: (0, 9), size: 1 × 3),
+            ]
+        )
     }
 
     @Test func HFlow_distributedOversizedSingleItem_reportsNaturalItemSize() {
@@ -460,9 +502,12 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (10 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 10 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 10 × 3)
+            ]
+        )
     }
 
     @Test func VFlow_distributedOversizedSingleItem_reportsNaturalItemSize() {
@@ -490,9 +535,12 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 10))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 10)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 10)
+            ]
+        )
     }
 
     @Test func HFlow_distributedEvenly_balancesRowsWithExactPlacements() {
@@ -513,21 +561,24 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (9 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 4, 0, size: 1 × 1)
-            placed(at: 6, 0, size: 1 × 1)
-            placed(at: 8, 0, size: 1 × 1)
-            placed(at: 0, 1, size: 1 × 1)
-            placed(at: 2, 1, size: 1 × 1)
-            placed(at: 4, 1, size: 1 × 1)
-            placed(at: 6, 1, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-            placed(at: 4, 2, size: 1 × 1)
-            placed(at: 6, 2, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (4, 0), size: 1 × 1),
+                .init(position: (6, 0), size: 1 × 1),
+                .init(position: (8, 0), size: 1 × 1),
+                .init(position: (0, 1), size: 1 × 1),
+                .init(position: (2, 1), size: 1 × 1),
+                .init(position: (4, 1), size: 1 × 1),
+                .init(position: (6, 1), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+                .init(position: (4, 2), size: 1 × 1),
+                .init(position: (6, 2), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_distributedEvenly_balancesColumnsWithExactPlacements() {
@@ -550,14 +601,17 @@ struct FlowDistributionRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 0, 4, size: 1 × 1)
-            placed(at: 1, 0, size: 1 × 1)
-            placed(at: 1, 2, size: 1 × 1)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (0, 4), size: 1 × 1),
+                .init(position: (1, 0), size: 1 × 1),
+                .init(position: (1, 2), size: 1 × 1),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+            ]
+        )
     }
 }

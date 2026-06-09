@@ -22,11 +22,14 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1.5, size: .zero)
-            placed(at: 0, 1, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1.5), size: .zero),
+                .init(position: (0, 1), size: 3 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 3×2
@@ -54,10 +57,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0.5, size: .zero)
-            placed(at: 0, 0, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0.5), size: .zero),
+                .init(position: (0, 0), size: 3 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 3×1
@@ -84,10 +90,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1, size: .zero)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1), size: .zero),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 3×1
@@ -115,12 +124,15 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1, size: .zero)
-            placed(at: 0, 1.5, size: .zero)
-            placed(at: 0, 1, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1), size: .zero),
+                .init(position: (0, 1.5), size: .zero),
+                .init(position: (0, 1), size: 3 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 3×2
@@ -150,11 +162,14 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (7 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_startInNewLineOnFirstItem_doesNotCreateEmptyRow() {
@@ -173,10 +188,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (7 × 1))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 4, 0, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (4, 0), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_startInNewLineOnEveryItem_placesEachItemInOwnRow() {
@@ -197,11 +215,14 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 1)
-            placed(at: 0, 1, size: 3 × 1)
-            placed(at: 0, 2, size: 3 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 1),
+                .init(position: (0, 1), size: 3 × 1),
+                .init(position: (0, 2), size: 3 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_lineBreakMarker_forcesNewColumn() {
@@ -222,11 +243,14 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 1.5, 0, size: .zero)
-            placed(at: 1, 0, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (1.5, 0), size: .zero),
+                .init(position: (1, 0), size: 1 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2×3
@@ -256,10 +280,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0.5, 0, size: .zero)
-            placed(at: 0, 0, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0.5, 0), size: .zero),
+                .init(position: (0, 0), size: 1 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 1×3
@@ -288,10 +315,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (1 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 1, 0, size: .zero)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (1, 0), size: .zero),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 1×3
@@ -320,12 +350,15 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 1, 0, size: .zero)
-            placed(at: 1.5, 0, size: .zero)
-            placed(at: 1, 0, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (1, 0), size: .zero),
+                .init(position: (1.5, 0), size: .zero),
+                .init(position: (1, 0), size: 1 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2×3
@@ -360,10 +393,13 @@ struct FlowLineBreakRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 7))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 3)
-            placed(at: 0, 4, size: 1 × 3)
-            placed(at: 1, 0, size: 1 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 3),
+                .init(position: (0, 4), size: 1 × 3),
+                .init(position: (1, 0), size: 1 × 3),
+            ]
+        )
     }
 }

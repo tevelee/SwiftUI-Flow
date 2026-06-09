@@ -23,23 +23,26 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (11 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 4, 0, size: 1 × 1)
-            placed(at: 6, 0, size: 1 × 1)
-            placed(at: 8, 0, size: 1 × 1)
-            placed(at: 10, 0, size: 1 × 1)
-            placed(at: 0, 1, size: 1 × 1)
-            placed(at: 2, 1, size: 1 × 1)
-            placed(at: 4, 1, size: 1 × 1)
-            placed(at: 6, 1, size: 1 × 1)
-            placed(at: 8, 1, size: 1 × 1)
-            placed(at: 10, 1, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-            placed(at: 4, 2, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (4, 0), size: 1 × 1),
+                .init(position: (6, 0), size: 1 × 1),
+                .init(position: (8, 0), size: 1 × 1),
+                .init(position: (10, 0), size: 1 × 1),
+                .init(position: (0, 1), size: 1 × 1),
+                .init(position: (2, 1), size: 1 × 1),
+                .init(position: (4, 1), size: 1 × 1),
+                .init(position: (6, 1), size: 1 × 1),
+                .init(position: (8, 1), size: 1 × 1),
+                .init(position: (10, 1), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+                .init(position: (4, 2), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_defaultWrapping_fillsColumnsInOrder() {
@@ -60,24 +63,27 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (6 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 1)
-            placed(at: 0, 1, size: 1 × 1)
-            placed(at: 0, 2, size: 1 × 1)
-            placed(at: 1, 0, size: 1 × 1)
-            placed(at: 1, 1, size: 1 × 1)
-            placed(at: 1, 2, size: 1 × 1)
-            placed(at: 2, 0, size: 1 × 1)
-            placed(at: 2, 1, size: 1 × 1)
-            placed(at: 2, 2, size: 1 × 1)
-            placed(at: 3, 0, size: 1 × 1)
-            placed(at: 3, 1, size: 1 × 1)
-            placed(at: 3, 2, size: 1 × 1)
-            placed(at: 4, 0, size: 1 × 1)
-            placed(at: 4, 1, size: 1 × 1)
-            placed(at: 4, 2, size: 1 × 1)
-            placed(at: 5, 0, size: 1 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 1),
+                .init(position: (0, 1), size: 1 × 1),
+                .init(position: (0, 2), size: 1 × 1),
+                .init(position: (1, 0), size: 1 × 1),
+                .init(position: (1, 1), size: 1 × 1),
+                .init(position: (1, 2), size: 1 × 1),
+                .init(position: (2, 0), size: 1 × 1),
+                .init(position: (2, 1), size: 1 × 1),
+                .init(position: (2, 2), size: 1 × 1),
+                .init(position: (3, 0), size: 1 × 1),
+                .init(position: (3, 1), size: 1 × 1),
+                .init(position: (3, 2), size: 1 × 1),
+                .init(position: (4, 0), size: 1 × 1),
+                .init(position: (4, 1), size: 1 × 1),
+                .init(position: (4, 2), size: 1 × 1),
+                .init(position: (5, 0), size: 1 × 1),
+            ]
+        )
     }
 
     @Test func HFlow_wrappingTwoItemsPerRow_reportsExactPlacements() {
@@ -98,12 +104,15 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 3, 0, size: 2 × 1)
-            placed(at: 0, 2, size: 2 × 1)
-            placed(at: 3, 2, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (3, 0), size: 2 × 1),
+                .init(position: (0, 2), size: 2 × 1),
+                .init(position: (3, 2), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_wrappingTwoItemsPerColumn_reportsExactPlacements() {
@@ -126,12 +135,15 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 2)
-            placed(at: 0, 3, size: 1 × 2)
-            placed(at: 2, 0, size: 1 × 2)
-            placed(at: 2, 3, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 2),
+                .init(position: (0, 3), size: 1 × 2),
+                .init(position: (2, 0), size: 1 × 2),
+                .init(position: (2, 3), size: 1 × 2),
+            ]
+        )
     }
 
     @Test func HFlow_centerAlignment_offsetsShortFinalRow() {
@@ -152,11 +164,14 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 1)
-            placed(at: 3, 0, size: 2 × 1)
-            placed(at: 1.5, 2, size: 2 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 1),
+                .init(position: (3, 0), size: 2 × 1),
+                .init(position: (1.5, 2), size: 2 × 1),
+            ]
+        )
     }
 
     @Test func VFlow_centerAlignment_offsetsNarrowItemWithinColumn() {
@@ -179,10 +194,13 @@ struct FlowWrappingAlignmentRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 1, 0, size: 1 × 2)
-            placed(at: 0, 3, size: 3 × 2)
-            placed(at: 4, 0, size: 1 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (1, 0), size: 1 × 2),
+                .init(position: (0, 3), size: 3 × 2),
+                .init(position: (4, 0), size: 1 × 2),
+            ]
+        )
     }
 }

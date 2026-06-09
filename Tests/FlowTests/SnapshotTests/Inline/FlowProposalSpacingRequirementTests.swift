@@ -22,11 +22,14 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (14 × 2))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 4, 0, size: 4 × 2)
-            placed(at: 9, 0, size: 5 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (4, 0), size: 4 × 2),
+                .init(position: (9, 0), size: 5 × 2),
+            ]
+        )
     }
 
     @Test func VFlow_infinityProposal_placesItemsInOneColumn() {
@@ -58,11 +61,14 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (2 × 14))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 0, 4, size: 2 × 4)
-            placed(at: 0, 9, size: 2 × 5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (0, 4), size: 2 × 4),
+                .init(position: (0, 9), size: 2 × 5),
+            ]
+        )
     }
 
     @Test func HFlow_zeroProposal_usesMinimumSizes() {
@@ -85,10 +91,13 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (4 × 5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 2)
-            placed(at: 0, 3, size: 4 × 2)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 2),
+                .init(position: (0, 3), size: 4 × 2),
+            ]
+        )
     }
 
     @Test func VFlow_zeroProposal_usesMinimumSizes() {
@@ -110,10 +119,13 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (5 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2 × 3)
-            placed(at: 3, 0, size: 2 × 4)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2 × 3),
+                .init(position: (3, 0), size: 2 × 4),
+            ]
+        )
     }
 
     @Test func HFlow_negativeSpacing_reducesRowWidth() {
@@ -134,11 +146,14 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (11 × 3))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 5 × 3)
-            placed(at: 3, 0, size: 5 × 3)
-            placed(at: 6, 0, size: 5 × 3)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 5 × 3),
+                .init(position: (3, 0), size: 5 × 3),
+                .init(position: (6, 0), size: 5 × 3),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 11×3
@@ -176,11 +191,14 @@ struct FlowProposalSpacingRequirementTests {
             """
         }
         #expect(result.reportedSize == (3 × 11))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 3 × 5)
-            placed(at: 0, 3, size: 3 × 5)
-            placed(at: 0, 6, size: 3 × 5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 3 × 5),
+                .init(position: (0, 3), size: 3 × 5),
+                .init(position: (0, 6), size: 3 × 5),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 3×11

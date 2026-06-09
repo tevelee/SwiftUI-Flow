@@ -14,11 +14,14 @@ struct FlowFractionalGeometryRequirementTests {
         .layoutThatFits()
 
         #expect(result.reportedSize == (4 × 2.75))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1.5 × 1.25)
-            placed(at: 2, 0, size: 2 × 1.25)
-            placed(at: 0, 1.5, size: 1 × 1.25)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1.5 × 1.25),
+                .init(position: (2, 0), size: 2 × 1.25),
+                .init(position: (0, 1.5), size: 1 × 1.25),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 4×2.75
@@ -39,11 +42,14 @@ struct FlowFractionalGeometryRequirementTests {
         .layoutThatFits()
 
         #expect(result.reportedSize == (2.75 × 4))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1.25 × 1.5)
-            placed(at: 0, 2, size: 1.25 × 2)
-            placed(at: 1.5, 0, size: 1.25 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1.25 × 1.5),
+                .init(position: (0, 2), size: 1.25 × 2),
+                .init(position: (1.5, 0), size: 1.25 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2.75×4
@@ -64,10 +70,13 @@ struct FlowFractionalGeometryRequirementTests {
         .layoutThatFits()
 
         #expect(result.reportedSize == (2.5 × 2.5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 1 × 2.5)
-            placed(at: 1.5, 0.5, size: 1 × 1.5)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 1 × 2.5),
+                .init(position: (1.5, 0.5), size: 1 × 1.5),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2.5×2.5
@@ -87,10 +96,13 @@ struct FlowFractionalGeometryRequirementTests {
         .layoutThatFits()
 
         #expect(result.reportedSize == (2.5 × 2.5))
-        expectPlacements(result.subviews) {
-            placed(at: 0, 0, size: 2.5 × 1)
-            placed(at: 0.5, 1.5, size: 1.5 × 1)
-        }
+        expectPlacements(
+            result.subviews,
+            [
+                .init(position: (0, 0), size: 2.5 × 1),
+                .init(position: (0.5, 1.5), size: 1.5 × 1),
+            ]
+        )
         assertLayoutTranscript(result) {
             """
             reportedSize: 2.5×2.5

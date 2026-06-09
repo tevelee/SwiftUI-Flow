@@ -53,6 +53,44 @@ struct FlowAlignmentRequirementTests {
         assertVFlowVerticalAlignment(.bottom, finalColumnY: 3)
     }
 
+    @Test func HFlow_firstTextBaseline_alignsItemsToCommonBaseline() {
+        let small = TestSubview(size: 3 × 4)
+        small.firstBaseline = 3
+        let large = TestSubview(size: 3 × 10)
+        large.firstBaseline = 8
+        // Common baseline = max(3, 8) = 8 from row top.
+        // small: ascent gap = 8-3=5 → y=5; large: y=0.
+        // Row height = ascent(8) + descent(max(4-3,10-8))=max(1,2)=2 → 10.
+        FlowLayoutScenario(
+            layout: .horizontal(verticalAlignment: .firstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0),
+            subviews: [small, large],
+            proposal: 100 × 100
+        )
+        .assertExpectedLayout(size: 6 × 10) {
+            placed(at: 0, 5, size: 3 × 4)
+            placed(at: 3, 0, size: 3 × 10)
+        }
+    }
+
+    @Test func HFlow_lastTextBaseline_alignsItemsToCommonBaseline() {
+        let small = TestSubview(size: 3 × 4)
+        small.lastBaseline = 3
+        let large = TestSubview(size: 3 × 10)
+        large.lastBaseline = 9
+        // Common baseline = max(3, 9) = 9 from row top.
+        // small: y=9-3=6; large: y=0.
+        // Row height = ascent(9) + descent(max(4-3,10-9))=max(1,1)=1 → 10.
+        FlowLayoutScenario(
+            layout: .horizontal(verticalAlignment: .lastTextBaseline, horizontalSpacing: 0, verticalSpacing: 0),
+            subviews: [small, large],
+            proposal: 100 × 100
+        )
+        .assertExpectedLayout(size: 6 × 10) {
+            placed(at: 0, 6, size: 3 × 4)
+            placed(at: 3, 0, size: 3 × 10)
+        }
+    }
+
     @Test(arguments: VFlowCombinedAlignmentCase.allCases)
     func VFlow_combinedHorizontalAndVerticalAlignment_placesItemsAtExpectedOffsets(_ testCase: VFlowCombinedAlignmentCase) {
         FlowLayoutScenario(

@@ -52,6 +52,22 @@ struct FlowUnboundedProposalRequirementTests {
         #expect(result.reportedSize == (14 × 2), "Three items + two 1pt gaps on one line = 14 wide, 2 tall")
     }
 
+    @Test(.tags(.regression)) func HFlow_justified_unboundedWidth_placesItemsAtNaturalPositions() {
+        // With infinite width the effective proposal equals the natural size, so
+        // justified distribution adds zero extra space — items land at natural positions.
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 1, verticalSpacing: 0, justified: true),
+            subviews: [3 × 1, 3 × 1, 3 × 1],
+            proposal: ProposedViewSize(width: .infinity, height: 1)
+        )
+        .layoutThatFits()
+        expectPlacements(result.subviews) {
+            placed(at: 0, 0, size: 3 × 1)
+            placed(at: 4, 0, size: 3 × 1)
+            placed(at: 8, 0, size: 3 × 1)
+        }
+    }
+
     @Test(.tags(.regression)) func HFlow_distributed_unspecifiedProposal_reportsNonZeroSize() {
         let result = FlowLayoutScenario(
             layout: .horizontal(horizontalSpacing: 1, verticalSpacing: 0, distributeItemsEvenly: true),

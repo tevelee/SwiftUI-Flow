@@ -185,6 +185,97 @@
             )
             #expect(lazyHeight == eagerHeight)
         }
+
+        @Test func justified_matchesEagerHFlow() {
+            // LazyHFlow must forward `justified` to the underlying HFlowLayout.
+            let spacing: CGFloat = 8
+            let width: CGFloat = 300
+
+            let eagerHeight = measuredHeight(
+                of: HFlow(spacing: spacing, justified: true) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: width
+            )
+            let lazyHeight = measuredHeight(
+                of: LazyHFlow(data: items(10), spacing: spacing, justified: true) { _ in Color.clear.frame(width: 50, height: 50) },
+                width: width
+            )
+            #expect(lazyHeight == eagerHeight)
+        }
+
+        @Test func dataFullAlignmentInit_separateHorizontalAndVerticalSpacing() {
+            // Exercises LazyHFlow(data:horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:).
+            // 7 items of 50pt in 300pt → row1: 6, row2: 1 → 2 rows.
+            let h = measuredHeight(
+                of: LazyHFlow(
+                    data: items(7),
+                    horizontalAlignment: .leading,
+                    verticalAlignment: .top,
+                    horizontalSpacing: 0,
+                    verticalSpacing: 0
+                ) { _ in Color.clear.frame(width: 50, height: 50) },
+                width: 300
+            )
+            #expect(h == 100)
+        }
+
+        @Test func viewBuilderSpacingInit_matchesDataInit() {
+            // Exercises LazyHFlow(spacing:content:) — ViewBuilder uniform-spacing init.
+            // Outside a ScrollView it renders all ForEach items eagerly, matching HFlow.
+            let spacing: CGFloat = 8
+            let width: CGFloat = 300
+
+            let eagerHeight = measuredHeight(
+                of: HFlow(spacing: spacing) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: width
+            )
+            let lazyHeight = measuredHeight(
+                of: LazyHFlow(spacing: spacing) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: width
+            )
+            #expect(lazyHeight == eagerHeight)
+        }
+
+        @Test func viewBuilderSeparateSpacingInit_rowSpacingAffectsHeight() {
+            // Exercises LazyHFlow(itemSpacing:rowSpacing:content:) — ViewBuilder separate-spacing init.
+            // 7 items of 50pt in 300pt → row1: 6, row2: 1 → rowSpacing bridges the two rows.
+            let hNoRowSpacing = measuredHeight(
+                of: LazyHFlow(itemSpacing: 0, rowSpacing: 0) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: 300
+            )
+            let hWithRowSpacing = measuredHeight(
+                of: LazyHFlow(itemSpacing: 0, rowSpacing: 20) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: 300
+            )
+            #expect(hNoRowSpacing == 100)
+            #expect(hWithRowSpacing == 120)
+        }
+
+        @Test func viewBuilderFullAlignmentInit_producesCorrectHeight() {
+            // Exercises LazyHFlow(horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:content:).
+            // 7 items of 50pt in 300pt with zero spacing → 6+1 = 2 rows of 50pt each.
+            let h = measuredHeight(
+                of: LazyHFlow(
+                    horizontalAlignment: .leading,
+                    verticalAlignment: .top,
+                    horizontalSpacing: 0,
+                    verticalSpacing: 0
+                ) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                width: 300
+            )
+            #expect(h == 100)
+        }
     }
 
     // MARK: - LazyVFlow Layout Tests
@@ -264,6 +355,179 @@
                 height: height
             )
             #expect(lazyWidth == eagerWidth)
+        }
+
+        @Test func justified_matchesEagerVFlow() {
+            // LazyVFlow must forward `justified` to the underlying VFlowLayout.
+            let spacing: CGFloat = 8
+            let height: CGFloat = 300
+
+            let eagerWidth = measuredWidth(
+                of: VFlow(spacing: spacing, justified: true) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: height
+            )
+            let lazyWidth = measuredWidth(
+                of: LazyVFlow(data: items(10), spacing: spacing, justified: true) { _ in Color.clear.frame(width: 50, height: 50) },
+                height: height
+            )
+            #expect(lazyWidth == eagerWidth)
+        }
+
+        @Test func dataFullAlignmentInit_separateHorizontalAndVerticalSpacing() {
+            // Exercises LazyVFlow(data:horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:).
+            // 7 items of 50pt in 300pt → col1: 6, col2: 1 → 2 columns.
+            let w = measuredWidth(
+                of: LazyVFlow(
+                    data: items(7),
+                    horizontalAlignment: .leading,
+                    verticalAlignment: .top,
+                    horizontalSpacing: 0,
+                    verticalSpacing: 0
+                ) { _ in Color.clear.frame(width: 50, height: 50) },
+                height: 300
+            )
+            #expect(w == 100)
+        }
+
+        @Test func viewBuilderSpacingInit_matchesDataInit() {
+            // Exercises LazyVFlow(spacing:content:) — ViewBuilder uniform-spacing init.
+            // Outside a ScrollView it renders all ForEach items eagerly, matching VFlow.
+            let spacing: CGFloat = 8
+            let height: CGFloat = 300
+
+            let eagerWidth = measuredWidth(
+                of: VFlow(spacing: spacing) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: height
+            )
+            let lazyWidth = measuredWidth(
+                of: LazyVFlow(spacing: spacing) {
+                    ForEach(0 ..< 10, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: height
+            )
+            #expect(lazyWidth == eagerWidth)
+        }
+
+        @Test func viewBuilderSeparateSpacingInit_columnSpacingAffectsWidth() {
+            // Exercises LazyVFlow(itemSpacing:columnSpacing:content:) — ViewBuilder separate-spacing init.
+            // 7 items of 50pt in 300pt → col1: 6, col2: 1 → columnSpacing bridges the two columns.
+            let wNoColumnSpacing = measuredWidth(
+                of: LazyVFlow(itemSpacing: 0, columnSpacing: 0) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: 300
+            )
+            let wWithColumnSpacing = measuredWidth(
+                of: LazyVFlow(itemSpacing: 0, columnSpacing: 20) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: 300
+            )
+            #expect(wNoColumnSpacing == 100)
+            #expect(wWithColumnSpacing == 120)
+        }
+
+        @Test func viewBuilderFullAlignmentInit_producesCorrectWidth() {
+            // Exercises LazyVFlow(horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:content:).
+            // 7 items of 50pt in 300pt with zero spacing → 6+1 = 2 columns of 50pt each.
+            let w = measuredWidth(
+                of: LazyVFlow(
+                    horizontalAlignment: .leading,
+                    verticalAlignment: .top,
+                    horizontalSpacing: 0,
+                    verticalSpacing: 0
+                ) {
+                    ForEach(0 ..< 7, id: \.self) { _ in Color.clear.frame(width: 50, height: 50) }
+                },
+                height: 300
+            )
+            #expect(w == 100)
+        }
+    }
+
+    // MARK: - Public API Rendering Tests
+
+    /// These tests use real HFlow rendering to exercise the public SwiftUI modifiers
+    /// (LineBreak, startInNewLine, flexibility) that the TestSubview helpers bypass.
+    @Suite(.tags(.requirements))
+    @MainActor
+    struct PublicAPIRenderingTests {
+
+        @Test func lineBreak_forcesNewRow() {
+            // 3 items × 50pt = 150pt fits in 200pt → 1 row without a break (height 50).
+            // LineBreak() between item 1 and items 2–3 splits them: row1=50pt, row2=100pt → height 100.
+            // Exercises LineBreak.init() and LineBreak.body.
+            let withoutBreak = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: 50, height: 50)
+                },
+                width: 200
+            )
+            let withBreak = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    LineBreak()
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: 50, height: 50)
+                },
+                width: 200
+            )
+            #expect(withoutBreak == 50)
+            #expect(withBreak == 100)
+        }
+
+        @Test func startInNewLine_forcesNewRow() {
+            // 2 items × 50pt = 100pt fits in 200pt → 1 row without the modifier (height 50).
+            // .startInNewLine() on the second item forces it to a new row → height 100.
+            // Exercises View.startInNewLine(_:).
+            let withoutModifier = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: 50, height: 50)
+                },
+                width: 200
+            )
+            let withModifier = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: 50, height: 50).startInNewLine()
+                },
+                width: 200
+            )
+            #expect(withoutModifier == 50)
+            #expect(withModifier == 100)
+        }
+
+        @Test func flexibilityMaximum_forcesOwnRow() {
+            // A .maximum flexible item that can expand to fill a row gets forced onto its own row.
+            // Without .flexibility(.maximum): 3 items fit on one row → height 50.
+            // With .flexibility(.maximum) on middle item: it fills its own row → 3 rows → height 150.
+            // Exercises View.flexibility(_:) and EnvironmentValues.flexibility.setter.
+            let withoutModifier = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(minWidth: 50, maxWidth: .infinity, minHeight: 50, maxHeight: 50)
+                    Color.clear.frame(width: 50, height: 50)
+                },
+                width: 200
+            )
+            let withModifier = measuredHeight(
+                of: HFlow(itemSpacing: 0, rowSpacing: 0) {
+                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(minWidth: 50, maxWidth: .infinity, minHeight: 50, maxHeight: 50)
+                        .flexibility(.maximum)
+                    Color.clear.frame(width: 50, height: 50)
+                },
+                width: 200
+            )
+            #expect(withoutModifier == 50)
+            #expect(withModifier == 150)
         }
     }
 #endif

@@ -86,6 +86,35 @@ struct FlowSizingRequirementTests {
         .assertExpectedLayout(size: .zero) {}
     }
 
+    @Test func HFlow_nilLineSpacing_usesNaturalViewSpacingBetweenRows() {
+        // verticalSpacing: nil exercises the adjacentPairs() path in updateLineSpacings:
+        // each row's leading space is computed from its direct predecessor via
+        // ViewSpacing.distance(to:along:). Default ViewSpacing() gives 8pt natural spacing.
+        FlowLayoutScenario(
+            layout: .horizontal(horizontalAlignment: .leading, horizontalSpacing: 1, verticalSpacing: nil),
+            subviews: [3 × 1, 3 × 1, 3 × 1],
+            proposal: 8 × 100
+        )
+        .assertExpectedLayout(size: 7 × 10) {
+            placed(at: 0, 0, size: 3 × 1)
+            placed(at: 4, 0, size: 3 × 1)
+            placed(at: 0, 9, size: 3 × 1)
+        }
+    }
+
+    @Test func HFlow_nonZeroBoundsOrigin_offsetsAllPlacements() {
+        FlowLayoutScenario(
+            layout: .horizontal(horizontalAlignment: .leading, verticalAlignment: .top, horizontalSpacing: 1, verticalSpacing: 0),
+            subviews: [3 × 1, 3 × 1],
+            proposal: 10 × 1,
+            bounds: CGRect(origin: CGPoint(x: 5, y: 3), size: CGSize(width: 10, height: 1))
+        )
+        .assertExpectedLayout(size: 7 × 1) {
+            placed(at: 5, 3, size: 3 × 1)
+            placed(at: 9, 3, size: 3 × 1)
+        }
+    }
+
     @Test func HFlow_zeroSizeSubviews_reportZeroSizeAndFinitePlacements() {
         FlowLayoutScenario(
             layout: .horizontal(horizontalAlignment: .center, horizontalSpacing: 0, verticalSpacing: 0),

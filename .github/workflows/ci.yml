@@ -77,9 +77,10 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test on iOS Simulator
         run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("iOS"))] | sort_by(.key) | last | .value[0].udid) // empty')
           xcodebuild test \
             -scheme Flow \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination "id=$UDID" \
             -skipMacroValidation
 
   test-visionos-simulator:
@@ -93,9 +94,10 @@ jobs:
       - uses: actions/checkout@v6
       - name: Test on visionOS Simulator
         run: |
+          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("xrOS|visionOS"))] | sort_by(.key) | last | .value[0].udid) // empty')
           xcodebuild test \
             -scheme Flow \
-            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=26.2' \
+            -destination "id=$UDID" \
             -skipMacroValidation
 
   lint:

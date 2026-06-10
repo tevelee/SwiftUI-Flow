@@ -49,53 +49,37 @@ jobs:
         # Image snapshot suites are host-bound pixel comparisons.
         run: swift test --skip ImageSnapshots --skip ReadmeSnapshotTests
 
-  build-platforms:
-    name: Build · ${{ matrix.platform }}
+  test-simulator:
+    name: Test · ${{ matrix.platform }} Simulator
     runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
-        platform: [iOS, tvOS, watchOS, visionOS]
-    steps:
-      - uses: actions/checkout@v6
-      # Default Xcode only: a pinned Xcode lacks the platform components.
-      - name: Build for ${{ matrix.platform }}
-        run: |
-          xcodebuild build \
-            -scheme Flow \
-            -destination 'generic/platform=${{ matrix.platform }}' \
-            -skipMacroValidation
-
-  test-ios-simulator:
-    name: Test · iOS Simulator
-    runs-on: macos-15
+        include:
+          - platform: iOS
+          - platform: tvOS
+          - platform: watchOS
+          - platform: visionOS
+            filter: "xrOS|visionOS"
     # Opt into the test-only dependencies (snapshot + property based).
     env:
       FLOW_SNAPSHOT_TESTING: "1"
       FLOW_PROPERTY_TESTING: "1"
     steps:
       - uses: actions/checkout@v6
-      - name: Test on iOS Simulator
+      - name: Resolve ${{ matrix.platform }} Simulator
         run: |
-          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("iOS"))] | sort_by(.key) | last | .value[0].udid) // empty')
-          xcodebuild test \
+          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("${{ matrix.filter || matrix.platform }}"))] | sort_by(.key) | last | .value[0].udid) // empty')
+          echo "UDID=$UDID" >> $GITHUB_ENV
+      - name: Build for ${{ matrix.platform }} Simulator
+        run: |
+          xcodebuild build-for-testing \
             -scheme Flow \
             -destination "id=$UDID" \
             -skipMacroValidation
-
-  test-visionos-simulator:
-    name: Test · visionOS Simulator
-    runs-on: macos-15
-    # Opt into the test-only dependencies (snapshot + property based).
-    env:
-      FLOW_SNAPSHOT_TESTING: "1"
-      FLOW_PROPERTY_TESTING: "1"
-    steps:
-      - uses: actions/checkout@v6
-      - name: Test on visionOS Simulator
+      - name: Test on ${{ matrix.platform }} Simulator
         run: |
-          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("xrOS|visionOS"))] | sort_by(.key) | last | .value[0].udid) // empty')
-          xcodebuild test \
+          xcodebuild test-without-building \
             -scheme Flow \
             -destination "id=$UDID" \
             -skipMacroValidation

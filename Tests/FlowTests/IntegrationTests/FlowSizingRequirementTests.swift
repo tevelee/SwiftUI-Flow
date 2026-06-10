@@ -107,20 +107,31 @@ struct FlowSizingRequirementTests {
     @Test func HFlow_nilLineSpacing_usesNaturalViewSpacingBetweenRows() {
         // verticalSpacing: nil exercises the adjacentPairs() path in updateLineSpacings:
         // each row's leading space is computed from its direct predecessor via
-        // ViewSpacing.distance(to:along:). Default ViewSpacing() gives 8pt natural spacing.
-        FlowLayoutScenario(
+        // ViewSpacing.distance(to:along:). Default ViewSpacing() gives 8pt on iOS/macOS, 24pt on tvOS.
+        let scenario = FlowLayoutScenario(
             layout: .horizontal(horizontalAlignment: .leading, horizontalSpacing: 1, verticalSpacing: nil),
             subviews: [3 × 1, 3 × 1, 3 × 1],
             proposal: 8 × 100
         )
-        .assertExpectedLayout(
-            size: 7 × 10,
-            placements: [
-                .init(position: (0, 0), size: 3 × 1),
-                .init(position: (4, 0), size: 3 × 1),
-                .init(position: (0, 9), size: 3 × 1),
-            ]
-        )
+        #if os(tvOS)
+            scenario.assertExpectedLayout(
+                size: 7 × 26,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (4, 0), size: 3 × 1),
+                    .init(position: (0, 25), size: 3 × 1),
+                ]
+            )
+        #else
+            scenario.assertExpectedLayout(
+                size: 7 × 10,
+                placements: [
+                    .init(position: (0, 0), size: 3 × 1),
+                    .init(position: (4, 0), size: 3 × 1),
+                    .init(position: (0, 9), size: 3 × 1),
+                ]
+            )
+        #endif
     }
 
     @Test func HFlow_nonZeroBoundsOrigin_offsetsAllPlacements() {

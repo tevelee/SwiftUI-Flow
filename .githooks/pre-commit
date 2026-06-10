@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+if ! command -v swift-format &>/dev/null || ! command -v swiftlint &>/dev/null; then
+  echo "warning: swift-format or swiftlint not found, skipping lint (run: brew install swift-format swiftlint)"
+  exit 0
+fi
+
+swift-format format --recursive --in-place Sources Tests
+swiftlint --fix --quiet
+
+git add Sources Tests
+
+swift-format lint --strict --recursive Sources Tests
+swiftlint lint --strict --quiet

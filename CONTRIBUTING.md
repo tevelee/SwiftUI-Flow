@@ -131,6 +131,12 @@ swiftlint --fix
 
 CI runs both linters on every PR and will fail on any violation. A bot also applies auto-fixes as a commit when it can resolve issues without ambiguity.
 
+**Pre-commit hook** (optional but recommended) — auto-fixes formatting before every commit and blocks the commit if unfixable violations remain:
+```bash
+git config core.hooksPath .githooks
+```
+Requires `swift-format` and `swiftlint` to be installed. The hook is a no-op (with a warning) if either tool is missing.
+
 ---
 
 ## Documentation

@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Check for missing tests
+        id: check
         uses: actions/github-script@v9
         with:
           script: |
@@ -35,34 +36,12 @@ jobs:
             );
             const testsChanged = files.some(f => f.filename.startsWith('Tests/'));
 
-            if (!sourcesChanged || testsChanged) return;
+            core.setOutput('needs_comment', String(sourcesChanged && !testsChanged));
 
-            const MARKER = '<!-- pr-missing-tests -->';
-            const body = [
-              MARKER,
-              '> [!NOTE]',
-              '> **No test files were modified in this PR.** If existing tests cover the change that\'s fine — just something to double-check. See [CONTRIBUTING.md](https://github.com/tevelee/SwiftUI-Flow/blob/main/CONTRIBUTING.md#testing) for the testing guide.',
-            ].join('\n');
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.payload.pull_request.number,
-            });
-
-            const existing = comments.find(c => c.body.startsWith(MARKER));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                body,
-              });
-            }
+      - if: steps.check.outputs.needs_comment == 'true'
+        uses: ./.github/actions/pr-comment-upsert
+        with:
+          marker: '<!-- pr-missing-tests -->'
+          body: |
+            > [!NOTE]
+            > **No test files were modified in this PR.** If existing tests cover the change that's fine — just something to double-check. See [CONTRIBUTING.md](https://github.com/tevelee/SwiftUI-Flow/blob/main/CONTRIBUTING.md#testing) for the testing guide.

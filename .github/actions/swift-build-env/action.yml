@@ -1,0 +1,17 @@
+name: Swift build environment
+description: Selects the specified Xcode version and restores the SPM build cache.
+
+inputs:
+  xcode-version:
+    description: Xcode version to select; used as part of the SPM cache key.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/setup-xcode
+      with:
+        xcode-version: ${{ inputs.xcode-version }}
+    - uses: ./.github/actions/spm-cache
+      with:
+        xcode-version: ${{ inputs.xcode-version }}

@@ -3,22 +3,37 @@ name: Code coverage
 on:
   push:
     branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package*.swift"
+      - ".github/workflows/coverage.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package*.swift"
+      - ".github/workflows/coverage.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   coverage:
     name: Codecov
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 15
     # Opt into the test-only dependencies (snapshot + property based).
     env:
       FLOW_SNAPSHOT_TESTING: "1"
       FLOW_PROPERTY_TESTING: "1"
     steps:
       - uses: actions/checkout@v6
-      - uses: maxim-lobanov/setup-xcode@v1
+      - uses: ./.github/actions/swift-build-env
         with:
-          xcode-version: "16.4"
+          xcode-version: "26.4"
 
       - name: Test with coverage
         run: swift test --enable-code-coverage --skip ImageSnapshots --skip ReadmeSnapshotTests

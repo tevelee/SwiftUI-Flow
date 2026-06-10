@@ -1,0 +1,10 @@
+name: Configure git bot
+description: Configures git identity as github-actions[bot] for automated commits.
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"

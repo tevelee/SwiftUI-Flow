@@ -1,0 +1,45 @@
+name: Upsert PR comment
+description: Creates or updates a bot comment on a PR, identified by an HTML marker.
+
+inputs:
+  marker:
+    description: HTML comment used to find the existing bot comment (e.g. <!-- my-marker -->)
+    required: true
+  body:
+    description: Comment body; the marker is prepended automatically
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/github-script@v9
+      env:
+        MARKER: ${{ inputs.marker }}
+        BODY: ${{ inputs.body }}
+      with:
+        script: |
+          const marker = process.env.MARKER;
+          const body = [marker, process.env.BODY].join('\n');
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.payload.pull_request.number,
+          });
+
+          const existing = comments.find(c => c.body.startsWith(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+          }

@@ -67,6 +67,7 @@
         // Outside a ScrollView, LazyHFlow renders all items eagerly — same as HFlow.
 
         @Test func emptyCollection_producesZeroHeight() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             let h = measuredHeight(
                 of: LazyHFlow(data: [Item](), spacing: 8) { _ in Color.clear.frame(width: 50, height: 50) },
                 width: 400
@@ -75,6 +76,7 @@
         }
 
         @Test func moreItems_producesMoreRows_andGreaterHeight() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // 4 items of 50pt in 280pt → 4 < 5 per row → 1 row → height 50.
             // 7 items of 50pt in 280pt → row1: 5, row2: 2 → height 100.
             let h4 = measuredHeight(
@@ -90,6 +92,7 @@
         }
 
         @Test func rowSpacing_increasesHeight() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // 7 items of 50pt in 300pt → row1: 6, row2: 1 → row spacing only matters with 2+ rows.
             let hNoSpacing = measuredHeight(
                 of: LazyHFlow(data: items(7), itemSpacing: 0, rowSpacing: 0) { _ in Color.clear.frame(width: 50, height: 50) },
@@ -104,6 +107,7 @@
         }
 
         @Test func itemSpacing_affectsLineBreaking() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // itemSpacing=0: 8×50=400 fits exactly in 400pt → 1 row → height 50.
             // itemSpacing=2: 8×50+7×2=414 > 400 → row1: 7, row2: 1 → height 100.
             let h0 = measuredHeight(
@@ -119,6 +123,7 @@
         }
 
         @Test func matchesEagerHFlow_forFixedSizeItems() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Core correctness guarantee: outside a ScrollView, LazyHFlow
             // should produce identical layout to HFlow.
             let spacing: CGFloat = 8
@@ -138,6 +143,7 @@
         }
 
         @Test func distributeItemsEvenly_matchesEagerHFlow() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // LazyHFlow must forward `distributeItemsEvenly` to the underlying HFlowLayout.
             let spacing: CGFloat = 8
             let width: CGFloat = 300
@@ -156,6 +162,7 @@
         }
 
         @Test func justified_matchesEagerHFlow() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // LazyHFlow must forward `justified` to the underlying HFlowLayout.
             let spacing: CGFloat = 8
             let width: CGFloat = 300
@@ -174,6 +181,7 @@
         }
 
         @Test func dataFullAlignmentInit_separateHorizontalAndVerticalSpacing() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyHFlow(data:horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:).
             // 7 items of 50pt in 300pt → row1: 6, row2: 1 → 2 rows.
             let h = measuredHeight(
@@ -190,6 +198,7 @@
         }
 
         @Test func viewBuilderSpacingInit_matchesDataInit() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyHFlow(spacing:content:) — ViewBuilder uniform-spacing init.
             // Outside a ScrollView it renders all ForEach items eagerly, matching HFlow.
             let spacing: CGFloat = 8
@@ -211,6 +220,7 @@
         }
 
         @Test func viewBuilderSeparateSpacingInit_rowSpacingAffectsHeight() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyHFlow(itemSpacing:rowSpacing:content:) — ViewBuilder separate-spacing init.
             // 7 items of 50pt in 300pt → row1: 6, row2: 1 → rowSpacing bridges the two rows.
             let hNoRowSpacing = measuredHeight(
@@ -230,6 +240,7 @@
         }
 
         @Test func viewBuilderFullAlignmentInit_producesCorrectHeight() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyHFlow(horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:content:).
             // 7 items of 50pt in 300pt with zero spacing → 6+1 = 2 rows of 50pt each.
             let h = measuredHeight(
@@ -255,6 +266,7 @@
         // Outside a ScrollView, LazyVFlow renders all items eagerly — same as VFlow.
 
         @Test func emptyCollection_producesZeroWidth() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             let w = measuredWidth(
                 of: LazyVFlow(data: [Item](), spacing: 8) { _ in Color.clear.frame(width: 50, height: 50) },
                 height: 400
@@ -263,6 +275,7 @@
         }
 
         @Test func moreItems_producesMoreColumns_andGreaterWidth() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // 4 items of 50pt in 280pt → 4 < 5 per column → 1 column → width 50.
             // 7 items of 50pt in 280pt → col1: 5, col2: 2 → width 100.
             let w4 = measuredWidth(
@@ -278,6 +291,7 @@
         }
 
         @Test func columnSpacing_increasesWidth() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // 7 items of 50pt in 300pt → col1: 6, col2: 1 → column spacing only matters with 2+ columns.
             let wNoSpacing = measuredWidth(
                 of: LazyVFlow(data: items(7), itemSpacing: 0, columnSpacing: 0) { _ in Color.clear.frame(width: 50, height: 50) },
@@ -292,6 +306,7 @@
         }
 
         @Test func matchesEagerVFlow_forFixedSizeItems() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             let spacing: CGFloat = 8
             let height: CGFloat = 300
 
@@ -309,6 +324,7 @@
         }
 
         @Test func distributeItemsEvenly_matchesEagerVFlow() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // LazyVFlow must forward `distributeItemsEvenly` to the underlying VFlowLayout.
             let spacing: CGFloat = 8
             let height: CGFloat = 300
@@ -327,6 +343,7 @@
         }
 
         @Test func justified_matchesEagerVFlow() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // LazyVFlow must forward `justified` to the underlying VFlowLayout.
             let spacing: CGFloat = 8
             let height: CGFloat = 300
@@ -345,6 +362,7 @@
         }
 
         @Test func dataFullAlignmentInit_separateHorizontalAndVerticalSpacing() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyVFlow(data:horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:).
             // 7 items of 50pt in 300pt → col1: 6, col2: 1 → 2 columns.
             let w = measuredWidth(
@@ -361,6 +379,7 @@
         }
 
         @Test func viewBuilderSpacingInit_matchesDataInit() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyVFlow(spacing:content:) — ViewBuilder uniform-spacing init.
             // Outside a ScrollView it renders all ForEach items eagerly, matching VFlow.
             let spacing: CGFloat = 8
@@ -382,6 +401,7 @@
         }
 
         @Test func viewBuilderSeparateSpacingInit_columnSpacingAffectsWidth() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyVFlow(itemSpacing:columnSpacing:content:) — ViewBuilder separate-spacing init.
             // 7 items of 50pt in 300pt → col1: 6, col2: 1 → columnSpacing bridges the two columns.
             let wNoColumnSpacing = measuredWidth(
@@ -401,6 +421,7 @@
         }
 
         @Test func viewBuilderFullAlignmentInit_producesCorrectWidth() {
+            guard #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) else { return }
             // Exercises LazyVFlow(horizontalAlignment:verticalAlignment:horizontalSpacing:verticalSpacing:content:).
             // 7 items of 50pt in 300pt with zero spacing → 6+1 = 2 columns of 50pt each.
             let w = measuredWidth(

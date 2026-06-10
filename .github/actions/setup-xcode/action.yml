@@ -1,0 +1,14 @@
+name: Select Xcode
+description: Selects the specified Xcode version.
+
+inputs:
+  xcode-version:
+    description: Xcode version to select
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: maxim-lobanov/setup-xcode@v1
+      with:
+        xcode-version: ${{ inputs.xcode-version }}

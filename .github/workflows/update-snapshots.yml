@@ -3,10 +3,15 @@ name: Update Snapshots
 on:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false  # Never interrupt a snapshot update mid-commit
+
 jobs:
   update:
     name: Regenerate snapshot references
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 20
     permissions:
       contents: write
     # Snapshot suites require the snapshot-testing dependency.
@@ -17,10 +22,12 @@ jobs:
         with:
           ref: ${{ github.ref }}
 
-      - name: Select Xcode 16.4
-        uses: maxim-lobanov/setup-xcode@v1
+      - uses: ./.github/actions/swift-build-env
         with:
-          xcode-version: "16.4"
+          xcode-version: "26.4"
+
+      - name: Build tests
+        run: swift build --build-tests
 
       - name: Delete existing reference images
         run: find Tests/FlowTests/SnapshotTests/Image/__Snapshots__ -name "*.png" -delete
@@ -35,13 +42,15 @@ jobs:
           swift test --filter ImageSnapshots
           swift test --filter ReadmeSnapshotTests
 
+      - uses: ./.github/actions/git-config-bot
+
       - name: Commit updated references
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Tests/FlowTests/SnapshotTests/Image/__Snapshots__/
-          git diff --staged --quiet && echo "Nothing to commit" || {
+          if git diff --staged --quiet; then
+            echo "Nothing to commit"
+          else
             git commit -m "Update snapshot references"
             git pull --rebase origin ${{ github.ref_name }}
             git push
-          }
+          fi

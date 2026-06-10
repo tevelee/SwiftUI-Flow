@@ -1,0 +1,19 @@
+name: Cache SPM build
+description: Caches .build/ and Package.resolved, keyed on Package.swift content.
+
+inputs:
+  xcode-version:
+    description: Xcode version; included in the cache key to prevent cross-toolchain restores
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v5
+      with:
+        path: |
+          .build
+          Package.resolved
+        key: spm-${{ runner.os }}-${{ runner.arch }}-xcode-${{ inputs.xcode-version }}-${{ hashFiles('Package*.swift') }}
+        restore-keys: |
+          spm-${{ runner.os }}-${{ runner.arch }}-xcode-${{ inputs.xcode-version }}-

@@ -6,10 +6,12 @@ if ! command -v swift-format &>/dev/null || ! command -v swiftlint &>/dev/null; 
   exit 0
 fi
 
+STAGED=$(git diff --cached --name-only --diff-filter=ACM | grep '\.swift$' || true)
+
 swift-format format --recursive --in-place Sources Tests
 swiftlint --fix --quiet
 
-git add Sources Tests
+[ -n "$STAGED" ] && echo "$STAGED" | xargs git add
 
 swift-format lint --strict --recursive Sources Tests
 swiftlint lint --strict --quiet

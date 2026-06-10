@@ -18,32 +18,11 @@ jobs:
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
     runs-on: ubuntu-latest
     steps:
-      - name: Add rocket reaction
-        uses: actions/github-script@v9
-        with:
-          script: |
-            await github.rest.reactions.createForIssueComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              content: 'rocket'
-            });
-
-      - name: Get PR details
-        id: pr
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-            core.setOutput('ref', pr.data.head.ref);
-            core.setOutput('is_fork', pr.data.head.repo.fork);
+      - id: init
+        uses: ./.github/actions/slash-command-init
 
       - name: Dispatch update-snapshots workflow
-        if: steps.pr.outputs.is_fork != 'true'
+        if: steps.init.outputs.is_fork != 'true'
         uses: actions/github-script@v9
         with:
           script: |
@@ -51,11 +30,11 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'update-snapshots.yml',
-              ref: '${{ steps.pr.outputs.ref }}'
+              ref: '${{ steps.init.outputs.ref }}'
             });
 
       - name: Comment — fork PR limitation
-        if: steps.pr.outputs.is_fork == 'true'
+        if: steps.init.outputs.is_fork == 'true'
         uses: actions/github-script@v9
         with:
           script: |

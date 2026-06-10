@@ -1,0 +1,41 @@
+name: Slash command init
+description: Reacts with rocket to the triggering comment and fetches PR head ref, SHA, and fork status.
+
+outputs:
+  ref:
+    description: PR head branch ref
+    value: ${{ steps.pr.outputs.ref }}
+  sha:
+    description: PR head commit SHA
+    value: ${{ steps.pr.outputs.sha }}
+  is_fork:
+    description: Whether the PR is from a fork ('true' or 'false')
+    value: ${{ steps.pr.outputs.is_fork }}
+
+runs:
+  using: composite
+  steps:
+    - name: Add rocket reaction
+      uses: actions/github-script@v9
+      with:
+        script: |
+          await github.rest.reactions.createForIssueComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            comment_id: context.payload.comment.id,
+            content: 'rocket'
+          });
+
+    - name: Get PR details
+      id: pr
+      uses: actions/github-script@v9
+      with:
+        script: |
+          const pr = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          core.setOutput('ref', pr.data.head.ref);
+          core.setOutput('sha', pr.data.head.sha);
+          core.setOutput('is_fork', String(pr.data.head.repo.fork));

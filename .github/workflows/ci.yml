@@ -3,8 +3,24 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package*.swift"
+      - ".swiftlint.yml"
+      - ".swift-format"
+      - ".github/workflows/*.yml"
+      - ".github/actions/**"
   pull_request:
     branches: [main]
+    paths:
+      - "Sources/**"
+      - "Tests/**"
+      - "Package*.swift"
+      - ".swiftlint.yml"
+      - ".swift-format"
+      - ".github/workflows/*.yml"
+      - ".github/actions/**"
   workflow_dispatch:
 
 concurrency:
@@ -15,82 +31,112 @@ jobs:
   test-macos:
     name: Test · macOS · Swift ${{ matrix.swift }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Build-only: Swift Testing is unavailable on this toolchain.
           - os: macos-14
             xcode: "15.4"
             swift: "5.10"
-            build_only: true
-          # Build-only: the test deps need Swift 6.1 to compile.
+            mode: build       # Swift Testing unavailable before Xcode 16
           - os: macos-15
             xcode: "16.2"
             swift: "6.0"
-            build_only: true
+            mode: test        # swift-custom-dump requires swift-tools-version 6.1
           - os: macos-15
             xcode: "16.4"
             swift: "6.1"
+            mode: test
+          - os: macos-15
+            xcode: "26.0"
+            swift: "6.2"
+            mode: test
+          - os: macos-26
+            xcode: "26.4"
+            swift: "6.3"
+            mode: test-all    # Full suite: snapshots, properties, image tests
     steps:
       - uses: actions/checkout@v6
-      - name: Select Xcode ${{ matrix.xcode }}
-        uses: maxim-lobanov/setup-xcode@v1
+      - uses: ./.github/actions/swift-build-env
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build
+        if: ${{ matrix.mode == 'build' }}
         run: swift build
       - name: Test
-        if: ${{ !matrix.build_only }}
-        # Opt into the test-only dependencies (snapshot + property based).
+        if: ${{ matrix.mode != 'build' }}
         env:
-          FLOW_SNAPSHOT_TESTING: "1"
-          FLOW_PROPERTY_TESTING: "1"
-        # Image snapshot suites are host-bound pixel comparisons.
-        run: swift test --skip ImageSnapshots --skip ReadmeSnapshotTests
+          FLOW_SNAPSHOT_TESTING: ${{ matrix.mode == 'test-all' }}
+          FLOW_PROPERTY_TESTING: ${{ matrix.mode == 'test-all' }}
+        run: swift test --xunit-output /tmp/test-results-${{ matrix.swift }}.xml
+      - name: Upload test results
+        if: ${{ failure() && matrix.mode != 'build' }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results-macos-swift-${{ matrix.swift }}
+          path: /tmp/test-results-${{ matrix.swift }}.xml
+          retention-days: 7
 
   test-simulator:
     name: Test · ${{ matrix.platform }} Simulator
-    runs-on: macos-15
+    runs-on: macos-26
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - platform: iOS
-          - platform: tvOS
-          - platform: watchOS
-          - platform: visionOS
-            filter: "xrOS|visionOS"
-    # Opt into the test-only dependencies (snapshot + property based).
+        platform: [iOS, tvOS, watchOS, visionOS]
+    # Property-based tests run on all platforms; snapshot tests are macOS-only.
     env:
-      FLOW_SNAPSHOT_TESTING: "1"
+      XCODE_VERSION: "26.4"
       FLOW_PROPERTY_TESTING: "1"
     steps:
       - uses: actions/checkout@v6
-      - name: Resolve ${{ matrix.platform }} Simulator
+      - uses: ./.github/actions/setup-xcode
+        with:
+          xcode-version: ${{ env.XCODE_VERSION }}
+      - name: Cache DerivedData
+        uses: actions/cache@v5
+        with:
+          path: .derived-data
+          key: derived-${{ runner.os }}-${{ runner.arch }}-${{ matrix.platform }}-xcode-${{ env.XCODE_VERSION }}
+      - name: Boot ${{ matrix.platform }} Simulator
+        id: sim
         run: |
-          UDID=$(xcrun simctl list devices available -j | jq -r '([.devices | to_entries[] | select(.key | test("${{ matrix.filter || matrix.platform }}"))] | sort_by(.key) | last | .value[0].udid) // empty')
-          echo "UDID=$UDID" >> $GITHUB_ENV
+          UDID=$(xcrun simctl list devices available "${{ matrix.platform }}" | grep -oiE '[0-9A-Fa-f-]{36}' | tail -1)
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          [ -n "$UDID" ] && xcrun simctl boot "$UDID" 2>/dev/null &
       - name: Build for ${{ matrix.platform }} Simulator
         run: |
           xcodebuild build-for-testing \
             -scheme Flow \
-            -destination "id=$UDID" \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath .derived-data \
             -skipMacroValidation
       - name: Test on ${{ matrix.platform }} Simulator
         run: |
           xcodebuild test-without-building \
             -scheme Flow \
-            -destination "id=$UDID" \
-            -skipMacroValidation
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath .derived-data \
+            -skipMacroValidation \
+            -resultBundlePath /tmp/result-${{ matrix.platform }}.xcresult
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: test-results-${{ matrix.platform }}.xcresult
+          path: /tmp/result-${{ matrix.platform }}.xcresult
+          retention-days: 7
 
   lint:
     name: Lint
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v6
-      - name: Install linters
-        run: brew install swift-format swiftlint
+      - uses: ./.github/actions/brew-bundle
+      - name: actionlint
+        run: actionlint
       - name: swift-format
         run: swift-format lint --strict --recursive Sources Tests
       - name: SwiftLint

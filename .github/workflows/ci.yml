@@ -79,7 +79,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme Flow \
-            -destination 'platform=iOS Simulator,name=iPhone 16,OS=latest' \
+            -destination 'platform=iOS Simulator,name=iPhone 16,OS=26.2' \
             -skipMacroValidation
 
   test-visionos-simulator:
@@ -95,7 +95,7 @@ jobs:
         run: |
           xcodebuild test \
             -scheme Flow \
-            -destination 'platform=visionOS Simulator,name=Apple Vision Pro,OS=26.2' \
+            -destination 'platform=visionOS Simulator,name=Apple Vision Pro' \
             -skipMacroValidation
 
   lint:

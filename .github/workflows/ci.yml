@@ -37,6 +37,10 @@ jobs:
       matrix:
         include:
           - os: macos-14
+            xcode: "15.2"
+            swift: "5.9"
+            mode: build       # Swift Testing unavailable before Xcode 16
+          - os: macos-14
             xcode: "15.4"
             swift: "5.10"
             mode: build       # Swift Testing unavailable before Xcode 16

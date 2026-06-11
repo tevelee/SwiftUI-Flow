@@ -39,8 +39,14 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
                 .layoutValue(
                     key: OverflowReporterKey.self,
                     value: { count in
-                        MainActor.assumeIsolated {
-                            if stateRef.hiddenCount != count { stateRef.hiddenCount = count }
+                        if #available(macOS 14, iOS 17, tvOS 17, watchOS 10, *) {
+                            MainActor.assumeIsolated {
+                                if stateRef.hiddenCount != count { stateRef.hiddenCount = count }
+                            }
+                        } else {
+                            Task { @MainActor in
+                                if stateRef.hiddenCount != count { stateRef.hiddenCount = count }
+                            }
                         }
                     }
                 )

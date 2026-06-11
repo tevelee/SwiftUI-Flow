@@ -180,6 +180,76 @@ enum FlowItemKind: String, CaseIterable, CustomStringConvertible, Identifiable {
     }
 }
 
+enum SeparatorStyle: String, CaseIterable, CustomStringConvertible, Identifiable {
+    case none
+    case dot
+    case bar
+    case divider
+
+    var id: Self { self }
+
+    var description: String {
+        switch self {
+            case .none: "None"
+            case .dot: "Dot"
+            case .bar: "Bar"
+            case .divider: "Divider"
+        }
+    }
+
+    var isVisible: Bool {
+        self != .none
+    }
+
+    /// A separator drawn between two items on the same line. It runs *across* the line, so it is a
+    /// short vertical tick in an `HFlow` and a short horizontal tick in a `VFlow`.
+    @ViewBuilder
+    func itemView(horizontalFlow: Bool) -> some View {
+        switch self {
+            case .none:
+                EmptyView()
+            case .dot:
+                Text("•")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            case .bar:
+                Capsule()
+                    .fill(.secondary.opacity(0.5))
+                    .frame(width: horizontalFlow ? 2 : 16, height: horizontalFlow ? 16 : 2)
+            case .divider:
+                Rectangle()
+                    .fill(.secondary.opacity(0.35))
+                    .frame(width: horizontalFlow ? 1 : 20, height: horizontalFlow ? 20 : 1)
+        }
+    }
+
+    /// A separator drawn between two lines. It spans the *full* line, so it is a horizontal rule in an
+    /// `HFlow` and a vertical rule in a `VFlow`.
+    @ViewBuilder
+    func lineView(horizontalFlow: Bool) -> some View {
+        switch self {
+            case .none:
+                EmptyView()
+            case .dot:
+                Text("•")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            case .bar:
+                if horizontalFlow {
+                    Capsule().fill(.secondary.opacity(0.5)).frame(height: 2).frame(maxWidth: .infinity)
+                } else {
+                    Capsule().fill(.secondary.opacity(0.5)).frame(width: 2).frame(maxHeight: .infinity)
+                }
+            case .divider:
+                if horizontalFlow {
+                    Divider()
+                } else {
+                    Rectangle().fill(.secondary.opacity(0.25)).frame(width: 1).frame(maxHeight: .infinity)
+                }
+        }
+    }
+}
+
 enum FlowItemColor: String, CaseIterable, CustomStringConvertible, Identifiable {
     case blue
     case teal
@@ -325,6 +395,12 @@ struct FlowLabSettings: Equatable {
     var showsFlexHints = true
     var animationsEnabled = true
     var maxLines: Int? = nil
+    var itemSeparator: SeparatorStyle = .none
+    var lineSeparator: SeparatorStyle = .none
+
+    var hasSeparators: Bool {
+        itemSeparator.isVisible || lineSeparator.isVisible
+    }
 
     var itemSpacingValue: CGFloat? {
         itemSpacing.map { CGFloat($0) }
@@ -445,6 +521,7 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
     case wordCloud
     case buttonCloud
     case flexibleCards
+    case separators
     case manualBreaks
     case lazyGallery
     case edgeCases
@@ -456,6 +533,7 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
             case .wordCloud: "Word Cloud"
             case .buttonCloud: "Button Cloud"
             case .flexibleCards: "Flexible Cards"
+            case .separators: "Separators"
             case .manualBreaks: "Manual Breaks"
             case .lazyGallery: "Lazy Gallery"
             case .edgeCases: "Edge Cases"
@@ -467,6 +545,7 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
             case .wordCloud: "textformat.size"
             case .buttonCloud: "rectangle.grid.2x2"
             case .flexibleCards: "rectangle.split.3x1"
+            case .separators: "separator.horizontal"
             case .manualBreaks: "arrow.turn.down.right"
             case .lazyGallery: "photo.on.rectangle"
             case .edgeCases: "wrench.and.screwdriver"
@@ -475,7 +554,7 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
 
     var defaultItemKind: FlowItemKind {
         switch self {
-            case .wordCloud:
+            case .wordCloud, .separators:
                 .word
             case .buttonCloud:
                 .button
@@ -519,6 +598,17 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
                     lineSpacing: 10,
                     justified: true,
                     verticalAlignment: .top
+                )
+            case .separators:
+                return FlowLabSettings(
+                    canvasWidth: 460,
+                    canvasHeight: 240,
+                    itemSpacing: 8,
+                    lineSpacing: 10,
+                    horizontalAlignment: .center,
+                    verticalAlignment: .center,
+                    itemSeparator: .dot,
+                    lineSeparator: .divider
                 )
             case .manualBreaks:
                 return FlowLabSettings(
@@ -590,6 +680,19 @@ enum FlowUseCase: String, CaseIterable, Identifiable {
                     FlowItem.newItem(kind: .spacer, index: 4),
                     FlowItem(title: "Backlog", subtitle: "41 ideas", kind: .card, color: .purple, width: .range(minimum: 120, ideal: 160, maximum: 260, maximumIsInfinite: true), height: .fixed(72)),
                     FlowItem(title: "Shipped", subtitle: "18 done", kind: .card, color: .green, width: .flexible(minimum: 120), height: .fixed(72), flexibility: .maximum)
+                ]
+            case .separators:
+                return [
+                    FlowItem(title: "Home", kind: .word, color: .blue),
+                    FlowItem(title: "Library", kind: .word, color: .teal),
+                    FlowItem(title: "Discover", kind: .word, color: .green),
+                    FlowItem(title: "Radio", kind: .word, color: .orange),
+                    FlowItem(title: "Recently Added", kind: .word, color: .purple),
+                    FlowItem(title: "Artists", kind: .word, color: .indigo),
+                    FlowItem(title: "Albums", kind: .word, color: .pink),
+                    FlowItem(title: "Playlists", kind: .word, color: .mint),
+                    FlowItem(title: "Songs", kind: .word, color: .red),
+                    FlowItem(title: "Genres", kind: .word, color: .blue)
                 ]
             case .manualBreaks:
                 return [

@@ -60,7 +60,7 @@ struct FlowLayout: Sendable {
         var depthAlignmentGuide: CGFloat = 0
     }
 
-    private typealias Item = (subview: any Subview, cache: FlowLayoutCache.SubviewCache)
+    private typealias Item = (index: Int, subview: any Subview, cache: FlowLayoutCache.SubviewCache)
     private typealias Line = [ItemWithSpacing<Item>]
     private typealias Lines = [ItemWithSpacing<Line>]
 
@@ -125,6 +125,7 @@ struct FlowLayout: Sendable {
         }
         placeHiddenSubviews(result.hidden, of: subviews, in: bounds)
         notifyOverflowReporter(hidden: result.hidden, cache: cache)
+        notifyLineStructureReporter(result.lineOf, cache: cache)
     }
 
     private func notifyOverflowReporter(hidden: [Int], cache: FlowLayoutCache) {
@@ -132,6 +133,18 @@ struct FlowLayout: Sendable {
             let reporter = cache.subviewsCache[overflowIdx].overflowReporter
         else { return }
         reporter(hidden.filter { $0 != overflowIdx }.count)
+    }
+
+    /// Reports the content line structure back to the view layer (the first content subview carries the
+    /// reporter) so line separators can take identity from their visual position.
+    private func notifyLineStructureReporter(_ lineOf: [Int]?, cache: FlowLayoutCache) {
+        guard let lineOf else { return }
+        for subviewCache in cache.subviewsCache {
+            if let reporter = subviewCache.lineStructureReporter {
+                reporter(lineOf)
+                return
+            }
+        }
     }
 
     /// Places truncated subviews. SwiftUI requires every subview be placed exactly once, so collapse
@@ -202,21 +215,30 @@ struct FlowLayout: Sendable {
     private struct LayoutResult {
         var lines: Lines
         var hidden: [Int]
+        /// Line index of every content item (content order), or `nil` when there are no separators.
+        var lineOf: [Int]?
     }
 
-    /// Core pipeline: line-break → (optional) cap → build lines → post-process.
+    /// Core pipeline: line-break → (optional) cap → build lines (with separators) → post-process.
     private func calculateLayout(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
         cache: inout FlowLayoutCache
     ) -> LayoutResult {
-        let rawLines = wrappedLines(in: proposedSize, of: subviews, cache: &cache)
+        let separators = SeparatorLayout(cache: cache, axis: axis, itemSpacing: itemSpacing)
+        let rawLines = wrappedLines(in: proposedSize, of: subviews, cache: &cache, separators: separators)
         let (visible, hidden) = cappedLines(from: rawLines, in: proposedSize, cache: cache)
-        var lines = makeLines(from: visible, of: subviews, cache: cache)
+        var lines = makeLines(from: visible, in: proposedSize, of: subviews, cache: cache, separators: separators)
         updateSpacesForJustifiedLayout(in: &lines, proposedSize: proposedSize)
         updateLineSpacings(in: &lines)
         updateAlignment(in: &lines)
-        return LayoutResult(lines: lines, hidden: hidden)
+        guard let separators else { return LayoutResult(lines: lines, hidden: hidden, lineOf: nil) }
+        let placed = Set(lines.flatMap { $0.item.map(\.item.index) })
+        return LayoutResult(
+            lines: lines,
+            hidden: hidden + separators.unusedSeparators(placed: placed),
+            lineOf: separators.lineStructure(of: visible)
+        )
     }
 
     /// Applies the line cap (if any), returning the visible lines and hidden subview indices.
@@ -239,17 +261,23 @@ struct FlowLayout: Sendable {
     private func wrappedLines(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
-        cache: inout FlowLayoutCache
+        cache: inout FlowLayoutCache,
+        separators: SeparatorLayout?
     ) -> LineBreakingOutput {
         let key = FlowLayoutCache.LineBreakingKey(proposedSize: proposedSize, axis: axis)
         if let cached = cache.cachedLineBreaking(for: key) {
             return cached
         }
 
-        let wrapped = lineBreaker.wrapItemsToLines(
-            items: makeLineBreakingInput(in: proposedSize, of: subviews, cache: cache),
+        var wrapped = lineBreaker.wrapItemsToLines(
+            items: makeLineBreakingInput(in: proposedSize, of: subviews, cache: cache, separators: separators),
             in: availableLineBreakingSpace(in: proposedSize)
         )
+        // The breaker indexes items by their position in its (content-only) input; resolve those to
+        // real subview indices so every downstream step can address subviews and the cache directly.
+        if let separators {
+            wrapped = separators.resolved(wrapped)
+        }
         cache.cacheLineBreaking(wrapped, for: key)
         return wrapped
     }
@@ -261,15 +289,33 @@ struct FlowLayout: Sendable {
     private func makeLineBreakingInput(
         in proposedSize: ProposedViewSize,
         of subviews: some Subviews,
-        cache: FlowLayoutCache
+        cache: FlowLayoutCache,
+        separators: SeparatorLayout?
     ) -> LineBreakingInput {
+        // With separators, the breaker only ever sees content items: each item separator's breadth is
+        // folded into the following item's leading spacing, so wrapping accounts for it while the
+        // breaker stays unaware of separators. The separator subviews are excluded entirely here and
+        // re-materialized once the lines are known.
+        if let separators {
+            return separators.contentIndices.indices.map { position in
+                let offset = separators.contentIndices[position]
+                return lineBreakingItem(
+                    for: subviews[offset],
+                    at: offset,
+                    leadingSpace: separators.breakerSpacing(beforeContentPosition: position),
+                    in: proposedSize,
+                    cache: cache
+                )
+            }
+        }
         // When a lineCap is active the overflow indicator is placed separately by LineCap —
         // exclude it so it doesn't consume space or affect where items wrap.
-        subviews.enumerated().compactMap { offset, subview in
+        return subviews.enumerated().compactMap { offset, subview in
             if lineCap != nil, offset == cache.overflowSubviewIndex { return nil }
             return lineBreakingItem(
                 for: subview,
                 at: offset,
+                leadingSpace: spacing(before: offset, cache: cache),
                 in: proposedSize,
                 cache: cache
             )
@@ -279,6 +325,7 @@ struct FlowLayout: Sendable {
     private func lineBreakingItem(
         for subview: some Subview,
         at offset: Int,
+        leadingSpace: CGFloat,
         in proposedSize: ProposedViewSize,
         cache: FlowLayoutCache
     ) -> LineItemInput {
@@ -287,7 +334,7 @@ struct FlowLayout: Sendable {
         let maximumBreadth = subviewCache.max.breadth
         return LineItemInput(
             size: min(minimumBreadth, maximumBreadth) ... max(minimumBreadth, maximumBreadth),
-            spacing: spacing(before: offset, cache: cache),
+            spacing: leadingSpace,
             priority: subviewCache.priority,
             flexibility: subviewCache.layoutValues.flexibility,
             isLineBreakView: subviewCache.layoutValues.isLineBreak,
@@ -307,39 +354,88 @@ struct FlowLayout: Sendable {
     }
 
     private func spacing(before offset: Int, cache: FlowLayoutCache) -> CGFloat {
-        if let itemSpacing {
-            return itemSpacing
-        }
-        guard offset > cache.subviewsCache.startIndex else {
-            return 0
-        }
-        let previous = cache.subviewsCache[offset - 1].spacing
-        let current = cache.subviewsCache[offset].spacing
-        return previous.distance(to: current, along: axis)
+        guard offset > cache.subviewsCache.startIndex else { return 0 }
+        return cache.spacing(from: offset - 1, to: offset, itemSpacing: itemSpacing, axis: axis)
     }
 
     private func availableLineBreakingSpace(in proposedSize: ProposedViewSize) -> CGFloat {
         proposedSize.replacingUnspecifiedDimensions(by: .infinity).value(on: axis)
     }
+}
 
-    // MARK: - Line construction
+// MARK: - Line construction & separators
 
+extension FlowLayout {
     private func makeLines(
         from wrapped: LineBreakingOutput,
+        in proposedSize: ProposedViewSize,
+        of subviews: some Subviews,
+        cache: FlowLayoutCache,
+        separators: SeparatorLayout?
+    ) -> Lines {
+        let contentLines = wrapped.map { makeLine(from: $0, of: subviews, cache: cache, separators: separators) }
+        guard let separators, !contentLines.isEmpty else { return contentLines }
+
+        // A line separator is its own single-item line inserted at each break boundary, so it reuses
+        // all the existing line placement, spacing, and alignment machinery for free.
+        let breadth = lineSeparatorBreadth(for: contentLines, in: proposedSize)
+        var result: Lines = []
+        result.reserveCapacity(contentLines.count * 2)
+        for index in contentLines.indices {
+            if index > 0, let first = wrapped[index].first?.index, let separator = separators.lineSeparator(startingLineAt: first) {
+                result.append(makeSeparatorLine(separator, breadth: breadth, depth: separators.depth(ofSeparator: separator), of: subviews, cache: cache))
+            }
+            result.append(contentLines[index])
+        }
+        return result
+    }
+
+    /// The breadth proposed to line separators: the justified width when justifying, otherwise the
+    /// widest content line, so a full-width separator (e.g. a `Divider`) spans the laid-out content.
+    private func lineSeparatorBreadth(for contentLines: Lines, in proposedSize: ProposedViewSize) -> CGFloat {
+        if justified, proposedSize.value(on: axis).isFinite {
+            return proposedSize.value(on: axis)
+        }
+        return contentLines.map(\.size.breadth).max() ?? 0
+    }
+
+    private func makeSeparatorLine(
+        _ index: Int,
+        breadth: CGFloat,
+        depth: CGFloat,
         of subviews: some Subviews,
         cache: FlowLayoutCache
-    ) -> Lines {
-        wrapped.map { makeLine(from: $0, of: subviews, cache: cache) }
+    ) -> Lines.Element {
+        let output = LineItemOutput(index: index, size: breadth, leadingSpace: 0)
+        let item = makeLineItem(from: output, naturalDepth: depth, of: subviews, cache: cache)
+        let metrics = lineMetrics(for: [item])
+        return Lines.Element(
+            item: [item],
+            size: metrics.size,
+            leadingSpace: 0,
+            depthAlignmentGuide: metrics.depthAlignmentGuide
+        )
     }
 
     private func makeLine(
         from wrappedLine: LineOutput,
         of subviews: some Subviews,
-        cache: FlowLayoutCache
+        cache: FlowLayoutCache,
+        separators: SeparatorLayout?
     ) -> Lines.Element {
-        let naturalDepth = wrappedLine.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0
-        let items = wrappedLine.map {
-            makeLineItem(from: $0, naturalDepth: naturalDepth, of: subviews, cache: cache)
+        let naturalDepth = lineNaturalDepth(of: wrappedLine, cache: cache, separators: separators)
+        var items: Line = []
+        items.reserveCapacity(wrappedLine.count)
+        for indexInLine in wrappedLine.indices {
+            var output = wrappedLine[indexInLine]
+            // Re-materialize the item separator the breaker folded into this item's leading space:
+            // give the separator its natural leading space and breadth, leaving the rest before the item.
+            if indexInLine > 0, let separator = separators?.itemSeparator(before: output.index) {
+                let separatorOutput = LineItemOutput(index: separator.index, size: separator.breadth, leadingSpace: separator.leadingSpace)
+                items.append(makeLineItem(from: separatorOutput, naturalDepth: naturalDepth, of: subviews, cache: cache))
+                output.leadingSpace -= separator.leadingSpace + separator.breadth
+            }
+            items.append(makeLineItem(from: output, naturalDepth: naturalDepth, of: subviews, cache: cache))
         }
         let metrics = lineMetrics(for: items)
         return Lines.Element(
@@ -348,6 +444,23 @@ struct FlowLayout: Sendable {
             leadingSpace: 0,
             depthAlignmentGuide: metrics.depthAlignmentGuide
         )
+    }
+
+    /// A line is tall enough for its deepest content item and any in-line item separators it carries.
+    private func lineNaturalDepth(
+        of wrappedLine: LineOutput,
+        cache: FlowLayoutCache,
+        separators: SeparatorLayout?
+    ) -> CGFloat {
+        var depth: CGFloat = 0
+        for indexInLine in wrappedLine.indices {
+            let contentIndex = wrappedLine[indexInLine].index
+            depth = max(depth, cache.subviewsCache[contentIndex].ideal.depth)
+            if indexInLine > 0, let separator = separators?.itemSeparator(before: contentIndex) {
+                depth = max(depth, separator.depth)
+            }
+        }
+        return depth
     }
 
     private func makeLineItem(
@@ -367,7 +480,7 @@ struct FlowLayout: Sendable {
         )
         let dimensions = subview.dimensions(proposal)
         return Line.Element(
-            item: (subview: subview, cache: subviewCache),
+            item: (index: wrappedItem.index, subview: subview, cache: subviewCache),
             size: dimensions.size(on: axis),
             leadingSpace: wrappedItem.leadingSpace,
             depthAlignmentGuide: alignmentOnDepth(dimensions)

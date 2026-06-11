@@ -19,6 +19,7 @@ Arranges views in lines and cuts new lines accordingly (if elements don't fit th
 - ↔️ **Justified lines** — stretch lines to fill the available space.
 - 🪗 **Flexibility model** — let items grow, stay rigid, or claim a whole line.
 - 📏 **Line limits** — cap a flow to *N* lines with an optional "+N more" overflow indicator.
+- ➗ **Separators** — draw dividers between items and/or lines (never at the edges); they take part in sizing and wrapping.
 - ✂️ **Manual line breaks** — force breaks with `LineBreak()` or `.startInNewLine()`.
 - 🌍 **RTL support** — adapts to the environment's layout direction.
 - 🧱 **`Layout` conformance** — `HFlowLayout` / `VFlowLayout` for use anywhere a `Layout` is expected.
@@ -239,6 +240,24 @@ HFlow {
     Text("+\(hidden) more").foregroundStyle(.secondary)
 }
 ```
+
+## Separators
+
+Draw separators between items and/or lines. They only appear *between* elements — never at the
+edges — and they participate in layout: an item separator's width is accounted for when wrapping,
+and a line separator contributes its height. A gap that wraps onto a new line shows the line
+separator instead of the item separator.
+
+```swift
+HFlow {
+    ForEach(tags, id: \.self) { Text($0) }
+}
+.itemSeparator { Text("•").foregroundStyle(.secondary) }
+.lineSeparator { Divider() }
+```
+
+The two modifiers are independent; use either one on its own or both together. They are available
+on `HFlow` and `VFlow`.
 
 ## Line breaks
 

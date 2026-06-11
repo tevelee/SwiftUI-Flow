@@ -50,6 +50,15 @@ public struct FlowLayoutCache {
         @usableFromInline
         var overflowReporter: (@Sendable (Int) -> Void)?
 
+        /// Whether this subview is a content item, an item separator, or a line separator.
+        /// Separators are injected by ``HFlow``/``VFlow`` between adjacent items and never at the edges.
+        @usableFromInline
+        var separatorRole: SeparatorRole
+
+        /// Reporter the layout calls with the line structure (set on content items by the separator wrapper).
+        @usableFromInline
+        var lineStructureReporter: (@Sendable ([Int]) -> Void)?
+
         @inlinable
         init(_ subview: some Subview, axis: Axis) {
             priority = subview.priority
@@ -62,6 +71,8 @@ public struct FlowLayoutCache {
                 flexibility: subview[FlexibilityLayoutValueKey.self]
             )
             overflowReporter = subview[OverflowReporterKey.self]
+            separatorRole = subview[SeparatorRoleLayoutValueKey.self]
+            lineStructureReporter = subview[LineStructureReporterKey.self]
         }
     }
 
@@ -72,6 +83,11 @@ public struct FlowLayoutCache {
     /// or `nil` when no overflow indicator is present. Computed once during `makeCache`.
     @usableFromInline
     let overflowSubviewIndex: Int?
+
+    /// Whether any subview carries a non-`content` ``SeparatorRole``. When `false` the layout skips
+    /// all separator handling, so flows without separators incur no extra work and no behavior change.
+    @usableFromInline
+    let hasSeparators: Bool
 
     /// Single-entry memo of the most recent line-breaking result. `sizeThatFits`
     /// and `placeSubviews` run back-to-back with the same proposal, so caching the
@@ -115,6 +131,7 @@ public struct FlowLayoutCache {
         overflowSubviewIndex = subviews.indices.last.flatMap {
             subviews[$0][IsOverflowLayoutValueKey.self] ? $0 : nil
         }
+        hasSeparators = subviewsCache.contains { $0.separatorRole.isSeparator }
     }
 
     @inlinable
@@ -130,6 +147,15 @@ public struct FlowLayoutCache {
     @inlinable
     mutating func rekeyLineBreaking(to key: LineBreakingKey) {
         lineBreaking?.key = key
+    }
+
+    /// Spacing between two subviews: the explicit `itemSpacing` when set, otherwise the distance
+    /// between their `ViewSpacing` preferences along `axis`. Shared by ``FlowLayout`` and
+    /// ``SeparatorLayout`` to avoid duplicating the same two-line fallback.
+    @usableFromInline
+    func spacing(from fromIndex: Int, to toIndex: Int, itemSpacing: CGFloat?, axis: Axis) -> CGFloat {
+        if let itemSpacing { return itemSpacing }
+        return subviewsCache[fromIndex].spacing.distance(to: subviewsCache[toIndex].spacing, along: axis)
     }
 }
 

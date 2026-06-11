@@ -145,6 +145,17 @@ struct FlowTweaksSidebar: View {
                     SidebarMaxLinesControl(maxLines: $settings.maxLines)
                 }
 
+                SidebarGroup("Separators", systemImage: "separator.horizontal") {
+                    SidebarSegmentedPickerRow("Item", selection: $settings.itemSeparator)
+                    SidebarSegmentedPickerRow("Line", selection: $settings.lineSeparator)
+                    if settings.mode.isLazy, settings.hasSeparators {
+                        Text("Separators apply to the eager HFlow / VFlow layouts.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
 
                 SidebarGroup("Guides", systemImage: "eye") {
                     SidebarToggleGrid {
@@ -561,11 +572,23 @@ struct FlowCanvas: View {
     private var preview: some View {
         if settings.mode.isLazy, #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
             lazyPreview
+        } else if settings.hasSeparators {
+            separatedEagerPreview
         } else {
             eagerLayout {
                 ForEach(items) { item in
                     renderedItem(item)
                 }
+            }
+        }
+    }
+
+    /// Separators live on the `HFlow` / `VFlow` view wrappers (they inject tagged subviews), so this
+    /// path uses the views directly instead of the generic `AnyLayout` canvas.
+    private var separatedEagerPreview: some View {
+        SeparatedEagerFlow(settings: settings) {
+            ForEach(items) { item in
+                renderedItem(item)
             }
         }
     }
@@ -664,6 +687,74 @@ struct FlowCanvas: View {
 
     private func itemIndex(_ item: FlowItem) -> Int {
         items.firstIndex(where: { $0.id == item.id }).map { $0 + 1 } ?? 0
+    }
+}
+
+private struct SeparatedEagerFlow<Content: View>: View {
+    let settings: FlowLabSettings
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        switch settings.mode {
+            case .horizontal, .lazyHorizontal:
+                decorate(
+                    HFlow(
+                        horizontalAlignment: settings.horizontalAlignment.value,
+                        verticalAlignment: settings.verticalAlignment.value,
+                        horizontalSpacing: settings.itemSpacingValue,
+                        verticalSpacing: settings.lineSpacingValue,
+                        justified: settings.justified,
+                        distributeItemsEvenly: settings.distributeItemsEvenly
+                    ) { content }
+                )
+            case .vertical, .lazyVertical:
+                decorate(
+                    VFlow(
+                        horizontalAlignment: settings.horizontalAlignment.value,
+                        verticalAlignment: settings.verticalAlignment.value,
+                        horizontalSpacing: settings.lineSpacingValue,
+                        verticalSpacing: settings.itemSpacingValue,
+                        justified: settings.justified,
+                        distributeItemsEvenly: settings.distributeItemsEvenly
+                    ) { content }
+                )
+        }
+    }
+
+    @ViewBuilder
+    private func decorate(_ flow: HFlow<Content>) -> some View {
+        switch (settings.itemSeparator.isVisible, settings.lineSeparator.isVisible) {
+            case (true, true):
+                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
+                    .lineSeparator { settings.lineSeparator.lineView(horizontalFlow: true) }
+                    .maxLines(settings.maxLines)
+            case (true, false):
+                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
+                    .maxLines(settings.maxLines)
+            case (false, true):
+                flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: true) }
+                    .maxLines(settings.maxLines)
+            case (false, false):
+                flow.maxLines(settings.maxLines)
+        }
+    }
+
+    @ViewBuilder
+    private func decorate(_ flow: VFlow<Content>) -> some View {
+        switch (settings.itemSeparator.isVisible, settings.lineSeparator.isVisible) {
+            case (true, true):
+                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
+                    .lineSeparator { settings.lineSeparator.lineView(horizontalFlow: false) }
+                    .maxLines(settings.maxLines)
+            case (true, false):
+                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
+                    .maxLines(settings.maxLines)
+            case (false, true):
+                flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: false) }
+                    .maxLines(settings.maxLines)
+            case (false, false):
+                flow.maxLines(settings.maxLines)
+        }
     }
 }
 

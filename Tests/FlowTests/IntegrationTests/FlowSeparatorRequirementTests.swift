@@ -136,9 +136,9 @@ struct FlowSeparatorRequirementTests {
         let cache = FlowLayoutCache(subviews, axis: .horizontal)
         let separators = SeparatorLayout(cache: cache, axis: .horizontal, itemSpacing: 0)!
 
-        let visible: LineBreakingOutput = [
-            [LineItemOutput(index: 0, size: 10, leadingSpace: 0)],
-            [LineItemOutput(index: 2, size: 10, leadingSpace: 0)],
+        let visible: WrappedLines = [
+            [WrappedItem(index: 0, size: 10, leadingSpace: 0)],
+            [WrappedItem(index: 2, size: 10, leadingSpace: 0)],
             // subview index 4 (c2) is absent — capped
         ]
         let lineOf = separators.lineStructure(of: visible)

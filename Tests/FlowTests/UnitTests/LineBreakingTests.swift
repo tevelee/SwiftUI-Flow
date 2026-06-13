@@ -5,11 +5,11 @@ import Testing
 
 @Suite(.tags(.requirements))
 struct LineBreakingTests {
-    @Suite("FlowLineBreaker")
-    struct FlowLineBreakerTests {
+    @Suite("GreedyLineBreaker")
+    struct GreedyLineBreakerTests {
 
         @Test func basic() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let breakpoints = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(10), spacing: 10),
@@ -31,13 +31,13 @@ struct LineBreakingTests {
         }
 
         @Test func emptyInput() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(items: [], in: 100)
             #expect(result.isEmpty)
         }
 
         @Test func singleItem() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(50), spacing: 0)
@@ -52,7 +52,7 @@ struct LineBreakingTests {
         }
 
         @Test func allFitOnOneLine() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(20), spacing: 0),
@@ -69,7 +69,7 @@ struct LineBreakingTests {
         }
 
         @Test func eachItemOwnLine() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(100), spacing: 0),
@@ -88,7 +88,7 @@ struct LineBreakingTests {
         }
 
         @Test func flexibleItem_expands() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(30), spacing: 0),
@@ -104,7 +104,7 @@ struct LineBreakingTests {
         }
 
         @Test func lineBreakView() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(20), spacing: 0),
@@ -122,11 +122,11 @@ struct LineBreakingTests {
         }
 
         @Test func lineBreakAtStart_clearsFollowingSpacing() {
-            assertLineBreakAtStartClearsFollowingSpacing(FlowLineBreaker())
+            assertLineBreakAtStartClearsFollowingSpacing(GreedyLineBreaker())
         }
 
         @Test func shouldStartInNewLine() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             let result = sut.wrapItemsToLines(
                 items: [
                     .init(size: .rigid(20), spacing: 0),
@@ -144,27 +144,27 @@ struct LineBreakingTests {
         }
 
         @Test func shouldStartInNewLineAtFirstItem_allowsFollowingItemsOnSameLine() {
-            assertShouldStartInNewLineAtFirstItemAllowsFollowingItemsOnSameLine(FlowLineBreaker())
+            assertShouldStartInNewLineAtFirstItemAllowsFollowingItemsOnSameLine(GreedyLineBreaker())
         }
 
         @Test func negativeSpacing_keepsOverlappingRigidItemsOnOneLine() {
-            assertNegativeSpacingKeepsOverlappingRigidItemsOnOneLine(FlowLineBreaker())
+            assertNegativeSpacingKeepsOverlappingRigidItemsOnOneLine(GreedyLineBreaker())
         }
 
         @Test func zeroSizedItem_staysOnLineAndKeepsSpacing() {
-            assertZeroSizedItemStaysOnLineAndKeepsSpacing(FlowLineBreaker())
+            assertZeroSizedItemStaysOnLineAndKeepsSpacing(GreedyLineBreaker())
         }
 
         @Test func negativeAvailableSpace_fallsBackToOneItemPerLine() {
-            assertNegativeAvailableSpaceFallsBackToOneItemPerLine(FlowLineBreaker())
+            assertNegativeAvailableSpaceFallsBackToOneItemPerLine(GreedyLineBreaker())
         }
 
         @Test func maximumFlexItem_movesToOwnLineWhenFullGrowthDoesNotFit() {
-            assertMaximumFlexItemMovesToOwnLineWhenFullGrowthDoesNotFit(FlowLineBreaker())
+            assertMaximumFlexItemMovesToOwnLineWhenFullGrowthDoesNotFit(GreedyLineBreaker())
         }
 
         @Test func oversizedItem_placedAlone() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             // Item (150) wider than the container (100) must still appear on its own line.
             let result = sut.wrapItemsToLines(
                 items: [
@@ -180,7 +180,7 @@ struct LineBreakingTests {
         }
 
         @Test func oversizedItem_doesNotDropNeighbours() {
-            let sut = FlowLineBreaker()
+            let sut = GreedyLineBreaker()
             // [A=30, B=150(overflow), C=30, D=30] in container 100.
             // A on its own line, B on its own (overflow), C+D on their own line.
             let result = sut.wrapItemsToLines(
@@ -225,14 +225,14 @@ struct LineBreakingTests {
         }
 
         @Test func equalRigidItems_rebalancesTrailingSingleItem() {
-            let items: [LineItemInput] = [
+            let items: [MeasuredItem] = [
                 .init(size: .rigid(10), spacing: 0),
                 .init(size: .rigid(10), spacing: 10),
                 .init(size: .rigid(10), spacing: 10),
                 .init(size: .rigid(10), spacing: 10),
             ]
 
-            let greedy = FlowLineBreaker().wrapItemsToLines(items: items, in: 50)
+            let greedy = GreedyLineBreaker().wrapItemsToLines(items: items, in: 50)
             let balanced = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 50)
 
             #expect(
@@ -250,14 +250,14 @@ struct LineBreakingTests {
         }
 
         @Test func asymmetricRigidItems_rebalancesTrailingSingleItemWithoutReordering() {
-            let items: [LineItemInput] = [
+            let items: [MeasuredItem] = [
                 .init(size: .rigid(10), spacing: 0),
                 .init(size: .rigid(10), spacing: 10),
                 .init(size: .rigid(10), spacing: 10),
                 .init(size: .rigid(20), spacing: 10),
             ]
 
-            let greedy = FlowLineBreaker().wrapItemsToLines(items: items, in: 50)
+            let greedy = GreedyLineBreaker().wrapItemsToLines(items: items, in: 50)
             let balanced = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 50)
 
             #expect(
@@ -371,7 +371,7 @@ struct LineBreakingTests {
         }
 
         @Test func vsFlow_balancedLines() {
-            let items: [LineItemInput] = [
+            let items: [MeasuredItem] = [
                 .init(size: .rigid(30), spacing: 0),
                 .init(size: .rigid(30), spacing: 10),
                 .init(size: .rigid(30), spacing: 10),
@@ -379,7 +379,7 @@ struct LineBreakingTests {
                 .init(size: .rigid(30), spacing: 10),
             ]
 
-            let flow = FlowLineBreaker().wrapItemsToLines(items: items, in: 80)
+            let flow = GreedyLineBreaker().wrapItemsToLines(items: items, in: 80)
             let knuth = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 80)
 
             // Both should produce valid line breaks
@@ -387,7 +387,7 @@ struct LineBreakingTests {
             #expect(!knuth.isEmpty)
 
             // Knuth-Plass should produce more balanced lines
-            func lineWidth(_ line: [LineItemOutput]) -> CGFloat {
+            func lineWidth(_ line: [WrappedItem]) -> CGFloat {
                 line.reduce(CGFloat(0)) { $0 + $1.size + $1.leadingSpace }
             }
             let flowWidths = flow.map(lineWidth)
@@ -490,7 +490,7 @@ struct LineBreakingTests {
             // [A, B, C] fits (min 180 - 90 = 90 <= 100) because of B's negative spacing.
             // The solver must not stop scanning at the overflowing inner range, otherwise
             // it splits the items across lines instead of keeping them together.
-            let items: [LineItemInput] = [
+            let items: [MeasuredItem] = [
                 .init(size: .rigid(60), spacing: 0),
                 .init(size: .rigid(60), spacing: -90),
                 .init(size: .rigid(60), spacing: 0),
@@ -507,7 +507,7 @@ struct LineBreakingTests {
                 "Negative spacing can let a wider range fit; the solver must keep these items on one line"
             )
             // Both breakers must agree on this layout.
-            #expect(result == FlowLineBreaker().wrapItemsToLines(items: items, in: 100))
+            #expect(result == GreedyLineBreaker().wrapItemsToLines(items: items, in: 100))
         }
 
         @Test func knuth_plass_infiniteSpace_honorsManualBreaks() {
@@ -528,7 +528,7 @@ struct LineBreakingTests {
     struct ParityTests {
         struct Scenario: CustomTestStringConvertible, Sendable {
             let testDescription: String
-            let items: [LineItemInput]
+            let items: [MeasuredItem]
             let available: CGFloat
         }
 
@@ -613,7 +613,7 @@ struct LineBreakingTests {
             ),
         ])
         func bothBreakersAgree(scenario: Scenario) {
-            let flow = FlowLineBreaker().wrapItemsToLines(items: scenario.items, in: scenario.available)
+            let flow = GreedyLineBreaker().wrapItemsToLines(items: scenario.items, in: scenario.available)
             let knuth = KnuthPlassLineBreaker().wrapItemsToLines(items: scenario.items, in: scenario.available)
             #expect(flow == knuth)
         }

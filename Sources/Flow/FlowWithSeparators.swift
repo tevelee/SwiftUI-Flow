@@ -16,14 +16,31 @@ import SwiftUI
 /// as content rewraps through it instead of jumping. Enumeration uses `Group(subviews:)` where available
 /// and falls back to `_VariadicView` on earlier systems.
 public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this type_name
+    @usableFromInline
     let makeLayout: (Int?) -> AnyLayout
+    @usableFromInline
     let content: Content
+    @usableFromInline
     var itemSeparator: (() -> AnyView)?
+    @usableFromInline
     var lineSeparator: (() -> AnyView)?
 
     @Environment(\.flexibility) private var flexibility
     @Environment(\.maxLines) private var maxLines
     @StateObject private var state = SeparatorLineStructure()
+
+    @inlinable
+    init(
+        makeLayout: @escaping (Int?) -> AnyLayout,
+        content: Content,
+        itemSeparator: (() -> AnyView)?,
+        lineSeparator: (() -> AnyView)?
+    ) {
+        self.makeLayout = makeLayout
+        self.content = content
+        self.itemSeparator = itemSeparator
+        self.lineSeparator = lineSeparator
+    }
 
     public var body: some View {
         let layout = makeLayout(maxLines)
@@ -79,12 +96,14 @@ public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:t
         }
     }
 
+    @usableFromInline
     func setting(itemSeparator: (() -> AnyView)?) -> Self {
         var copy = self
         copy.itemSeparator = itemSeparator
         return copy
     }
 
+    @usableFromInline
     func setting(lineSeparator: (() -> AnyView)?) -> Self {
         var copy = self
         copy.lineSeparator = lineSeparator
@@ -228,6 +247,7 @@ extension HFlow {
     /// ```
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @inlinable
     public func itemSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators<Content> {
@@ -253,6 +273,7 @@ extension HFlow {
     /// ```
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @inlinable
     public func lineSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators<Content> {
@@ -273,6 +294,7 @@ extension VFlow {
     /// at the top or bottom edge. Combine with ``lineSeparator(_:)`` to control both.
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @inlinable
     public func itemSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators<Content> {
@@ -291,6 +313,7 @@ extension VFlow {
     /// never before the first or after the last. Combine with ``itemSeparator(_:)`` to control both.
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @inlinable
     public func lineSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators<Content> {
@@ -306,6 +329,7 @@ extension VFlow {
 extension _FlowWithSeparators {
     /// Adds (or replaces) the item separator drawn between adjacent items on the same line.
     /// See ``HFlow/itemSeparator(_:)``.
+    @inlinable
     public func itemSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators {
@@ -314,6 +338,7 @@ extension _FlowWithSeparators {
 
     /// Adds (or replaces) the line separator drawn between adjacent lines.
     /// See ``HFlow/lineSeparator(_:)``.
+    @inlinable
     public func lineSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators {

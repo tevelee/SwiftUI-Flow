@@ -46,21 +46,24 @@ extension Axis {
     }
 }
 
-// MARK: Fixed orientation -> orientation independent
+// MARK: - Axis-relative conversion
 
-protocol FixedOrientation2DCoordinate {
+/// A concrete 2D value (point, size, proposal) that converts to and from axis-relative ``Size``
+/// (breadth/depth) terms, so the axis-agnostic algorithm can read and write it without caring which
+/// axis maps to x and which to y.
+protocol AxisConvertible {
     init(size: Size, axis: Axis)
     func value(on axis: Axis) -> CGFloat
 }
 
-extension FixedOrientation2DCoordinate {
+extension AxisConvertible {
     @inlinable
     func size(on axis: Axis) -> Size {
         Size(breadth: value(on: axis), depth: value(on: axis.perpendicular))
     }
 }
 
-extension CGPoint: FixedOrientation2DCoordinate {
+extension CGPoint: AxisConvertible {
     @inlinable
     init(size: Size, axis: Axis) {
         self.init(x: size[axis], y: size[axis.perpendicular])
@@ -75,7 +78,7 @@ extension CGPoint: FixedOrientation2DCoordinate {
     }
 }
 
-extension CGSize: FixedOrientation2DCoordinate {
+extension CGSize: AxisConvertible {
     @inlinable
     init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
@@ -98,7 +101,7 @@ extension CGSize: FixedOrientation2DCoordinate {
     }
 }
 
-extension ProposedViewSize: FixedOrientation2DCoordinate {
+extension ProposedViewSize: AxisConvertible {
     @inlinable
     init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])

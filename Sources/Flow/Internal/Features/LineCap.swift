@@ -1,10 +1,14 @@
 import CoreFoundation
 
-/// Encapsulates the line-cap feature: truncation to `maxLines` and optional overflow-indicator placement.
+/// The line-cap feature: truncation to `maxLines` and optional overflow-indicator placement.
 ///
-/// All `.maxLines()` logic lives here so the core `FlowLayout` algorithm is unaware of line limits.
-/// `FlowLayout` calls `apply(to:…)` once per layout pass; the result is a plain
-/// `(visible lines, hidden indices)` value it can act on without further knowledge.
+/// All `.maxLines()` logic lives here so the core `FlowLayout` algorithm stays unaware of line limits.
+/// ``FlowLayout`` calls it at the two pipeline seams:
+///
+/// * ``excludeOverflowIndicator(from:cache:)`` keeps the overflow indicator out of line breaking — it
+///   is placed separately, so it must not consume space or affect where items wrap.
+/// * ``truncate(_:available:cache:spacingBefore:)`` drops lines beyond the limit and places the
+///   overflow indicator on the last visible line.
 @usableFromInline
 struct LineCap: Sendable {
     @usableFromInline var maxLines: Int
@@ -14,45 +18,48 @@ struct LineCap: Sendable {
         self.maxLines = maxLines
     }
 
-    struct Result {
-        var visible: LineBreakingOutput
-        var hidden: [Int]
+    // MARK: - Input seam
+
+    /// Removes the overflow indicator from the breaker input. It is placed separately on the last
+    /// visible line in ``truncate(_:available:cache:spacingBefore:)``, so it must not take part
+    /// in line breaking.
+    func excludeOverflowIndicator(from input: BreakerInput, cache: FlowLayoutCache) -> BreakerInput {
+        guard let overflowIndex = cache.overflowSubviewIndex,
+            let position = input.subviewIndices.firstIndex(of: overflowIndex)
+        else { return input }
+        var input = input
+        input.items.remove(at: position)
+        input.subviewIndices.remove(at: position)
+        return input
     }
 
-    /// Truncates `lines` to `maxLines` and optionally inserts the overflow indicator on the last visible line.
-    ///
-    /// - Parameters:
-    ///   - lines: Raw line-breaking output (all lines, before any cap).
-    ///   - overflowIndex: Index of the overflow-indicator subview, or `nil` if none is present.
-    ///   - available: Available breadth (used to decide whether the indicator fits).
-    ///   - spacingBefore: Returns the leading space for a given subview index.
-    ///   - sizeOf: Returns the ideal breadth for a given subview index.
-    func apply(
-        to lines: LineBreakingOutput,
-        overflowIndex: Int?,
-        available: CGFloat,
-        spacingBefore: (Int) -> CGFloat,
-        sizeOf: (Int) -> CGFloat
-    ) -> Result {
-        var (visible, hidden) = truncate(lines)
+    // MARK: - Output seam
 
-        if let overflowIndex {
+    /// Truncates the wrapped lines to `maxLines`, returning the hidden subviews, and places the
+    /// overflow indicator (if any) on the last visible line.
+    func truncate(
+        _ lines: WrappedLines,
+        available: CGFloat,
+        cache: FlowLayoutCache,
+        spacingBefore: (Int) -> CGFloat
+    ) -> LineAdaptation {
+        var (visible, hidden) = splitAtLimit(lines)
+        if let overflowIndex = cache.overflowSubviewIndex {
             placeOrHideOverflowIndicator(
                 at: overflowIndex,
                 visible: &visible,
                 hidden: &hidden,
                 available: available,
                 spacingBefore: spacingBefore,
-                sizeOf: sizeOf
+                sizeOf: { cache.subviewsCache[$0].ideal.breadth }
             )
         }
-
-        return Result(visible: visible, hidden: hidden)
+        return LineAdaptation(lines: visible, hidden: hidden)
     }
 
-    // MARK: - Truncation
-
-    private func truncate(_ lines: LineBreakingOutput) -> (visible: LineBreakingOutput, hidden: [Int]) {
+    /// Splits the lines into the first `maxLines` (visible) and the subview indices of everything
+    /// beyond the limit (hidden).
+    private func splitAtLimit(_ lines: WrappedLines) -> (visible: WrappedLines, hidden: [Int]) {
         let limit = max(0, maxLines)
         guard lines.count > limit else { return (lines, []) }
         let visible = Array(lines.prefix(limit))
@@ -60,13 +67,11 @@ struct LineCap: Sendable {
         return (visible, hidden)
     }
 
-    // MARK: - Overflow indicator
-
     /// Places the overflow indicator at the end of the last visible line, trimming items to make room.
     /// If nothing was hidden (all items fit) or no lines are visible, hides the indicator instead.
     private func placeOrHideOverflowIndicator(
         at overflowIdx: Int,
-        visible: inout LineBreakingOutput,
+        visible: inout WrappedLines,
         hidden: inout [Int],
         available: CGFloat,
         spacingBefore: (Int) -> CGFloat,
@@ -81,13 +86,13 @@ struct LineCap: Sendable {
         let trimmed = trimLastLine(&visible, toFit: overflowWidth + overflowSpacing, available: available)
         hidden.append(contentsOf: trimmed)
         let leadingSpace = visible[visible.count - 1].isEmpty ? 0 : overflowSpacing
-        visible[visible.count - 1].append(LineItemOutput(index: overflowIdx, size: overflowWidth, leadingSpace: leadingSpace))
+        visible[visible.count - 1].append(WrappedItem(index: overflowIdx, size: overflowWidth, leadingSpace: leadingSpace))
     }
 
     /// Removes trailing items from the last line until `needed` fits within `available`.
     /// Returns the indices of removed items.
     private func trimLastLine(
-        _ lines: inout LineBreakingOutput,
+        _ lines: inout WrappedLines,
         toFit needed: CGFloat,
         available: CGFloat
     ) -> [Int] {

@@ -1,15 +1,5 @@
 import SwiftUI
 
-/// The way line breaking treats flexible items. The default behavior is `.natural`.
-public enum FlexibilityBehavior: Sendable {
-    /// The layout chooses the minimum space for the view, regardless of how much it can expand
-    case minimum
-    /// The layout allows the views to expand as they naturally do.
-    case natural
-    /// If a view can expand, it allows to "push" out other views and fill a whole row on its own.
-    case maximum
-}
-
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
 /// Even though it needs to be public (because it's part of the layout protocol conformance),
 /// it's considered an internal implementation detail.
@@ -116,10 +106,10 @@ public struct FlowLayoutCache {
         @usableFromInline
         var key: LineBreakingKey
         @usableFromInline
-        var lines: LineBreakingOutput
+        var lines: WrappedLines
 
         @inlinable
-        init(key: LineBreakingKey, lines: LineBreakingOutput) {
+        init(key: LineBreakingKey, lines: WrappedLines) {
             self.key = key
             self.lines = lines
         }
@@ -135,12 +125,12 @@ public struct FlowLayoutCache {
     }
 
     @inlinable
-    func cachedLineBreaking(for key: LineBreakingKey) -> LineBreakingOutput? {
+    func cachedLineBreaking(for key: LineBreakingKey) -> WrappedLines? {
         lineBreaking?.key == key ? lineBreaking?.lines : nil
     }
 
     @inlinable
-    mutating func cacheLineBreaking(_ lines: LineBreakingOutput, for key: LineBreakingKey) {
+    mutating func cacheLineBreaking(_ lines: WrappedLines, for key: LineBreakingKey) {
         lineBreaking = LineBreakingResult(key: key, lines: lines)
     }
 
@@ -156,103 +146,5 @@ public struct FlowLayoutCache {
     func spacing(from fromIndex: Int, to toIndex: Int, itemSpacing: CGFloat?, axis: Axis) -> CGFloat {
         if let itemSpacing { return itemSpacing }
         return subviewsCache[fromIndex].spacing.distance(to: subviewsCache[toIndex].spacing, along: axis)
-    }
-}
-
-/// A view to manually insert breaks into flow layout, allowing precise control over line breaking.
-public struct LineBreak: View {
-    /// Initializes a new line break view
-    public init() {}
-
-    public var body: some View {
-        Color.clear
-            .frame(width: 0, height: 0)
-            .layoutValue(key: IsLineBreakLayoutValueKey.self, value: true)
-    }
-}
-
-extension View {
-    /// Allows flow layout elements to be started on new lines, allowing precise control over line breaking.
-    public func startInNewLine(_ enabled: Bool = true) -> some View {
-        layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: enabled)
-    }
-
-    /// Allows modifying the flexibility behavior of views so that flow can layout them accordingly.
-    /// This modifier can be placed outside of flow layout too, and propagate to all flow layouts inside that view tree (using environment).
-    /// The default flexibility of each item in a flow is `.natural`.
-    public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
-        layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
-            .environment(\.flexibility, behavior)
-    }
-}
-
-@usableFromInline
-struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue = false
-}
-
-@usableFromInline
-struct IsLineBreakLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue = false
-}
-
-@usableFromInline
-struct FlexibilityLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue: FlexibilityBehavior = .natural
-}
-
-@usableFromInline
-struct IsOverflowLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue = false
-}
-
-@usableFromInline
-struct OverflowReporterKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue: (@Sendable (Int) -> Void)? = nil
-}
-
-@usableFromInline
-struct FlexibilityEnvironmentKey: EnvironmentKey {
-    @usableFromInline
-    static let defaultValue: FlexibilityBehavior = .natural
-}
-
-@usableFromInline
-struct MaxLinesEnvironmentKey: EnvironmentKey {
-    @usableFromInline
-    static let defaultValue: Int? = nil
-}
-
-extension EnvironmentValues {
-    @usableFromInline
-    var flexibility: FlexibilityBehavior {
-        get { self[FlexibilityEnvironmentKey.self] }
-        set { self[FlexibilityEnvironmentKey.self] = newValue }
-    }
-
-    @usableFromInline
-    var maxLines: Int? {
-        get { self[MaxLinesEnvironmentKey.self] }
-        set { self[MaxLinesEnvironmentKey.self] = newValue }
-    }
-}
-
-extension View {
-    /// Caps the nearest enclosing ``HFlow`` or ``VFlow`` to `limit` lines.
-    ///
-    /// Items beyond the limit are hidden from view but still participate in
-    /// line-breaking so the layout remains consistent.  Pass `nil` to remove
-    /// any previously set limit.
-    ///
-    /// - Parameter limit: Maximum number of lines (rows for `HFlow`, columns
-    ///   for `VFlow`). `nil` keeps every line.
-    @inlinable
-    public func maxLines(_ limit: Int?) -> some View {
-        environment(\.maxLines, limit)
     }
 }

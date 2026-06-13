@@ -24,7 +24,7 @@ struct SeparatorSnapshots {
     /// When the gap wraps, the line separator (B) becomes its own full-width line between rows.
     @Test func lineSeparator_betweenRows() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
-        let separator = CGSize(width: 0, height: 1) ... CGSize(width: .infinity, height: 1)
+        let separator = (0 × 1) ... (inf × 1)
         separator[SeparatorRoleLayoutValueKey.self] = .lineSeparator
         let result = sut.layout([3 × 1, separator, 3 × 1], in: 3 × 3)
         assertLayoutRendering(result) {
@@ -44,7 +44,7 @@ struct SeparatorSnapshots {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
         let itemSeparator = TestSubview(size: 1 × 1)
         itemSeparator[SeparatorRoleLayoutValueKey.self] = .itemSeparator
-        let lineSep = CGSize(width: 0, height: 1) ... CGSize(width: .infinity, height: 1)
+        let lineSep = (0 × 1) ... (inf × 1)
         lineSep[SeparatorRoleLayoutValueKey.self] = .lineSeparator
         let result = sut.layout([3 × 1, itemSeparator, lineSep, 3 × 1], in: 8 × 2)
         assertLayoutRendering(result) {

@@ -133,6 +133,7 @@ public struct VFlow<Content: View>: View {
     @usableFromInline
     @Environment(\.maxLines) var _maxLinesCap
 
+    @inlinable
     public var body: some View {
         let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
         effectiveLayout {

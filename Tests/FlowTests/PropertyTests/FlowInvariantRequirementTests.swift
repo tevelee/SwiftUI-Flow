@@ -116,6 +116,48 @@ struct FlowInvariantRequirementTests {
             }
         }
     }
+
+    @Suite("Distribution")
+    struct Distribution {
+        @Test func generatedJustifiedAndDistributedScenarios_placeEverySubviewWithFiniteNonNegativeGeometry() async {
+            await propertyCheck(count: generatedDistributionCheckCount, input: generatedDistributionInvariantCase) { generated in
+                assertPlacesEverySubviewWithFiniteNonNegativeGeometry(generated.makeCase())
+            }
+        }
+
+        @Test func generatedJustifiedAndDistributedScenarios_keepVisiblePlacementsInsideReportedSize() async {
+            await propertyCheck(count: generatedDistributionCheckCount, input: generatedDistributionInvariantCase) { generated in
+                assertKeepsVisiblePlacementsInsideReportedSize(generated.makeCase())
+            }
+        }
+
+        @Test func generatedJustifiedAndDistributedScenarios_keepVisibleFramesDisjointWhenSpacingIsNonNegative() async {
+            await propertyCheck(count: generatedDistributionCheckCount, input: generatedDistributionInvariantCase) { generated in
+                assertVisibleFramesDoNotOverlapWhenSpacingIsNonNegative(generated.makeCase())
+            }
+        }
+    }
+
+    @Suite("LineCap")
+    struct LineCap {
+        @Test func generatedCappedScenarios_placeEverySubviewWithFiniteNonNegativeGeometry() async {
+            await propertyCheck(count: generatedCappedCheckCount, input: generatedCappedInvariantCase) { generated in
+                assertPlacesEverySubviewWithFiniteNonNegativeGeometry(generated.makeCase())
+            }
+        }
+
+        @Test func generatedCappedScenarios_keepVisibleInsideAndHiddenParked() async {
+            await propertyCheck(count: generatedCappedCheckCount, input: generatedCappedInvariantCase) { generated in
+                assertCappedLayoutKeepsVisibleInsideAndHiddenParked(generated.makeCase())
+            }
+        }
+
+        @Test func generatedCappedScenarios_preserveVisibleTraversalOrder() async {
+            await propertyCheck(count: generatedCappedCheckCount, input: generatedCappedInvariantCase) { generated in
+                assertCappedPreservesVisibleTraversalOrder(generated.makeCase())
+            }
+        }
+    }
 }
 
 private let tolerance: CGFloat = 0.000_001
@@ -125,6 +167,9 @@ private let generatedFractionalCheckCount = 100
 private let generatedSpacingFallbackCheckCount = 80
 private let generatedTransposeCheckCount = 80
 private let generatedMonotonicCheckCount = 80
+private let generatedDistributionCheckCount = 120
+private let generatedCappedCheckCount = 120
+private let hiddenParkingThreshold: CGFloat = 100_000
 
 private enum FlowInvariantOrientation: CaseIterable, Sendable, CustomStringConvertible {
     case horizontal
@@ -176,6 +221,8 @@ private enum GeneratedScenarioCategory: String, Sendable, CustomStringConvertibl
     case transpose
     case monotonic
     case spacingFallback
+    case distribution
+    case capped
 
     var description: String { rawValue }
 }
@@ -414,6 +461,73 @@ private func assertVisibleFramesDoNotOverlapWhenSpacingIsNonNegative(_ scenario:
     }
 }
 
+/// A capped (`maxLines`) layout truncates overflowing lines: visible subviews stay inside the
+/// reported (smaller) size, and the truncated ones are parked far below the content so they
+/// never draw. Verify both halves of that contract.
+private func assertCappedLayoutKeepsVisibleInsideAndHiddenParked(_ scenario: FlowInvariantCase) {
+    let result = scenario.layoutThatFits()
+    expectFinite(result.reportedSize.width, "\(scenario.name) reported width")
+    expectFinite(result.reportedSize.height, "\(scenario.name) reported height")
+    #expect(result.reportedSize.width >= 0, "\(scenario.name) reported width should be non-negative")
+    #expect(result.reportedSize.height >= 0, "\(scenario.name) reported height should be non-negative")
+    let placementBoundsSize = scenario.bounds?.size ?? result.reportedSize
+
+    for (index, subview) in result.subviews.enumerated() {
+        guard let placement = subview.placement else {
+            continue
+        }
+        let frame = CGRect(origin: placement.position, size: placement.size)
+        if placement.position.y >= hiddenParkingThreshold {
+            // Truncated subviews are parked well past the content; they must not intrude on it.
+            #expect(
+                frame.minY >= placementBoundsSize.height + hiddenParkingThreshold - tolerance,
+                "\(scenario.name) hidden subview \(index) should be parked outside the reported size"
+            )
+            continue
+        }
+        #expect(frame.minX >= -tolerance, "\(scenario.name) visible subview \(index) should not be left of bounds")
+        #expect(frame.minY >= -tolerance, "\(scenario.name) visible subview \(index) should not be above bounds")
+        #expect(
+            frame.maxX <= placementBoundsSize.width + tolerance,
+            "\(scenario.name) visible subview \(index) should not exceed reported width"
+        )
+        #expect(
+            frame.maxY <= placementBoundsSize.height + tolerance,
+            "\(scenario.name) visible subview \(index) should not exceed reported height"
+        )
+    }
+}
+
+private func assertCappedPreservesVisibleTraversalOrder(_ scenario: FlowInvariantCase) {
+    let result = scenario.layoutThatFits()
+    let visiblePlacements = result.subviews.enumerated().compactMap { index, subview -> IndexedPlacement? in
+        guard let placement = subview.placement else { return nil }
+        // Exclude parked (truncated) subviews and zero-area placements.
+        guard placement.position.y < hiddenParkingThreshold else { return nil }
+        guard placement.size.width > 0, placement.size.height > 0 else { return nil }
+        return IndexedPlacement(index: index, placement: placement)
+    }
+
+    for (previous, next) in zip(visiblePlacements, visiblePlacements.dropFirst()) {
+        switch scenario.orientation {
+            case .horizontal:
+                let sameOrLaterInRow = next.placement.position.x + tolerance >= previous.placement.position.x
+                let laterRow = next.placement.position.y + tolerance >= previous.placement.position.y
+                #expect(
+                    sameOrLaterInRow || laterRow,
+                    "\(scenario.name) visible subview \(next.index) should not move before subview \(previous.index)"
+                )
+            case .vertical:
+                let sameOrLaterInColumn = next.placement.position.y + tolerance >= previous.placement.position.y
+                let laterColumn = next.placement.position.x + tolerance >= previous.placement.position.x
+                #expect(
+                    sameOrLaterInColumn || laterColumn,
+                    "\(scenario.name) visible subview \(next.index) should not move before subview \(previous.index)"
+                )
+        }
+    }
+}
+
 private enum GeneratedAxisAlignment: CaseIterable, Sendable, CustomStringConvertible {
     case start
     case center
@@ -602,6 +716,29 @@ private struct GeneratedInvariantSpec: Sendable, CustomStringConvertible {
 
     var description: String {
         "\(orientation) proposal:\(proposalBreadth)×\(proposalDepth) \(layout) subviews:\(subviews)"
+    }
+}
+
+private struct GeneratedCappedSpec: Sendable, CustomStringConvertible {
+    let orientation: FlowInvariantOrientation
+    let layout: GeneratedLayoutSpec
+    let subviews: [GeneratedSubviewSpec]
+    let maxLines: Int
+    let proposalBreadth: Int
+    let proposalDepth: Int
+
+    func makeCase() -> FlowInvariantCase {
+        FlowInvariantCase(
+            name: "generated \(GeneratedScenarioCategory.capped) \(description)",
+            orientation: orientation,
+            layout: layout.layout(orientation: orientation).withMaxLines(maxLines),
+            subviews: subviews.map { $0.makeSubview(orientation: orientation) },
+            proposal: orientation.proposal(breadth: CGFloat(proposalBreadth), depth: CGFloat(proposalDepth))
+        )
+    }
+
+    var description: String {
+        "maxLines:\(maxLines) \(orientation) proposal:\(proposalBreadth)×\(proposalDepth) \(layout) subviews:\(subviews)"
     }
 }
 
@@ -853,6 +990,28 @@ private let generatedCommonLayoutSpec = zip(
     )
 }
 
+// Non-negative spacing (so the no-overlap invariant applies) with justified and/or
+// distributeItemsEvenly enabled, which the common/edge generators otherwise leave off.
+private let generatedDistributionLayoutSpec = zip(
+    generatedAxisAlignment,
+    generatedAxisAlignment,
+    Gen.int(in: 0 ... 4),
+    Gen.int(in: 0 ... 4),
+    Gen.bool(0.5),
+    Gen.bool(0.5)
+)
+.map { input in
+    let (breadthAlignment, depthAlignment, itemSpacing, lineSpacing, justified, distributeItemsEvenly) = input
+    return GeneratedLayoutSpec(
+        breadthAlignment: breadthAlignment,
+        depthAlignment: depthAlignment,
+        itemSpacing: itemSpacing,
+        lineSpacing: lineSpacing,
+        justified: justified,
+        distributeItemsEvenly: distributeItemsEvenly
+    )
+}
+
 private let generatedSubviewSpec = zip(
     Gen.int(in: 1 ... 8),
     Gen.int(in: 0 ... 4),
@@ -1009,6 +1168,45 @@ private let generatedEdgeInvariantCase = zip(
         orientation: orientation,
         layout: layout,
         subviews: subviews,
+        proposalBreadth: proposalBreadth,
+        proposalDepth: proposalDepth
+    )
+}
+
+private let generatedDistributionInvariantCase = zip(
+    Gen<FlowInvariantOrientation>.case,
+    generatedDistributionLayoutSpec,
+    generatedCommonSubviewSpec.array(of: 1 ... 8),
+    Gen.int(in: 12 ... 30),
+    Gen.int(in: 4 ... 24)
+)
+.map { input in
+    let (orientation, layout, subviews, proposalBreadth, proposalDepth) = input
+    return GeneratedInvariantSpec(
+        category: .distribution,
+        orientation: orientation,
+        layout: layout,
+        subviews: subviews,
+        proposalBreadth: proposalBreadth,
+        proposalDepth: proposalDepth
+    )
+}
+
+private let generatedCappedInvariantCase = zip(
+    Gen<FlowInvariantOrientation>.case,
+    generatedCommonLayoutSpec,
+    generatedCommonSubviewSpec.array(of: 2 ... 10),
+    Gen.int(in: 1 ... 4),
+    Gen.int(in: 8 ... 20),
+    Gen.int(in: 4 ... 24)
+)
+.map { input in
+    let (orientation, layout, subviews, maxLines, proposalBreadth, proposalDepth) = input
+    return GeneratedCappedSpec(
+        orientation: orientation,
+        layout: layout,
+        subviews: subviews,
+        maxLines: maxLines,
         proposalBreadth: proposalBreadth,
         proposalDepth: proposalDepth
     )

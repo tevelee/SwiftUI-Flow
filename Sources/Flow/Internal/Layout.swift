@@ -407,7 +407,11 @@ struct FlowLayout: Sendable {
             let visibleIndices = items.indices.filter { !items[$0].item.cache.layoutValues.isLineBreak }
             guard visibleIndices.count > 1 else { continue }
             let usedSpace = items.sum { $0.size.breadth + $0.leadingSpace }
-            let distributedSpace = (availableSpace - usedSpace) / Double(visibleIndices.count - 1)
+            // Justification only ever stretches the gaps to fill leftover room. When a line's
+            // measured content already meets or exceeds the available space (e.g. a subview
+            // reports a larger size than it was proposed), there is nothing to distribute —
+            // clamp at zero so we never pull items together into an overlap.
+            let distributedSpace = max(0, (availableSpace - usedSpace) / Double(visibleIndices.count - 1))
             for itemIndex in visibleIndices.dropFirst() {
                 lines[lineIndex].item[itemIndex].leadingSpace += distributedSpace
             }

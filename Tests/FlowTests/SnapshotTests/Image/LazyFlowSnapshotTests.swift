@@ -50,7 +50,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_alignmentTop() {
@@ -61,7 +61,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 250)))
         }
 
         @Test func lazyHFlow_alignmentBottom() {
@@ -72,7 +72,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 250)))
         }
 
         @Test func lazyHFlow_compactSpacing() {
@@ -83,7 +83,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_spaciousSpacing() {
@@ -94,7 +94,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 250)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 250)))
         }
 
         @Test func lazyHFlow_justified() {
@@ -105,7 +105,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_distributeItemsEvenly() {
@@ -116,7 +116,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 320, height: 200)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 200)))
         }
 
         @Test func lazyHFlow_tagCloud() {
@@ -137,7 +137,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.9, size: CGSize(width: 320, height: 200)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 320, height: 200)))
         }
     }
 
@@ -154,7 +154,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 200, height: 320)))
         }
 
         @Test func lazyVFlow_alignmentLeading() {
@@ -165,7 +165,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 200, height: 320)))
         }
 
         @Test func lazyVFlow_alignmentTrailing() {
@@ -176,7 +176,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 200, height: 320)))
         }
 
         @Test func lazyVFlow_compactSpacing() {
@@ -187,7 +187,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 200, height: 320)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 200, height: 320)))
         }
 
         @Test func lazyVFlow_spaciousSpacing() {
@@ -198,7 +198,7 @@
             }
             .padding(12)
             .background(Color.white)
-            assertSnapshot(of: view, as: .image(perceptualPrecision: 0.95, size: CGSize(width: 250, height: 320)))
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 250, height: 320)))
         }
     }
 #endif

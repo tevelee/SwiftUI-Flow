@@ -5,16 +5,40 @@
     import SnapshotTesting
     @testable import Flow
 
-    // MARK: - macOS SwiftUI Image Strategy
-
     extension Snapshotting where Value: SwiftUI.View, Format == NSImage {
         @MainActor
-        static func image(precision: Float = 1, perceptualPrecision: Float = 1, size: CGSize) -> Snapshotting {
-            Snapshotting<NSView, NSImage>.image(precision: precision, perceptualPrecision: perceptualPrecision, size: size).pullback { view in
-                let hosting = NSHostingView(rootView: view.environment(\.colorScheme, .light))
-                hosting.frame.size = size
-                return hosting
-            }
+        static func image(size: CGSize) -> Snapshotting {
+            Snapshotting<NSView, NSImage>.image(size: size, scale: 1)
+                .pullback { NSHostingView(rootView: $0.environment(\.colorScheme, .light)) }
+        }
+    }
+
+    extension Snapshotting where Value == NSView, Format == NSImage {
+        fileprivate static func image(size: CGSize, scale: CGFloat) -> Snapshotting {
+            Snapshotting<NSImage, NSImage>.image()
+                .pullback { view in
+                    MainActor.assumeIsolated {
+                        view.frame = CGRect(origin: .zero, size: size)
+                        view.layoutSubtreeIfNeeded()
+                        let rep = NSBitmapImageRep(
+                            bitmapDataPlanes: nil,
+                            pixelsWide: Int((size.width * scale).rounded()),
+                            pixelsHigh: Int((size.height * scale).rounded()),
+                            bitsPerSample: 8,
+                            samplesPerPixel: 4,
+                            hasAlpha: true,
+                            isPlanar: false,
+                            colorSpaceName: .deviceRGB,
+                            bytesPerRow: 0,
+                            bitsPerPixel: 0
+                        )!
+                        rep.size = size
+                        view.cacheDisplay(in: view.bounds, to: rep)
+                        let image = NSImage(size: size)
+                        image.addRepresentation(rep)
+                        return image
+                    }
+                }
         }
     }
 

@@ -24,10 +24,15 @@ public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:t
     var itemSeparator: (() -> AnyView)?
     @usableFromInline
     var lineSeparator: (() -> AnyView)?
+    @usableFromInline
+    var maxLinesOverride: Int?
+    @usableFromInline
+    var overflowBuilder: ((Int) -> AnyView)?
 
     @Environment(\.flexibility) private var flexibility
     @Environment(\.maxLines) private var maxLines
     @StateObject private var state = SeparatorLineStructure()
+    @StateObject private var overflowState = SeparatorOverflowState()
 
     @inlinable
     init(
@@ -40,15 +45,32 @@ public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:t
         self.content = content
         self.itemSeparator = itemSeparator
         self.lineSeparator = lineSeparator
+        maxLinesOverride = nil
+        overflowBuilder = nil
     }
 
     public var body: some View {
-        let layout = makeLayout(maxLines)
+        let layout = makeLayout(maxLinesOverride ?? maxLines)
         // Line separators need to know the line structure; item separators do not, so only pay for the
         // reporter when line separators are configured.
         let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructureReporter(for: state)
+        let overflowStateRef = overflowState
         return layout {
             interleaved(reporter: reporter)
+            if let overflowBuilder {
+                overflowBuilder(overflowState.hiddenCount)
+                    .layoutValue(key: IsOverflowLayoutValueKey.self, value: true)
+                    .layoutValue(
+                        key: OverflowReporterKey.self,
+                        value: { count in
+                            Task { @MainActor in
+                                if overflowStateRef.hiddenCount != count {
+                                    overflowStateRef.hiddenCount = count
+                                }
+                            }
+                        }
+                    )
+            }
         }
     }
 
@@ -120,6 +142,11 @@ private final class SeparatorLineStructure: ObservableObject {
     @Published var lineOf: [Int] = []
 }
 
+@MainActor
+private final class SeparatorOverflowState: ObservableObject {
+    @Published var hiddenCount: Int = 0
+}
+
 /// Builds the reporter the layout calls with the line structure. The publish is deferred out of the
 /// layout pass (mutating `@Published` during a view update is disallowed) and guarded so the one-shot
 /// feedback settles instead of re-triggering. Mirrors the reporter pattern used by the overflow indicator.
@@ -133,9 +160,8 @@ private func lineStructureReporter(for state: SeparatorLineStructure) -> @Sendab
 
 // MARK: - Separator injection
 
-/// Emits the separators that follow the content item at `index`: an item separator in every gap, plus a
-/// line separator only where the layout reported a line break. Both are identified by their position in
-/// the reported line structure so identity stays stable as items rewrap across lines.
+/// Emits the separators that follow the content item at `index`: item and line separators live in
+/// every configured gap so the layout can decide which one is visible after line breaking.
 @ViewBuilder
 private func separators(
     afterIndex index: Int,
@@ -154,9 +180,9 @@ private func separators(
             .id(itemSeparatorIdentity(afterPosition: index, lineOf: lineOf, positionsInLine: positionsInLine))
             .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .itemSeparator)
     }
-    if let lineSeparator, isLineBoundary(after: index, lineOf: lineOf) {
+    if let lineSeparator {
         lineSeparator()
-            .id(LineSeparatorIdentity(boundary: lineOf[index + 1]))
+            .id(lineSeparatorIdentity(afterPosition: index, lineOf: lineOf))
             .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .lineSeparator)
     }
 }
@@ -195,13 +221,24 @@ private func itemSeparatorIdentity(afterPosition index: Int, lineOf: [Int], posi
     return ItemSeparatorIdentity(line: 0, positionInLine: index)
 }
 
+/// Positional identity for the line separator after content position `index`.
+/// Visible line separators use their visual boundary once line structure is known; hidden/bootstrap
+/// placeholders use the gap position so every gap contributes a distinct separator subview.
+private func lineSeparatorIdentity(afterPosition index: Int, lineOf: [Int]) -> LineSeparatorIdentity {
+    if isLineBoundary(after: index, lineOf: lineOf) {
+        return LineSeparatorIdentity(boundary: lineOf[index + 1], gap: nil)
+    }
+    return LineSeparatorIdentity(boundary: nil, gap: index)
+}
+
 private struct ItemSeparatorIdentity: Hashable {
     let line: Int
     let positionInLine: Int
 }
 
 private struct LineSeparatorIdentity: Hashable {
-    let boundary: Int
+    let boundary: Int?
+    let gap: Int?
 }
 
 /// `_VariadicView` fallback used before `Group(subviews:)` is available.
@@ -247,6 +284,7 @@ extension HFlow {
     /// ```
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @MainActor
     @inlinable
     public func itemSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
@@ -273,6 +311,7 @@ extension HFlow {
     /// ```
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @MainActor
     @inlinable
     public func lineSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
@@ -294,6 +333,7 @@ extension VFlow {
     /// at the top or bottom edge. Combine with ``lineSeparator(_:)`` to control both.
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @MainActor
     @inlinable
     public func itemSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
@@ -313,6 +353,7 @@ extension VFlow {
     /// never before the first or after the last. Combine with ``itemSeparator(_:)`` to control both.
     ///
     /// - Parameter separator: A view builder producing a single separator view.
+    @MainActor
     @inlinable
     public func lineSeparator<Separator: View>(
         @ViewBuilder _ separator: @escaping () -> Separator
@@ -343,5 +384,19 @@ extension _FlowWithSeparators {
         @ViewBuilder _ separator: @escaping () -> Separator
     ) -> _FlowWithSeparators {
         setting(lineSeparator: { AnyView(separator()) })
+    }
+
+    /// Caps the separated flow and appends an overflow view at the end of the last visible line.
+    /// See ``HFlow/maxLines(_:overflow:)``.
+    @MainActor
+    @inlinable
+    public func maxLines<Overflow: View>(
+        _ limit: Int,
+        @ViewBuilder overflow: @escaping (Int) -> Overflow
+    ) -> _FlowWithSeparators {
+        var copy = self
+        copy.maxLinesOverride = limit
+        copy.overflowBuilder = { AnyView(overflow($0)) }
+        return copy
     }
 }

@@ -278,6 +278,11 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     }
 
     @inlinable
+    nonisolated public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
+        layout.layout.refreshCache(&cache, subviews: subviews)
+    }
+
+    @inlinable
     nonisolated public static var layoutProperties: LayoutProperties {
         HFlowLayout.layoutProperties
     }

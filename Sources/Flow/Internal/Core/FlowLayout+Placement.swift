@@ -1,7 +1,7 @@
 import CoreFoundation
 import SwiftUI
 
-// Pipeline phase — placement (and the reporters that follow it).
+// Pipeline phase — placement, plus the reporters shared by measurement and placement.
 //
 // Walks the finished geometry and hands every subview to SwiftUI via `place(at:anchor:proposal:)`,
 // advancing the cursor by each block's leading space and size. Truncated subviews are parked
@@ -72,7 +72,12 @@ extension FlowLayout {
         guard let overflowIdx = cache.overflowSubviewIndex,
             let reporter = cache.subviewsCache[overflowIdx].overflowReporter
         else { return }
-        reporter(hidden.filter { $0 != overflowIdx }.count)
+        let count = hidden.filter {
+            $0 != overflowIdx
+                && cache.subviewsCache[$0].separatorRole == .content
+                && !cache.subviewsCache[$0].layoutValues.isLineBreak
+        }.count
+        reporter(count)
     }
 
     /// Reports the content line structure back to the view layer (the first content subview carries the

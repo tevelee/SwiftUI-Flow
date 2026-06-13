@@ -572,21 +572,15 @@ struct FlowCanvas: View {
     private var preview: some View {
         if settings.mode.isLazy, #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
             lazyPreview
-        } else if settings.hasSeparators {
-            separatedEagerPreview
         } else {
-            eagerLayout {
-                ForEach(items) { item in
-                    renderedItem(item)
-                }
-            }
+            eagerPreview
         }
     }
 
-    /// Separators live on the `HFlow` / `VFlow` view wrappers (they inject tagged subviews), so this
-    /// path uses the views directly instead of the generic `AnyLayout` canvas.
-    private var separatedEagerPreview: some View {
-        SeparatedEagerFlow(settings: settings) {
+    /// Overflow indicators and separators live on the `HFlow` / `VFlow` view wrappers, so the eager
+    /// preview uses the views directly instead of the generic `AnyLayout` canvas.
+    private var eagerPreview: some View {
+        EagerFlowPreview(settings: settings) {
             ForEach(items) { item in
                 renderedItem(item)
             }
@@ -658,39 +652,12 @@ struct FlowCanvas: View {
         }
     }
 
-    private var eagerLayout: AnyLayout {
-        switch settings.mode {
-            case .horizontal, .lazyHorizontal:
-                AnyLayout(
-                    HFlowLayout(
-                        horizontalAlignment: settings.horizontalAlignment.value,
-                        verticalAlignment: settings.verticalAlignment.value,
-                        horizontalSpacing: settings.itemSpacingValue,
-                        verticalSpacing: settings.lineSpacingValue,
-                        justified: settings.justified,
-                        distributeItemsEvenly: settings.distributeItemsEvenly
-                    ).withMaxLines(settings.maxLines)
-                )
-            case .vertical, .lazyVertical:
-                AnyLayout(
-                    VFlowLayout(
-                        horizontalAlignment: settings.horizontalAlignment.value,
-                        verticalAlignment: settings.verticalAlignment.value,
-                        horizontalSpacing: settings.lineSpacingValue,
-                        verticalSpacing: settings.itemSpacingValue,
-                        justified: settings.justified,
-                        distributeItemsEvenly: settings.distributeItemsEvenly
-                    ).withMaxLines(settings.maxLines)
-                )
-        }
-    }
-
     private func itemIndex(_ item: FlowItem) -> Int {
         items.firstIndex(where: { $0.id == item.id }).map { $0 + 1 } ?? 0
     }
 }
 
-private struct SeparatedEagerFlow<Content: View>: View {
+private struct EagerFlowPreview<Content: View>: View {
     let settings: FlowLabSettings
     @ViewBuilder let content: Content
 
@@ -725,17 +692,36 @@ private struct SeparatedEagerFlow<Content: View>: View {
     private func decorate(_ flow: HFlow<Content>) -> some View {
         switch (settings.itemSeparator.isVisible, settings.lineSeparator.isVisible) {
             case (true, true):
-                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
+                let decorated =
+                    flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
                     .lineSeparator { settings.lineSeparator.lineView(horizontalFlow: true) }
-                    .maxLines(settings.maxLines)
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (true, false):
-                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
-                    .maxLines(settings.maxLines)
+                let decorated = flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: true) }
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (false, true):
-                flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: true) }
-                    .maxLines(settings.maxLines)
+                let decorated = flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: true) }
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (false, false):
-                flow.maxLines(settings.maxLines)
+                capped(flow)
         }
     }
 
@@ -743,18 +729,75 @@ private struct SeparatedEagerFlow<Content: View>: View {
     private func decorate(_ flow: VFlow<Content>) -> some View {
         switch (settings.itemSeparator.isVisible, settings.lineSeparator.isVisible) {
             case (true, true):
-                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
+                let decorated =
+                    flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
                     .lineSeparator { settings.lineSeparator.lineView(horizontalFlow: false) }
-                    .maxLines(settings.maxLines)
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (true, false):
-                flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
-                    .maxLines(settings.maxLines)
+                let decorated = flow.itemSeparator { settings.itemSeparator.itemView(horizontalFlow: false) }
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (false, true):
-                flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: false) }
-                    .maxLines(settings.maxLines)
+                let decorated = flow.lineSeparator { settings.lineSeparator.lineView(horizontalFlow: false) }
+                if let maxLines = settings.maxLines {
+                    decorated.maxLines(maxLines) { count in
+                        FlowOverflowBadge(hiddenCount: count)
+                    }
+                } else {
+                    decorated
+                }
             case (false, false):
-                flow.maxLines(settings.maxLines)
+                capped(flow)
         }
+    }
+
+    @ViewBuilder
+    private func capped(_ flow: HFlow<Content>) -> some View {
+        if let maxLines = settings.maxLines {
+            flow.maxLines(maxLines) { count in
+                FlowOverflowBadge(hiddenCount: count)
+            }
+        } else {
+            flow
+        }
+    }
+
+    @ViewBuilder
+    private func capped(_ flow: VFlow<Content>) -> some View {
+        if let maxLines = settings.maxLines {
+            flow.maxLines(maxLines) { count in
+                FlowOverflowBadge(hiddenCount: count)
+            }
+        } else {
+            flow
+        }
+    }
+}
+
+private struct FlowOverflowBadge: View {
+    let hiddenCount: Int
+
+    var body: some View {
+        Text("+\(hiddenCount) more")
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .lineLimit(1)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.accentColor, in: Capsule())
+            .accessibilityLabel("\(hiddenCount) more items")
     }
 }
 

@@ -110,6 +110,11 @@ extension VFlowLayout: Layout {
     }
 
     @inlinable
+    public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
+        layout.refreshCache(&cache, subviews: subviews)
+    }
+
+    @inlinable
     public static var layoutProperties: LayoutProperties {
         var properties = LayoutProperties()
         properties.stackOrientation = .vertical

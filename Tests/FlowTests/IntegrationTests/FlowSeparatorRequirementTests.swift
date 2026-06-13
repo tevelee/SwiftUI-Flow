@@ -115,7 +115,7 @@ struct FlowSeparatorRequirementTests {
             size: 50 × 22,
             placements: [
                 .init(position: (0, 0), size: 50 × 10),  // c0
-                .init(position: (0, 100 + 1_000_000), size: 8 × 10),  // item separator parked off-screen
+                .init(position: (0, CGFloat(100 + 1_000_000)), size: 8 × 10),  // item separator parked off-screen
                 .init(position: (0, 10), size: 50 × 2),  // line separator drawn instead
                 .init(position: (0, 12), size: 50 × 10),  // c1
             ]

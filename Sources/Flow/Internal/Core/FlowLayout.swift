@@ -72,7 +72,8 @@ struct FlowLayout: Sendable {
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
-        let lines = resolveLayout(in: proposedSize, of: subviews, cache: &cache).lines
+        let result = resolveLayout(in: proposedSize, of: subviews, cache: &cache)
+        let lines = result.lines
         var size = lines.reduce(Size.zero) { acc, line in
             Size(breadth: max(acc.breadth, line.size.breadth), depth: acc.depth + line.size.depth + line.leadingSpace)
         }
@@ -81,6 +82,10 @@ struct FlowLayout: Sendable {
             size.breadth = proposedSize.value(on: axis)
         }
         rekeyLineBreaking(toResolvedBreadth: size.breadth, proposal: proposedSize, cache: &cache)
+        if proposedSize.value(on: axis).isFinite {
+            notifyOverflowReporter(hidden: result.hidden, cache: cache)
+            notifyLineStructureReporter(result.lineStructure, cache: cache)
+        }
         return CGSize(size: size, axis: axis)
     }
 
@@ -117,6 +122,11 @@ struct FlowLayout: Sendable {
     @usableFromInline
     func makeCache(_ subviews: some Subviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: axis)
+    }
+
+    @usableFromInline
+    func refreshCache(_ cache: inout FlowLayoutCache, subviews: some Subviews) {
+        cache = FlowLayoutCache(subviews, axis: axis)
     }
 
     /// When `sizeThatFits` was asked with an unbounded breadth, `placeSubviews` substitutes the actual
@@ -274,5 +284,10 @@ extension FlowLayout: Layout {
     @inlinable
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)
+    }
+
+    @inlinable
+    func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
+        refreshCache(&cache, subviews: subviews)
     }
 }

@@ -33,7 +33,7 @@ struct SeparatorRoleLayoutValueKey: LayoutValueKey {
     static let defaultValue: SeparatorRole = .content
 }
 
-/// Reporter the layout calls (once per placement pass) with the line index of every content item, so
+/// Reporter the layout calls with the line index of every content item, so
 /// the view layer can give line separators identity based on their *visual* position (which line
 /// boundary they sit on) rather than the content around them. Reporting is one-directional — line
 /// separators do not affect line breaking — so the feedback converges in a single pass.

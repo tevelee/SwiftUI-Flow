@@ -112,6 +112,13 @@ struct KnuthPlassSolver {
     var costs: [CGFloat]
     var breaks: [Int?]
     var sizeCache: SegmentSizingCache
+    /// Whether `chooseBestBreak` may stop as soon as a multi-item range overflows.
+    /// Widening a range by an earlier item grows its minimum width by that item's
+    /// (non-negative) size plus the following spacing, so with non-negative spacing
+    /// the minimum width is monotonic: once a range overflows, every wider range
+    /// overflows too. Negative spacing breaks that monotonicity — a wider range can
+    /// shrink back under the limit and fit — so we must keep scanning in that case.
+    let mayStopAtFirstOverflow: Bool
 
     @usableFromInline
     init(items: LineBreakingInput, availableSpace: CGFloat) {
@@ -120,6 +127,9 @@ struct KnuthPlassSolver {
         costs = Array(repeating: .infinity, count: items.count + 1)
         breaks = Array(repeating: nil, count: items.count + 1)
         sizeCache = SegmentSizingCache(items: items, availableSpace: availableSpace)
+        // Only the spacing between items (every spacing except the first item's, which
+        // never contributes to a line's width) can turn the minimum width non-monotonic.
+        mayStopAtFirstOverflow = items.dropFirst().allSatisfy { $0.spacing >= 0 }
     }
 
     @usableFromInline
@@ -140,10 +150,12 @@ struct KnuthPlassSolver {
             let range = start ..< end
             guard let candidateCost = candidateCost(for: range) else {
                 // A multi-item range that doesn't fit means all wider ranges (lower
-                // start values) also won't fit: overflow only grows, and structural
-                // violations (line-break / shouldStartInNewLine at non-first position)
-                // move further from position 0 as start decreases.
-                if range.count > 1 { break }
+                // start values) also won't fit: overflow only grows (when spacing is
+                // non-negative, see `mayStopAtFirstOverflow`), and structural violations
+                // (line-break / shouldStartInNewLine at non-first position) move further
+                // from position 0 as start decreases. Negative spacing can shrink a wider
+                // range back under the limit, so keep scanning when it is present.
+                if range.count > 1, mayStopAtFirstOverflow { break }
                 continue
             }
             if candidateCost < costs[end] {

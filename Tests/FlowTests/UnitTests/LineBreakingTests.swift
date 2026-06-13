@@ -484,6 +484,32 @@ struct LineBreakingTests {
             #expect(result.flatMap { $0 }.map(\.index) == [0, 1, 2])
         }
 
+        @Test func negativeSpacing_keepsItemsTogetherWhenWiderRangeFitsButInnerRangeOverflows() {
+            // A=60, B=60 (spacing -90), C=60 (spacing 0) in width 100.
+            // The inner range [B, C] overflows (min 120 > 100), but the full range
+            // [A, B, C] fits (min 180 - 90 = 90 <= 100) because of B's negative spacing.
+            // The solver must not stop scanning at the overflowing inner range, otherwise
+            // it splits the items across lines instead of keeping them together.
+            let items: [LineItemInput] = [
+                .init(size: .rigid(60), spacing: 0),
+                .init(size: .rigid(60), spacing: -90),
+                .init(size: .rigid(60), spacing: 0),
+            ]
+            let result = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 100)
+            #expect(
+                result == [
+                    [
+                        .init(index: 0, size: 60, leadingSpace: 0),
+                        .init(index: 1, size: 60, leadingSpace: -90),
+                        .init(index: 2, size: 60, leadingSpace: 0),
+                    ]
+                ],
+                "Negative spacing can let a wider range fit; the solver must keep these items on one line"
+            )
+            // Both breakers must agree on this layout.
+            #expect(result == FlowLineBreaker().wrapItemsToLines(items: items, in: 100))
+        }
+
         @Test func knuth_plass_infiniteSpace_honorsManualBreaks() {
             let sut = KnuthPlassLineBreaker()
             let result = sut.wrapItemsToLines(
@@ -575,6 +601,15 @@ struct LineBreakingTests {
                     .init(size: .rigid(10), spacing: 5),
                 ],
                 available: -10
+            ),
+            Scenario(
+                testDescription: "negative spacing — wider range fits though inner range overflows",
+                items: [
+                    .init(size: .rigid(60), spacing: 0),
+                    .init(size: .rigid(60), spacing: -90),
+                    .init(size: .rigid(60), spacing: 0),
+                ],
+                available: 100
             ),
         ])
         func bothBreakersAgree(scenario: Scenario) {

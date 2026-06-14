@@ -7,12 +7,8 @@ import CoreFoundation
 // dynamic programming over break points. ``SegmentSizingCache`` memoizes the per-segment sizing
 // (shared with the greedy path through ``LineSizer`` in `LineSizing.swift`).
 
-@usableFromInline
 struct KnuthPlassLineBreaker: LineBreaking {
-    @inlinable
-    init() {}
 
-    @inlinable
     func wrapItemsToLines(items: [MeasuredItem], in availableSpace: CGFloat) -> WrappedLines {
         // With unbounded space there is nothing to optimize: wrapping never reduces
         // the squared-leftover cost, so every candidate scores an infinite penalty and
@@ -26,7 +22,6 @@ struct KnuthPlassLineBreaker: LineBreaking {
     }
 }
 
-@usableFromInline
 struct KnuthPlassSolver {
     let items: [MeasuredItem]
     let availableSpace: CGFloat
@@ -41,7 +36,6 @@ struct KnuthPlassSolver {
     /// shrink back under the limit and fit — so we must keep scanning in that case.
     let mayStopAtFirstOverflow: Bool
 
-    @usableFromInline
     init(items: [MeasuredItem], availableSpace: CGFloat) {
         self.items = items
         self.availableSpace = availableSpace
@@ -53,7 +47,6 @@ struct KnuthPlassSolver {
         mayStopAtFirstOverflow = items.dropFirst().allSatisfy { $0.spacing >= 0 }
     }
 
-    @usableFromInline
     mutating func solve() -> WrappedLines {
         guard !items.isEmpty else {
             return []
@@ -143,14 +136,12 @@ struct KnuthPlassSolver {
     }
 }
 
-@usableFromInline
 struct SegmentSizingCache {
     let items: [MeasuredItem]
     let availableSpace: CGFloat
     private var computed: Set<Range<Int>> = []
     private var calculations: [Range<Int>: SizedLine] = [:]
 
-    @usableFromInline
     init(items: [MeasuredItem], availableSpace: CGFloat) {
         self.items = items
         self.availableSpace = availableSpace

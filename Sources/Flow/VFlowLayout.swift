@@ -1,9 +1,7 @@
 import SwiftUI
 
 /// A layout that arranges its children in a vertically flowing manner.
-@frozen
 public struct VFlowLayout {
-    @usableFromInline
     let layout: FlowLayout
 
     /// Creates a vertical flow layout with the given spacing and horizontal alignment.
@@ -20,7 +18,6 @@ public struct VFlowLayout {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
-    @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -50,7 +47,6 @@ public struct VFlowLayout {
     ///   - distributeItemsEvenly: Instead of prioritizing the first columns, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each column, while respecting their order.
-    @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
         verticalAlignment: VerticalAlignment,
@@ -71,21 +67,19 @@ public struct VFlowLayout {
 }
 
 extension VFlowLayout {
-    @usableFromInline
     init(layout: FlowLayout) {
         self.layout = layout
     }
 
-    /// Returns a copy of this layout capped to `maxLines` columns.
-    /// Items beyond the limit are hidden; pass `nil` to remove any cap.
-    @inlinable
-    public func withMaxLines(_ maxLines: Int?) -> VFlowLayout {
-        VFlowLayout(layout: layout.withMaxLines(maxLines))
+    /// Returns a copy whose engine runs exactly `features`. Used by the view-layer composers (in the
+    /// feature targets) to fold the feature list into the concrete layout without the core naming any
+    /// feature. `withMaxLines(_:)` now lives in `FlowLineLimit` (it builds a line-cap feature).
+    package func withFeatures(_ features: [any FlowLayoutFeature]) -> VFlowLayout {
+        VFlowLayout(layout: layout.withFeatures(features))
     }
 }
 
 extension VFlowLayout: Layout {
-    @inlinable
     public func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
@@ -94,7 +88,6 @@ extension VFlowLayout: Layout {
         layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 
-    @inlinable
     public func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -104,17 +97,14 @@ extension VFlowLayout: Layout {
         layout.placeSubviews(in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
-    @inlinable
     public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .vertical)
     }
 
-    @inlinable
     public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
         layout.refreshCache(&cache, subviews: subviews)
     }
 
-    @inlinable
     public static var layoutProperties: LayoutProperties {
         var properties = LayoutProperties()
         properties.stackOrientation = .vertical

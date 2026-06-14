@@ -19,7 +19,13 @@ let package = Package(
         .watchOS(.v9)
     ],
     products: [
-        .library(name: "Flow", targets: ["Flow"])
+        // Umbrella: the core engine plus every feature target.
+        .library(name: "Flow", targets: ["Flow", "FlowLineLimit", "FlowSeparators"]),
+        // The feature-free layout engine on its own.
+        .library(name: "FlowCore", targets: ["Flow"]),
+        // Individually composable features, each usable without the other.
+        .library(name: "FlowLineLimit", targets: ["FlowLineLimit"]),
+        .library(name: "FlowSeparators", targets: ["FlowSeparators"])
     ],
     dependencies: [],
     targets: [
@@ -30,9 +36,25 @@ let package = Package(
                 .enableExperimentalFeature("StrictConcurrency")
             ]
         ),
+        .target(
+            name: "FlowLineLimit",
+            dependencies: ["Flow"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
+        ),
+        .target(
+            name: "FlowSeparators",
+            dependencies: ["Flow"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
+        ),
         .testTarget(
             name: "FlowTests",
-            dependencies: ["Flow"],
+            dependencies: ["Flow", "FlowLineLimit", "FlowSeparators"],
             exclude: [
                 "README.md",
                 "PropertyTests"

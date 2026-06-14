@@ -1,49 +1,50 @@
+import Flow
 import SwiftUI
 
-// MARK: - Feature composition
+// MARK: - Composer
 
-/// (Internal.) Composes flow content with feature-generated subviews that must be siblings in one layout pass.
-/// Created by `HFlow.body` / `VFlow.body` when separator injection is configured.
+/// The ``FlowComposer`` the separator modifiers register into the composition chain. It reads the
+/// separator environment, contributes a ``SeparatorFeature`` to the engine, and interleaves separator
+/// subviews into the content so the layout can measure and place them as siblings of the content.
+///
+/// Runs at a higher ``priority`` than line capping (``FlowLineLimit``), so capping's output-seam
+/// truncation happens before separators are materialized, and so this transform sits *inside* any
+/// overflow indicator — keeping that indicator the last subview the layout sees.
+struct SeparatorComposer: FlowComposer {
+    var priority: Int { 1 }
+
+    @MainActor
+    func makeBody(
+        content: AnyView,
+        next: @escaping @MainActor ([any FlowLayoutFeature], AnyView) -> AnyView
+    ) -> AnyView {
+        AnyView(SeparatorComposition(content: content, next: next))
+    }
+}
+
+// MARK: - Separator injection
+
+/// Composes flow content with separator subviews that must be siblings in one layout pass.
 ///
 /// Item separators are anchored to the content pair they sit between; line separators are anchored to
 /// the *visual* line boundary they fill (reported back by the layout), so a divider stays the same view
 /// as content rewraps through it instead of jumping. Enumeration uses `Group(subviews:)` where available
-/// and falls back to `_VariadicView` on earlier systems. If line capping also supplies an overflow
-/// indicator, it is appended here so the layout can measure and place all generated children together.
-@usableFromInline
-struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this type_name
-    @usableFromInline
-    let makeLayout: (Int?) -> AnyLayout
-    @usableFromInline
-    let content: Content
+/// and falls back to `_VariadicView` on earlier systems.
+private struct SeparatorComposition: View {
+    let content: AnyView
+    let next: @MainActor ([any FlowLayoutFeature], AnyView) -> AnyView
 
-    @Environment(\.flexibility) private var flexibility
-    @Environment(\.maxLines) private var maxLines
     @Environment(\._flowItemSeparator) private var itemSeparator
     @Environment(\._flowLineSeparator) private var lineSeparator
-    @Environment(\._flowOverflowBuilder) private var overflowBuilder
     @StateObject private var lineStructure = Reported<[Int]>([])
-    @StateObject private var overflowCount = Reported(0)
 
-    @usableFromInline
-    init(makeLayout: @escaping (Int?) -> AnyLayout, content: Content) {
-        self.makeLayout = makeLayout
-        self.content = content
-    }
-
-    @usableFromInline
     var body: some View {
-        let layout = makeLayout(maxLines)
+        let features: [any FlowLayoutFeature] =
+            (itemSeparator != nil || lineSeparator != nil) ? [SeparatorFeature()] : []
         // Line separators need to know the line structure; item separators do not, so only pay for the
         // reporter when line separators are configured.
         let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructure.reporter()
-        return layout {
-            interleaved(reporter: reporter)
-            if let overflowBuilder {
-                overflowBuilder(overflowCount.value)
-                    .overflowIndicator(reporter: overflowCount.reporter())
-            }
-        }
+        return next(features, AnyView(interleaved(reporter: reporter)))
     }
 
     @ViewBuilder
@@ -52,14 +53,13 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
         // referenced safely inside @ViewBuilder and Group(subviews:) closures.
         let itemSep = itemSeparator
         let lineSep = lineSeparator
+        // Reset the composition chain (and this feature's environment) so nested flows don't inherit it.
         let tagged =
             content
-            .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
             .layoutValue(key: LineStructureReporterKey.self, value: reporter)
-            .environment(\.maxLines, nil)
+            .environment(\.flowComposers, [])
             .environment(\._flowItemSeparator, nil)
             .environment(\._flowLineSeparator, nil)
-            .environment(\._flowOverflowBuilder, nil)
         if itemSep != nil || lineSep != nil {
             // `Group(subviews:)` ships in the Xcode 16 SDK (Swift 6+); earlier toolchains fall back to the
             // `_VariadicView` SPI, which behaves the same back to the minimum deployment targets.
@@ -96,8 +96,6 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
         }
     }
 }
-
-// MARK: - Separator injection
 
 /// The shared body of both interleaving paths (``Group(subviews:)`` and the ``_VariadicView``
 /// fallback): emit each element followed by the separators for the gap after it, except after the last.
@@ -144,11 +142,13 @@ private func separators(
         itemSeparator()
             .id(itemSeparatorIdentity(afterPosition: index, lineOf: lineOf, positionsInLine: positionsInLine))
             .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .itemSeparator)
+            .layoutValue(key: IsAuxiliaryLayoutValueKey.self, value: true)
     }
     if let lineSeparator {
         lineSeparator()
             .id(lineSeparatorIdentity(afterPosition: index, lineOf: lineOf))
             .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .lineSeparator)
+            .layoutValue(key: IsAuxiliaryLayoutValueKey.self, value: true)
     }
 }
 

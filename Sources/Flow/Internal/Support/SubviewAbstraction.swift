@@ -1,12 +1,10 @@
 import SwiftUI
 
-@usableFromInline
-protocol Subviews: RandomAccessCollection where Element: Subview, Index == Int {}
+package protocol Subviews: RandomAccessCollection where Element: Subview, Index == Int {}
 
 extension LayoutSubviews: Subviews {}
 
-@usableFromInline
-protocol Subview {
+package protocol Subview {
     var spacing: ViewSpacing { get }
     var priority: Double { get }
     func sizeThatFits(_ proposal: ProposedViewSize) -> CGSize
@@ -18,37 +16,34 @@ protocol Subview {
 // SwiftUI also defines a `Subview` type starting in newer SDK versions. Tests should
 // use these typealiases to avoid ambiguity when `@testable import Flow` is combined with
 // `import SwiftUI`.
-@usableFromInline typealias FlowSubview = Subview
-@usableFromInline typealias FlowSubviews = Subviews
+package typealias FlowSubview = Subview
+package typealias FlowSubviews = Subviews
 
 extension LayoutSubview: Subview {
-    @usableFromInline
-    func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
+    package func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
         dimensions(in: proposal)
     }
 }
 
-@usableFromInline
-protocol Dimensions {
+package protocol Dimensions {
     var width: CGFloat { get }
     var height: CGFloat { get }
 
     subscript(guide: HorizontalAlignment) -> CGFloat { get }
     subscript(guide: VerticalAlignment) -> CGFloat { get }
 }
+
 extension ViewDimensions: Dimensions {}
 
 extension Dimensions {
-    @usableFromInline
-    func size(on axis: Axis) -> Size {
+    package func size(on axis: Axis) -> Size {
         Size(
             breadth: value(on: axis),
             depth: value(on: axis.perpendicular)
         )
     }
 
-    @usableFromInline
-    func value(on axis: Axis) -> CGFloat {
+    package func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: width
             case .vertical: height

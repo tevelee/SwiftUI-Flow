@@ -1,6 +1,7 @@
 import Testing
 
 @testable import Flow
+@testable import FlowSeparators
 
 @Suite(.tags(.requirements))
 struct SeparatorPlanTests {

@@ -1,12 +1,12 @@
 import CoreFoundation
 import SwiftUI
 
-// Pipeline phase — placement, plus the reporters shared by measurement and placement.
+// Pipeline phase — placement.
 //
 // Walks the finished geometry and hands every subview to SwiftUI via `place(at:anchor:proposal:)`,
 // advancing the cursor by each block's leading space and size. Truncated subviews are parked
-// off-screen. Afterwards the reporters feed structural facts (overflow count, line structure) back to
-// the view layer.
+// off-screen. Feeding structural facts back to the view layer (overflow count, line structure) is the
+// job of the optional features themselves, via ``FlowFeatureSession/report(_:)``.
 
 extension FlowLayout {
     /// Advances `target` along `axis` for one ``Spaced`` block: add its leading space, run `body` at
@@ -63,32 +63,6 @@ extension FlowLayout {
         let sentinel = CGPoint(x: bounds.minX, y: bounds.maxY + hiddenSubviewOffset).finite(or: 0)
         for index in indices {
             subviews[index].place(at: sentinel, anchor: .topLeading, proposal: .zero)
-        }
-    }
-
-    // MARK: - Reporting
-
-    func notifyOverflowReporter(hidden: [Int], cache: FlowLayoutCache) {
-        guard let overflowIdx = cache.overflowSubviewIndex,
-            let reporter = cache.subviewsCache[overflowIdx].overflowReporter
-        else { return }
-        let count = hidden.filter {
-            $0 != overflowIdx
-                && cache.subviewsCache[$0].separatorRole == .content
-                && !cache.subviewsCache[$0].layoutValues.isLineBreak
-        }.count
-        reporter(count)
-    }
-
-    /// Reports the content line structure back to the view layer (the first content subview carries the
-    /// reporter) so line separators can take identity from their visual position.
-    func notifyLineStructureReporter(_ lineStructure: [Int]?, cache: FlowLayoutCache) {
-        guard let lineStructure else { return }
-        for subviewCache in cache.subviewsCache {
-            if let reporter = subviewCache.lineStructureReporter {
-                reporter(lineStructure)
-                return
-            }
         }
     }
 }

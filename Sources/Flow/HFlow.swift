@@ -22,11 +22,8 @@ import SwiftUI
 /// too expensive, see ``LazyHFlow``, which provides lazy rendering at the cost
 /// of exact flow layout (items are placed in a uniform adaptive grid instead).
 ///
-@frozen
 public struct HFlow<Content: View>: View {
-    @usableFromInline
     let layout: HFlowLayout
-    @usableFromInline
     let content: Content
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
@@ -44,7 +41,6 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -76,7 +72,6 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -107,7 +102,6 @@ public struct HFlow<Content: View>: View {
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
         verticalAlignment: VerticalAlignment,
@@ -128,30 +122,22 @@ public struct HFlow<Content: View>: View {
         )
     }
 
-    @usableFromInline
-    @Environment(\.flexibility) var flexibility
-    @usableFromInline
-    @Environment(\.maxLines) var _maxLinesCap
-    @usableFromInline
-    @Environment(\._flowItemSeparator) var _itemSeparator
-    @usableFromInline
-    @Environment(\._flowLineSeparator) var _lineSeparator
-    @usableFromInline
-    @Environment(\._flowOverflowBuilder) var _overflowBuilder
+    @Environment(\.flexibility) private var flexibility
+    @Environment(\.flowComposers) private var flowComposers
 
-    @inlinable
     public var body: some View {
-        if _itemSeparator != nil || _lineSeparator != nil {
-            _FlowFeatureComposition(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
-        } else if let overflowBuilder = _overflowBuilder {
-            _FlowWithOverflow(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content, overflowBuilder: overflowBuilder)
+        let tagged = content.layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
+        // The engine knows nothing about features: if any feature registered a composer (via its
+        // modifier, in a feature target), hand off body construction to the composer chain; otherwise
+        // lay the content out plainly. The composers fold their feature list back in via `makeLayout`.
+        if flowComposers.isEmpty {
+            layout { tagged }
         } else {
-            let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
-            effectiveLayout {
-                content
-                    .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-                    .environment(\.maxLines, nil)
-            }
+            composeFlowBody(
+                composers: flowComposers,
+                makeLayout: { features in AnyLayout(layout.withFeatures(features)) },
+                content: AnyView(tagged)
+            )
         }
     }
 }
@@ -175,7 +161,6 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -206,7 +191,6 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -235,7 +219,6 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
         verticalAlignment: VerticalAlignment,
@@ -256,7 +239,6 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         }
     }
 
-    @inlinable
     nonisolated public func sizeThatFits(
         proposal: ProposedViewSize,
         subviews: LayoutSubviews,
@@ -269,7 +251,6 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         )
     }
 
-    @inlinable
     nonisolated public func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -284,17 +265,14 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
         )
     }
 
-    @inlinable
     nonisolated public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
-    @inlinable
     nonisolated public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
         layout.layout.refreshCache(&cache, subviews: subviews)
     }
 
-    @inlinable
     nonisolated public static var layoutProperties: LayoutProperties {
         HFlowLayout.layoutProperties
     }

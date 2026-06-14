@@ -7,20 +7,12 @@ import Foundation
 /// the structural rules around line breaks) and, if so, resolves each item's breadth — distributing
 /// any leftover space by layout priority and flexibility. Both ``GreedyLineBreaker`` and
 /// ``KnuthPlassLineBreaker`` size every candidate line through this one type.
-@usableFromInline
 struct LineSizer {
-    @usableFromInline
     let availableSpace: CGFloat
-
-    @inlinable
-    init(availableSpace: CGFloat) {
-        self.availableSpace = availableSpace
-    }
 
     /// The fitted line for `items`, or `nil` when they cannot fit — their minimum widths exceed the
     /// available space, or a structural rule forbids them sharing a line (a line break or a
     /// `shouldStartInNewLine` item anywhere but first).
-    @inlinable
     func sizes(of items: IndexedMeasuredItems) -> SizedLine? {
         guard let items = normalizedItemsForSizing(items) else {
             return nil
@@ -41,21 +33,18 @@ struct LineSizer {
     }
 
     /// The fitted line when `items` fit, otherwise the minimum-size fallback — always returns a line.
-    @usableFromInline
     func resolvedLine(_ items: IndexedMeasuredItems) -> WrappedLine {
         sizes(of: items)?.items ?? fallbackLine(items)
     }
 
     /// Places items at their minimum sizes when the normal sizing constraints cannot be satisfied
     /// (e.g. an item wider than the available space).
-    @inlinable
     func fallbackLine(_ items: IndexedMeasuredItems) -> WrappedLine {
         items.enumerated().map { i, item in
             WrappedItem(index: item.offset, size: item.element.size.lowerBound, leadingSpace: i == 0 ? 0 : item.element.spacing)
         }
     }
 
-    @usableFromInline
     func normalizedItemsForSizing(_ items: IndexedMeasuredItems) -> IndexedMeasuredItems? {
         guard !items.isEmpty else {
             return nil
@@ -80,17 +69,14 @@ struct LineSizer {
         return normalized
     }
 
-    @usableFromInline
     func totalMinimumSize(of items: IndexedMeasuredItems) -> CGFloat {
         items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
     }
 
-    @usableFromInline
     func roundingTolerance(for totalMinimumSize: CGFloat) -> CGFloat {
         max(totalMinimumSize.magnitude, availableSpace.magnitude, 1) * CGFloat.ulpOfOne
     }
 
-    @usableFromInline
     func maximumFlexItemsFit(_ items: IndexedMeasuredItems, remainingSpace: CGFloat) -> Bool {
         // Each `.maximum` item wants to grow toward filling the line; account for their
         // growth cumulatively so several of them on one segment cannot each claim the
@@ -107,7 +93,6 @@ struct LineSizer {
         return true
     }
 
-    @usableFromInline
     func distributeRemainingSpace(
         in items: IndexedMeasuredItems,
         remainingSpace: inout CGFloat
@@ -137,5 +122,4 @@ struct LineSizer {
 }
 
 /// A fitted line: the resolved items plus the breadth left over after placing them.
-@usableFromInline
 typealias SizedLine = (items: WrappedLine, remainingSpace: CGFloat)

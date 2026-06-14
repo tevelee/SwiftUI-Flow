@@ -20,19 +20,13 @@ import SwiftUI
 ///     }
 ///
 @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
-@frozen
 public struct LazyVFlow<LayoutContent: View>: View {
-    @usableFromInline
     let count: Int
-    @usableFromInline
     let layout: VFlowLayout
-    @usableFromInline
     let makeContent: (Int) -> LayoutContent
 
-    @usableFromInline
     @Environment(\.flexibility) var flexibility
 
-    @usableFromInline
     init(count: Int, layout: VFlowLayout, makeContent: @escaping (Int) -> LayoutContent) {
         self.count = count
         self.layout = layout
@@ -52,7 +46,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
-    @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
         alignment: HorizontalAlignment = .center,
@@ -85,7 +78,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
-    @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
         alignment: HorizontalAlignment = .center,
@@ -117,7 +109,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
-    @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
         horizontalAlignment: HorizontalAlignment,
@@ -157,7 +148,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -192,7 +182,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
@@ -224,7 +213,6 @@ public struct LazyVFlow<LayoutContent: View>: View {
     ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
     ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
-    @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
         verticalAlignment: VerticalAlignment,

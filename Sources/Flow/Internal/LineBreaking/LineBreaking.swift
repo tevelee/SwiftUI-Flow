@@ -13,22 +13,14 @@ import CoreFoundation
 
 /// One item as the breaker sees it: a breadth range it may occupy, the spacing before it, and the
 /// layout flags that constrain where it can go.
-@usableFromInline
-struct MeasuredItem: Sendable {
-    @usableFromInline
-    var size: ClosedRange<CGFloat>
-    @usableFromInline
-    var spacing: CGFloat
-    @usableFromInline
-    var priority: Double = 0
-    @usableFromInline
-    var flexibility: FlexibilityBehavior = .natural
-    @usableFromInline
-    var isLineBreakView: Bool = false
-    @usableFromInline
-    var shouldStartInNewLine: Bool = false
+package struct MeasuredItem: Sendable {
+    package var size: ClosedRange<CGFloat>
+    package var spacing: CGFloat
+    package var priority: Double = 0
+    package var flexibility: FlexibilityBehavior = .natural
+    package var isLineBreakView: Bool = false
+    package var shouldStartInNewLine: Bool = false
     /// How much breadth the item can still gain beyond its minimum (zero when it must stay minimal).
-    @inlinable
     var growingPotential: Double {
         guard flexibility == .minimum else {
             return size.upperBound - size.lowerBound
@@ -38,17 +30,12 @@ struct MeasuredItem: Sendable {
 }
 
 /// One item placed on a wrapped line: which subview it is, its resolved breadth, and the space before it.
-@usableFromInline
-struct WrappedItem: Equatable {
-    @usableFromInline
-    let index: Int
-    @usableFromInline
-    var size: CGFloat
-    @usableFromInline
-    var leadingSpace: CGFloat
+package struct WrappedItem: Equatable {
+    package let index: Int
+    package var size: CGFloat
+    package var leadingSpace: CGFloat
 
-    @inlinable
-    init(index: Int, size: CGFloat, leadingSpace: CGFloat) {
+    package init(index: Int, size: CGFloat, leadingSpace: CGFloat) {
         self.index = index
         self.size = size
         self.leadingSpace = leadingSpace
@@ -56,20 +43,15 @@ struct WrappedItem: Equatable {
 }
 
 /// One wrapped line.
-@usableFromInline
-typealias WrappedLine = [WrappedItem]
+package typealias WrappedLine = [WrappedItem]
 
 /// All the wrapped lines a breaker produces.
-@usableFromInline
-typealias WrappedLines = [WrappedLine]
+package typealias WrappedLines = [WrappedLine]
 
 /// Measured items carrying their original positions, used while sizing a candidate line.
-@usableFromInline
 typealias IndexedMeasuredItems = [(offset: Int, element: MeasuredItem)]
 
 /// Wraps a flat run of measured items into lines that each fit `availableSpace`.
-@usableFromInline
 protocol LineBreaking {
-    @inlinable
     func wrapItemsToLines(items: [MeasuredItem], in availableSpace: CGFloat) -> WrappedLines
 }

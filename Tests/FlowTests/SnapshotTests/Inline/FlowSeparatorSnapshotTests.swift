@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 
 @testable import Flow
+@testable import FlowSeparators
 
 @Suite(.tags(.snapshot))
 struct SeparatorSnapshots {

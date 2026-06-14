@@ -1,18 +1,35 @@
 import CoreFoundation
+import Flow
 import SwiftUI
 
-/// The separator feature: draws separators between items and between lines, much as ``LineCap``
-/// handles line limits. ``FlowLayout`` calls it at the two pipeline seams:
+/// The separator feature: draws separators between items and between lines. All of it lives here so the
+/// core ``FlowLayout`` engine stays unaware of separators — it sees only an opaque ``FlowLayoutFeature``.
 ///
-/// * ``foldIntoContent(_:)`` (input seam) reduces the breaker input to content items only, folding
-///   each item separator's breadth into the following item's spacing so wrapping accounts for it
-///   while the breaker stays separator-agnostic.
-/// * ``materialize(in:justified:proposal:)`` (output seam) re-materializes those separators once the
-///   lines are known — item separators as ordinary in-line items, line separators as their own
-///   single-item lines — so the core line-construction code treats them like any other subview.
+/// ``makeSession(subviews:cache:context:)`` builds a ``SeparatorLayout`` session only when a subview
+/// actually carries a non-`content` ``SeparatorRole``; otherwise it returns `nil` and the feature sits
+/// the pass out, so flows without separators incur no extra work.
+struct SeparatorFeature: FlowLayoutFeature {
+
+    func makeSession(
+        subviews: some Subviews,
+        cache: FlowLayoutCache,
+        context: FlowFeatureContext
+    ) -> (any FlowFeatureSession)? {
+        SeparatorLayout(subviews: subviews, cache: cache, context: context)
+    }
+}
+
+/// The per-pass worker for ``SeparatorFeature``. ``FlowLayout`` folds it in at the two pipeline seams:
 ///
-/// Created only when a subview carries a non-`content` ``SeparatorRole`` (see ``init?(cache:axis:itemSpacing:)``).
-struct SeparatorLayout {
+/// * ``adaptInput(_:)`` reduces the breaker input to content items only, folding each item separator's
+///   breadth into the following item's spacing so wrapping accounts for it while the breaker stays
+///   separator-agnostic.
+/// * ``adaptOutput(_:)`` re-materializes those separators once the lines are known — item separators as
+///   ordinary in-line items, line separators as their own single-item lines — so the core
+///   line-construction code treats them like any other subview.
+/// * ``report(_:)`` feeds the content line structure back to the view layer so line separators can take
+///   identity from their visual position.
+struct SeparatorLayout: FlowFeatureSession {
     /// An item separator to draw in-line between two items on the same line.
     private struct ItemSeparator {
         var index: Int
@@ -23,25 +40,48 @@ struct SeparatorLayout {
     private let plan: SeparatorPlan
     private let axis: Axis
     private let itemSpacing: CGFloat?
+    private let justified: Bool
+    private let proposal: ProposedViewSize
     private let cache: FlowLayoutCache
+    /// Reporter the view layer set on a content subview; called with the content line structure.
+    private let lineStructureReporter: (@Sendable ([Int]) -> Void)?
 
-    init?(cache: FlowLayoutCache, axis: Axis, itemSpacing: CGFloat?) {
-        guard cache.hasSeparators else { return nil }
+    init?(subviews: some Subviews, cache: FlowLayoutCache, context: FlowFeatureContext) {
+        let roles = subviews.map { $0[SeparatorRoleLayoutValueKey.self] }
+        guard roles.contains(where: { $0.isSeparator }) else { return nil }
         plan = SeparatorPlan(
-            roles: cache.subviewsCache.map(\.separatorRole),
+            roles: roles,
             isLineBreak: cache.subviewsCache.map { $0.layoutValues.isLineBreak }
         )
-        self.axis = axis
-        self.itemSpacing = itemSpacing
+        axis = context.axis
+        itemSpacing = context.itemSpacing
+        justified = context.justified
+        proposal = context.proposal
         self.cache = cache
+        lineStructureReporter = subviews.lazy.compactMap { $0[LineStructureReporterKey.self] }.first
+    }
+
+    // MARK: - Seams
+
+    func adaptInput(_ input: BreakerInput) -> BreakerInput {
+        foldIntoContent(input)
+    }
+
+    func adaptOutput(_ lines: WrappedLines) -> LineAdaptation {
+        materialize(in: lines)
+    }
+
+    func report(_ result: FlowLayoutResult) {
+        guard let lineStructureReporter, let lineStructure = result.lineStructure else { return }
+        lineStructureReporter(lineStructure)
     }
 
     // MARK: - Input seam
 
     /// Reduces the breaker input to content items only: each content item keeps its sizing but its
     /// leading spacing folds in the preceding item separator's breadth. Separator subviews are dropped
-    /// from line breaking entirely and re-materialized in ``materialize(in:justified:proposal:)``.
-    func foldIntoContent(_ input: BreakerInput) -> BreakerInput {
+    /// from line breaking entirely and re-materialized in ``materialize(in:)``.
+    private func foldIntoContent(_ input: BreakerInput) -> BreakerInput {
         let itemBySubview = Dictionary(uniqueKeysWithValues: zip(input.subviewIndices, input.items))
         var items: [MeasuredItem] = []
         var subviewIndices: [Int] = []
@@ -76,13 +116,9 @@ struct SeparatorLayout {
     /// Re-materializes separators into the wrapped content lines: an item separator before each
     /// eligible non-first item on a line, and a line separator as its own single-item line at each
     /// break boundary. Records the content line structure and hides any separators left unused.
-    func materialize(
-        in lines: WrappedLines,
-        justified: Bool,
-        proposal: ProposedViewSize
-    ) -> LineAdaptation {
+    private func materialize(in lines: WrappedLines) -> LineAdaptation {
         let structure = lineStructure(of: lines)
-        let breadth = lineSeparatorBreadth(for: lines, justified: justified, proposal: proposal)
+        let breadth = lineSeparatorBreadth(for: lines)
 
         var result: WrappedLines = []
         result.reserveCapacity(lines.count * 2)
@@ -130,7 +166,7 @@ struct SeparatorLayout {
 
     /// The breadth proposed to line separators: the justified width when justifying, otherwise the
     /// widest content line, so a full-width separator (e.g. a `Divider`) spans the laid-out content.
-    private func lineSeparatorBreadth(for lines: WrappedLines, justified: Bool, proposal: ProposedViewSize) -> CGFloat {
+    private func lineSeparatorBreadth(for lines: WrappedLines) -> CGFloat {
         if justified, proposal.value(on: axis).isFinite {
             return proposal.value(on: axis)
         }

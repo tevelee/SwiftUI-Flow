@@ -6,17 +6,20 @@ import SwiftUI
 /// `@Published` state during a SwiftUI update is disallowed, so ``reporter()`` defers the publish
 /// to the next main-actor turn and skips it when the value is unchanged. Held as a `@StateObject`
 /// so the reference survives body re-evaluations.
+///
+/// Lives in the core so each feature target (`FlowLineLimit`, `FlowSeparators`) can hold its own
+/// reporter without depending on the other.
 @MainActor
-final class Reported<Value: Equatable & Sendable>: ObservableObject {
-    @Published var value: Value
+package final class Reported<Value: Equatable & Sendable>: ObservableObject {
+    @Published package var value: Value
 
-    init(_ value: Value) {
+    package init(_ value: Value) {
         self.value = value
     }
 
     /// A `@Sendable` reporter the layout calls with a new value; deferred out of the layout pass and
     /// guarded against redundant publishes.
-    func reporter() -> @Sendable (Value) -> Void {
+    package func reporter() -> @Sendable (Value) -> Void {
         { value in
             Task { @MainActor in
                 if self.value != value { self.value = value }

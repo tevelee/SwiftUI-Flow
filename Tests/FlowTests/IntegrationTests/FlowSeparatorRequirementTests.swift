@@ -3,6 +3,7 @@ import SwiftUI
 import Testing
 
 @testable import Flow
+@testable import FlowSeparators
 
 @Suite(.tags(.requirements))
 struct FlowSeparatorRequirementTests {
@@ -134,7 +135,14 @@ struct FlowSeparatorRequirementTests {
         )
         // subview order: c0(0), lineSep(1), c1(2), lineSep(3), c2(4)  →  contentIndices = [0, 2, 4]
         let cache = FlowLayoutCache(subviews, axis: .horizontal)
-        let separators = SeparatorLayout(cache: cache, axis: .horizontal, itemSpacing: 0)!
+        let context = FlowFeatureContext(
+            axis: .horizontal,
+            itemSpacing: 0,
+            justified: false,
+            proposal: .unspecified,
+            availableBreadth: .infinity
+        )
+        let separators = SeparatorLayout(subviews: subviews, cache: cache, context: context)!
 
         let visible: WrappedLines = [
             [WrappedItem(index: 0, size: 10, leadingSpace: 0)],

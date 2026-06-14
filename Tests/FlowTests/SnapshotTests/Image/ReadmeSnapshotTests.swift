@@ -4,6 +4,8 @@
     import Testing
     import SnapshotTesting
     @testable import Flow
+    @testable import FlowLineLimit
+    @testable import FlowSeparators
 
     @Suite(.tags(.snapshot, .imageSnapshot, .readmeSnapshot))
     @MainActor

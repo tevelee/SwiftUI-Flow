@@ -7,7 +7,6 @@ import SwiftUI
 /// part in line breaking, which are drawn in-line, which are drawn between lines, and which are
 /// dropped. When no subview carries a non-`content` role the entire separator pipeline is skipped,
 /// so flows without separators behave exactly as before.
-@usableFromInline
 enum SeparatorRole: Sendable, Hashable {
     /// A regular content item supplied by the caller.
     case content
@@ -18,7 +17,6 @@ enum SeparatorRole: Sendable, Hashable {
 
     /// Whether this role is a separator (as opposed to content). Used from `@inlinable` cache code,
     /// so it avoids relying on the synthesized `Equatable` conformance there.
-    @usableFromInline
     var isSeparator: Bool {
         switch self {
             case .content: false
@@ -27,9 +25,7 @@ enum SeparatorRole: Sendable, Hashable {
     }
 }
 
-@usableFromInline
 struct SeparatorRoleLayoutValueKey: LayoutValueKey {
-    @usableFromInline
     static let defaultValue: SeparatorRole = .content
 }
 
@@ -37,9 +33,7 @@ struct SeparatorRoleLayoutValueKey: LayoutValueKey {
 /// the view layer can give line separators identity based on their *visual* position (which line
 /// boundary they sit on) rather than the content around them. Reporting is one-directional — line
 /// separators do not affect line breaking — so the feedback converges in a single pass.
-@usableFromInline
 struct LineStructureReporterKey: LayoutValueKey {
-    @usableFromInline
     static let defaultValue: (@Sendable ([Int]) -> Void)? = nil
 }
 

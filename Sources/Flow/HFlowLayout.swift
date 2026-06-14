@@ -1,9 +1,7 @@
 import SwiftUI
 
 /// A layout that arranges its children in a horizontally flowing manner.
-@frozen
 public struct HFlowLayout: Sendable {
-    @usableFromInline
     let layout: FlowLayout
 
     /// Creates a horizontal flow with the given spacing and vertical alignment.
@@ -20,7 +18,6 @@ public struct HFlowLayout: Sendable {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable
     public init(
         alignment: VerticalAlignment = .center,
         itemSpacing: CGFloat? = nil,
@@ -50,7 +47,6 @@ public struct HFlowLayout: Sendable {
     ///   - distributeItemsEvenly: Instead of prioritizing the first rows, this
     ///     mode tries to distribute items more evenly by minimizing the empty
     ///     spaces left in each row, while respecting their order.
-    @inlinable
     public init(
         horizontalAlignment: HorizontalAlignment,
         verticalAlignment: VerticalAlignment,
@@ -71,41 +67,35 @@ public struct HFlowLayout: Sendable {
 }
 
 extension HFlowLayout {
-    @usableFromInline
     init(layout: FlowLayout) {
         self.layout = layout
     }
 
-    /// Returns a copy of this layout capped to `maxLines` rows.
-    /// Items beyond the limit are hidden; pass `nil` to remove any cap.
-    @inlinable
-    public func withMaxLines(_ maxLines: Int?) -> HFlowLayout {
-        HFlowLayout(layout: layout.withMaxLines(maxLines))
+    /// Returns a copy whose engine runs exactly `features`. Used by the view-layer composers (in the
+    /// feature targets) to fold the feature list into the concrete layout without the core naming any
+    /// feature. `withMaxLines(_:)` now lives in `FlowLineLimit` (it builds a line-cap feature).
+    package func withFeatures(_ features: [any FlowLayoutFeature]) -> HFlowLayout {
+        HFlowLayout(layout: layout.withFeatures(features))
     }
 }
 
 extension HFlowLayout: Layout {
-    @inlinable
     public func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) -> CGSize {
         layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
     }
 
-    @inlinable
     public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout FlowLayoutCache) {
         layout.placeSubviews(in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
-    @inlinable
     public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .horizontal)
     }
 
-    @inlinable
     public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
         layout.refreshCache(&cache, subviews: subviews)
     }
 
-    @inlinable
     public static var layoutProperties: LayoutProperties {
         var properties = LayoutProperties()
         properties.stackOrientation = .horizontal

@@ -1,24 +1,18 @@
 import CoreFoundation
 import SwiftUI
 
-@usableFromInline
-struct Size: Sendable {
-    @usableFromInline
-    var breadth: CGFloat
-    @usableFromInline
-    var depth: CGFloat
+package struct Size: Sendable {
+    package var breadth: CGFloat
+    package var depth: CGFloat
 
-    @usableFromInline
-    init(breadth: CGFloat, depth: CGFloat) {
+    package init(breadth: CGFloat, depth: CGFloat) {
         self.breadth = breadth
         self.depth = depth
     }
 
-    @usableFromInline
-    static let zero = Size(breadth: 0, depth: 0)
+    package static let zero = Size(breadth: 0, depth: 0)
 
-    @usableFromInline
-    subscript(axis: Axis) -> CGFloat {
+    package subscript(axis: Axis) -> CGFloat {
         get {
             self[keyPath: keyPath(on: axis)]
         }
@@ -27,8 +21,7 @@ struct Size: Sendable {
         }
     }
 
-    @usableFromInline
-    func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
+    package func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
         switch axis {
             case .horizontal: \.breadth
             case .vertical: \.depth
@@ -37,8 +30,7 @@ struct Size: Sendable {
 }
 
 extension Axis {
-    @usableFromInline
-    var perpendicular: Axis {
+    package var perpendicular: Axis {
         switch self {
             case .horizontal: .vertical
             case .vertical: .horizontal
@@ -51,26 +43,23 @@ extension Axis {
 /// A concrete 2D value (point, size, proposal) that converts to and from axis-relative ``Size``
 /// (breadth/depth) terms, so the axis-agnostic algorithm can read and write it without caring which
 /// axis maps to x and which to y.
-protocol AxisConvertible {
+package protocol AxisConvertible {
     init(size: Size, axis: Axis)
     func value(on axis: Axis) -> CGFloat
 }
 
 extension AxisConvertible {
-    @inlinable
-    func size(on axis: Axis) -> Size {
+    package func size(on axis: Axis) -> Size {
         Size(breadth: value(on: axis), depth: value(on: axis.perpendicular))
     }
 }
 
 extension CGPoint: AxisConvertible {
-    @inlinable
-    init(size: Size, axis: Axis) {
+    package init(size: Size, axis: Axis) {
         self.init(x: size[axis], y: size[axis.perpendicular])
     }
 
-    @inlinable
-    func value(on axis: Axis) -> CGFloat {
+    package func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: x
             case .vertical: y
@@ -79,21 +68,18 @@ extension CGPoint: AxisConvertible {
 }
 
 extension CGSize: AxisConvertible {
-    @inlinable
-    init(size: Size, axis: Axis) {
+    package init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 
-    @inlinable
-    func value(on axis: Axis) -> CGFloat {
+    package func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: width
             case .vertical: height
         }
     }
 
-    @inlinable
-    static var infinity: CGSize {
+    package static var infinity: CGSize {
         CGSize(
             width: CGFloat.infinity,
             height: CGFloat.infinity
@@ -102,13 +88,11 @@ extension CGSize: AxisConvertible {
 }
 
 extension ProposedViewSize: AxisConvertible {
-    @inlinable
-    init(size: Size, axis: Axis) {
+    package init(size: Size, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 
-    @inlinable
-    func value(on axis: Axis) -> CGFloat {
+    package func value(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: width ?? .infinity
             case .vertical: height ?? .infinity
@@ -117,8 +101,7 @@ extension ProposedViewSize: AxisConvertible {
 }
 
 extension CGRect {
-    @inlinable
-    func minimumValue(on axis: Axis) -> CGFloat {
+    package func minimumValue(on axis: Axis) -> CGFloat {
         switch axis {
             case .horizontal: minX
             case .vertical: minY

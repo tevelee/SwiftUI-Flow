@@ -39,6 +39,21 @@ Add the package to your `Package.swift`:
 
 then add `"Flow"` to your target's dependencies. In Xcode, choose **File ▸ Add Package Dependencies…** and enter `https://github.com/tevelee/SwiftUI-Flow`.
 
+### Modules
+
+The package ships as composable products so you only pull in what you use:
+
+| Product | Module(s) to `import` | Contents |
+| --- | --- | --- |
+| `Flow` | `Flow`, `FlowLineLimit`, `FlowSeparators` | The umbrella — engine plus every feature. |
+| `FlowCore` | `Flow` | The layout engine only (`HFlow`/`VFlow` and their modifiers), no optional features. |
+| `FlowLineLimit` | `FlowLineLimit` | The `.maxLines(_:)` feature. Re-exports `Flow`. |
+| `FlowSeparators` | `FlowSeparators` | The `.itemSeparator`/`.lineSeparator` feature. Re-exports `Flow`. |
+
+`import Flow` gives you the core layout. The line-limit and separator features each live in their own
+module (each re-exports `Flow`), so add `import FlowLineLimit` and/or `import FlowSeparators` where you
+use them.
+
 ## Documentation
 
 Full API reference and guides are hosted on the [Swift Package Index](https://swiftpackageindex.com/tevelee/SwiftUI-Flow/documentation/flow).
@@ -221,7 +236,7 @@ HFlow {
 
 ## Line limits
 
-Cap a flow to a maximum number of lines with `.maxLines(_:)`:
+Cap a flow to a maximum number of lines with `.maxLines(_:)` (`import FlowLineLimit`):
 
 ```swift
 HFlow {
@@ -245,8 +260,8 @@ HFlow {
 
 ## Separators
 
-Draw separators between items and/or lines. They only appear *between* elements — never at the
-edges — and they participate in layout: an item separator's width is accounted for when wrapping,
+Draw separators between items and/or lines (`import FlowSeparators`). They only appear *between*
+elements — never at the edges — and they participate in layout: an item separator's width is accounted for when wrapping,
 and a line separator contributes its height. A gap that wraps onto a new line shows the line
 separator instead of the item separator.
 

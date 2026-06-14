@@ -21,7 +21,13 @@ let package = Package(
         .visionOS(.v1)
     ],
     products: [
-        .library(name: "Flow", targets: ["Flow"])
+        // Umbrella: the core engine plus every feature target.
+        .library(name: "Flow", targets: ["Flow", "FlowLineLimit", "FlowSeparators"]),
+        // The feature-free layout engine on its own.
+        .library(name: "FlowCore", targets: ["Flow"]),
+        // Individually composable features, each usable without the other.
+        .library(name: "FlowLineLimit", targets: ["FlowLineLimit"]),
+        .library(name: "FlowSeparators", targets: ["FlowSeparators"])
     ],
     dependencies: [],
     targets: [
@@ -32,9 +38,25 @@ let package = Package(
                 .swiftLanguageMode(.v6)
             ]
         ),
+        .target(
+            name: "FlowLineLimit",
+            dependencies: ["Flow"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .swiftLanguageMode(.v6)
+            ]
+        ),
+        .target(
+            name: "FlowSeparators",
+            dependencies: ["Flow"],
+            swiftSettings: [
+                .enableUpcomingFeature("ExistentialAny"),
+                .swiftLanguageMode(.v6)
+            ]
+        ),
         .testTarget(
             name: "FlowTests",
-            dependencies: ["Flow"],
+            dependencies: ["Flow", "FlowLineLimit", "FlowSeparators"],
             exclude: ["README.md"],
             swiftSettings: [
                 .enableUpcomingFeature("ExistentialAny"),

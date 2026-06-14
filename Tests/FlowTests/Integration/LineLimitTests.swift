@@ -2,6 +2,7 @@ import SwiftUI
 import Testing
 
 @testable import Flow
+@testable import FlowLineLimit
 
 @Suite
 struct LineLimitTests {
@@ -40,21 +41,21 @@ struct LineLimitTests {
     }
 
     @Test func HFlowLayout_maxLinesInit_setsLimit() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 2)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(2)
         let subviews: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let size = sut.sizeThatFits(proposal: 5 × 5, subviews: subviews)
         #expect(size.height == 2)
     }
 
     @Test func VFlowLayout_maxLinesInit_setsLimit() {
-        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 2)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(2)
         let subviews: [TestSubview] = [1 × 4, 1 × 4, 1 × 4]
         let size = sut.sizeThatFits(proposal: 5 × 5, subviews: subviews)
         #expect(size.width == 2)
     }
 
     @Test func HFlow_maxLines_keepsFirstLine_hidesRest() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         // Three width-4 items in a width-5 box wrap to three single-item lines.
         let subviews: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         _ = sut.layout(subviews, in: 5 × 5)
@@ -64,13 +65,13 @@ struct LineLimitTests {
     }
 
     @Test func HFlow_maxLines_reportsTruncatedHeight() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         let size = sut.sizeThatFits(proposal: 5 × 5, subviews: [4 × 1, 4 × 1, 4 × 1])
         #expect(size.height == 1)
     }
 
     @Test func HFlow_maxLines_aboveNaturalLineCount_isNoOp() {
-        let capped: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 10)
+        let capped: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(10)
         let subviews: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         _ = capped.layout(subviews, in: 5 × 5)
         #expect(subviews.allSatisfy { !isOffscreen($0, in: 5 × 5) })
@@ -78,7 +79,7 @@ struct LineLimitTests {
     }
 
     @Test func VFlow_maxLines_keepsFirstColumn_hidesRest() {
-        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .vertical(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         let subviews: [TestSubview] = [1 × 4, 1 × 4, 1 × 4]
         _ = sut.layout(subviews, in: 5 × 5)
         #expect(subviews[0].placement?.position == CGPoint(x: 0, y: 0))
@@ -99,7 +100,7 @@ struct LineLimitTests {
 
     @Test func overflowReporter_doesNotAffectLayoutSize() {
         // A reporter on the overflow indicator must not change the measured size.
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 1, height: 1))
         overflow[IsOverflowLayoutValueKey.self] = true
@@ -113,7 +114,7 @@ struct LineLimitTests {
         // resize passes in the same run-loop iteration don't interleave stale 0-counts.
         final class Counts: @unchecked Sendable { var values: [Int] = [] }
         let counts = Counts()
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 1, height: 1))
         overflow[IsOverflowLayoutValueKey.self] = true
@@ -127,7 +128,7 @@ struct LineLimitTests {
     // MARK: - Overflow indicator subview path
 
     @Test func overflowIndicator_isPlacedAtEndOfLastVisibleLine() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         // Three 2-wide items in a 5-wide box wrap as: row1=[item0,item1], row2=[item2].
         // Plus a 1-wide overflow indicator. Row1 used width = 4; overflow(1) fits without trimming.
         let items: [TestSubview] = [2 × 1, 2 × 1, 2 × 1]
@@ -144,7 +145,7 @@ struct LineLimitTests {
     }
 
     @Test func overflowIndicator_hiddenWhenAllItemsFit() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 5)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(5)
         let items: [TestSubview] = [4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 2, height: 1))
         overflow[IsOverflowLayoutValueKey.self] = true
@@ -175,7 +176,7 @@ struct LineLimitTests {
     // MARK: - Overflow indicator edge cases
 
     @Test func overflowIndicator_hiddenWhenMaxLinesIsZero() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 0)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(0)
         let items: [TestSubview] = [4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 2, height: 1))
         overflow[IsOverflowLayoutValueKey.self] = true
@@ -187,7 +188,7 @@ struct LineLimitTests {
     }
 
     @Test func overflowIndicator_trimsLastLineItemsToFit() {
-        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
+        let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0).withMaxLines(1)
         // item0 (w=4) is alone on row 1; overflow (w=2) can't join (4+2=6>5).
         // trimLastLine removes item0, leaving an empty row, then places overflow at x=0.
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]

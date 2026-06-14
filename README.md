@@ -241,6 +241,8 @@ HFlow {
 }
 ```
 
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_maxlines.1.png)
+
 ## Separators
 
 Draw separators between items and/or lines. They only appear *between* elements — never at the
@@ -258,6 +260,8 @@ HFlow {
 
 The two modifiers are independent; use either one on its own or both together. They are available
 on `HFlow` and `VFlow`.
+
+![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_separators.1.png)
 
 ## Line breaks
 

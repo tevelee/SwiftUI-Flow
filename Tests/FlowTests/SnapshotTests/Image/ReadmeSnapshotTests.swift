@@ -192,6 +192,46 @@
             assertSnapshot(of: view, as: .image(size: CGSize(width: 170, height: 110)))
         }
 
+        @Test func hflow_maxlines() async {
+            let view = HFlow {
+                ForEach(items) { item in
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(item.color.gradient)
+                        .frame(width: .random(in: 25 ... 75, using: &self.rng), height: 50)
+                }
+            }
+            .maxLines(2) { hidden in
+                Text("+\(hidden) more")
+                    .font(.callout.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(.gray))
+            }
+            .frame(maxWidth: 400)
+            await assertSnapshotSettled(view, size: CGSize(width: 400, height: 120))
+        }
+
+        @Test func hflow_separators() {
+            let view = HFlow {
+                ForEach(items) { item in
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(item.color.gradient)
+                        .frame(width: .random(in: 25 ... 75, using: &self.rng), height: 50)
+                }
+            }
+            .itemSeparator {
+                Text("•").foregroundStyle(.secondary)
+            }
+            .lineSeparator {
+                Rectangle()
+                    .fill(.separator)
+                    .frame(height: 1)
+            }
+            .frame(maxWidth: 400)
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 400, height: 250)))
+        }
+
         @Test func hflow_rtl() {
             let view = HFlow {
                 ForEach(items) { item in

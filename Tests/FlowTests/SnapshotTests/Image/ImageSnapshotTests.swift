@@ -11,6 +11,53 @@
             Snapshotting<NSView, NSImage>.image(size: size, scale: 1)
                 .pullback { NSHostingView(rootView: $0.environment(\.colorScheme, .light)) }
         }
+
+    }
+
+    /// Two-pass snapshot for views whose visible state is set via `Task { @MainActor in }` from the
+    /// layout engine (e.g. `_FlowWithOverflow`'s overflow badge). A synchronous pullback cannot drain
+    /// Swift concurrency tasks because `MainActor.assumeIsolated` holds the actor. Making the test
+    /// `async` and calling `await Task.yield()` releases the actor so the enqueued task runs, then
+    /// a second layout pass captures the settled state.
+    @MainActor
+    func assertSnapshotSettled<V: View>(
+        _ view: V,
+        size: CGSize,
+        file: StaticString = #filePath,
+        testName: String = #function,
+        line: UInt = #line
+    ) async {
+        let host = NSHostingView(rootView: view.environment(\.colorScheme, .light))
+        host.frame = CGRect(origin: .zero, size: size)
+        host.layoutSubtreeIfNeeded()
+
+        // Each yield releases the main actor, letting enqueued Task { @MainActor in } closures run
+        // and allowing SwiftUI to process the resulting @Published changes.
+        await Task.yield()
+        await Task.yield()
+        await Task.yield()
+
+        host.needsLayout = true
+        host.layoutSubtreeIfNeeded()
+
+        let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil,
+            pixelsWide: Int(size.width.rounded()),
+            pixelsHigh: Int(size.height.rounded()),
+            bitsPerSample: 8,
+            samplesPerPixel: 4,
+            hasAlpha: true,
+            isPlanar: false,
+            colorSpaceName: .deviceRGB,
+            bytesPerRow: 0,
+            bitsPerPixel: 0
+        )!
+        rep.size = size
+        host.cacheDisplay(in: host.bounds, to: rep)
+        let image = NSImage(size: size)
+        image.addRepresentation(rep)
+
+        assertSnapshot(of: image, as: .image, file: file, testName: testName, line: line)
     }
 
     extension Snapshotting where Value == NSView, Format == NSImage {

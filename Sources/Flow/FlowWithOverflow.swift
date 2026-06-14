@@ -1,19 +1,12 @@
 import SwiftUI
 
-// MARK: - State holder
-
-/// Holds the hidden-item count reported back from the layout engine.
-/// Using a class (ObservableObject) so the @State reference survives body re-evaluations.
-@MainActor
-private final class OverflowState: ObservableObject {
-    @Published var hiddenCount: Int = 0
-}
-
 // MARK: - Overflow wrapper
 
 /// Wraps a flow layout to support `.maxLines(_:overflow:)` with a live hidden-item count.
 /// - Note: Do not use this type directly. Use ``HFlow/maxLines(_:overflow:)`` or ``VFlow/maxLines(_:overflow:)`` instead.
 public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swiftlint:disable:this type_name
+    @Environment(\.flexibility) private var flexibility
+
     @usableFromInline
     let layout: AnyLayout
     @usableFromInline
@@ -21,7 +14,7 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
     @usableFromInline
     let overflowBuilder: (Int) -> Overflow
 
-    @StateObject private var state = OverflowState()
+    @StateObject private var state = Reported(0)
 
     @inlinable
     init(layout: AnyLayout, content: Content, overflowBuilder: @escaping (Int) -> Overflow) {
@@ -31,19 +24,24 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
     }
 
     public var body: some View {
-        let stateRef = state
-        layout {
-            content.environment(\.maxLines, nil)
-            overflowBuilder(state.hiddenCount)
-                .layoutValue(key: IsOverflowLayoutValueKey.self, value: true)
-                .layoutValue(
-                    key: OverflowReporterKey.self,
-                    value: { count in
-                        Task { @MainActor in
-                            if stateRef.hiddenCount != count { stateRef.hiddenCount = count }
-                        }
-                    }
-                )
+        let reporter = state.reporter()
+        return layout {
+            content
+                .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
+                .environment(\.maxLines, nil)
+                .environment(\._flowOverflowBuilder, nil)
+            overflowBuilder(state.value)
+                .overflowIndicator(reporter: reporter)
         }
+    }
+}
+
+extension View {
+    /// Tags this view as the overflow indicator and wires the hidden-count reporter, so the layout
+    /// keeps it out of line breaking, places it on the last visible line, and reports how many items
+    /// the cap hid.
+    func overflowIndicator(reporter: @escaping @Sendable (Int) -> Void) -> some View {
+        layoutValue(key: IsOverflowLayoutValueKey.self, value: true)
+            .layoutValue(key: OverflowReporterKey.self, value: reporter)
     }
 }

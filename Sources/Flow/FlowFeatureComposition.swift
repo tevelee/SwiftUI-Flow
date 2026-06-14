@@ -1,16 +1,17 @@
 import SwiftUI
 
-// MARK: - Separator wrapper
+// MARK: - Feature composition
 
-/// (Internal.) Enumerates a flow's content and injects separator subviews between items and/or lines.
-/// Created by `HFlow.body` / `VFlow.body` when any flow separator or overflow env key is set.
+/// (Internal.) Composes flow content with feature-generated subviews that must be siblings in one layout pass.
+/// Created by `HFlow.body` / `VFlow.body` when separator injection is configured.
 ///
 /// Item separators are anchored to the content pair they sit between; line separators are anchored to
 /// the *visual* line boundary they fill (reported back by the layout), so a divider stays the same view
 /// as content rewraps through it instead of jumping. Enumeration uses `Group(subviews:)` where available
-/// and falls back to `_VariadicView` on earlier systems.
+/// and falls back to `_VariadicView` on earlier systems. If line capping also supplies an overflow
+/// indicator, it is appended here so the layout can measure and place all generated children together.
 @usableFromInline
-struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this type_name
+struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this type_name
     @usableFromInline
     let makeLayout: (Int?) -> AnyLayout
     @usableFromInline
@@ -21,8 +22,8 @@ struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this typ
     @Environment(\._flowItemSeparator) private var itemSeparator
     @Environment(\._flowLineSeparator) private var lineSeparator
     @Environment(\._flowOverflowBuilder) private var overflowBuilder
-    @StateObject private var state = SeparatorLineStructure()
-    @StateObject private var overflowState = SeparatorOverflowState()
+    @StateObject private var lineStructure = Reported<[Int]>([])
+    @StateObject private var overflowCount = Reported(0)
 
     @usableFromInline
     init(makeLayout: @escaping (Int?) -> AnyLayout, content: Content) {
@@ -35,23 +36,12 @@ struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this typ
         let layout = makeLayout(maxLines)
         // Line separators need to know the line structure; item separators do not, so only pay for the
         // reporter when line separators are configured.
-        let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructureReporter(for: state)
-        let overflowStateRef = overflowState
+        let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructure.reporter()
         return layout {
             interleaved(reporter: reporter)
             if let overflowBuilder {
-                overflowBuilder(overflowState.hiddenCount)
-                    .layoutValue(key: IsOverflowLayoutValueKey.self, value: true)
-                    .layoutValue(
-                        key: OverflowReporterKey.self,
-                        value: { count in
-                            Task { @MainActor in
-                                if overflowStateRef.hiddenCount != count {
-                                    overflowStateRef.hiddenCount = count
-                                }
-                            }
-                        }
-                    )
+                overflowBuilder(overflowCount.value)
+                    .overflowIndicator(reporter: overflowCount.reporter())
             }
         }
     }
@@ -76,21 +66,12 @@ struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this typ
             #if swift(>=6.0)
                 if #available(iOS 18, macOS 15, tvOS 18, watchOS 11, visionOS 2, *) {
                     Group(subviews: tagged) { subviews in
-                        let last = subviews.count - 1
-                        let lineOf = state.lineOf
-                        let positionsInLine = linePositions(for: lineOf)
-                        ForEach(Array(subviews.enumerated()), id: \.element.id) { item in
-                            item.element
-                            if item.offset < last {
-                                separators(
-                                    afterIndex: item.offset,
-                                    itemSeparator: itemSep,
-                                    lineSeparator: lineSep,
-                                    lineOf: lineOf,
-                                    positionsInLine: positionsInLine
-                                )
-                            }
-                        }
+                        interleavedContent(
+                            subviews,
+                            itemSeparator: itemSep,
+                            lineSeparator: lineSep,
+                            lineOf: lineStructure.value
+                        )
                     }
                 } else {
                     variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
@@ -109,39 +90,40 @@ struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this typ
         lineSeparator: (() -> AnyView)?
     ) -> some View {
         _VariadicView.Tree(
-            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: state.lineOf)
+            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineStructure.value)
         ) {
             tagged
         }
     }
 }
 
-// MARK: - Reported line structure
+// MARK: - Separator injection
 
-/// Holds the line index of every content item, reported by the layout, so the view layer can identify
-/// line separators by their visual position. A class so the `@StateObject` reference survives re-evaluations.
-@MainActor
-private final class SeparatorLineStructure: ObservableObject {
-    @Published var lineOf: [Int] = []
-}
-
-@MainActor
-private final class SeparatorOverflowState: ObservableObject {
-    @Published var hiddenCount: Int = 0
-}
-
-/// Builds the reporter the layout calls with the line structure. The publish is deferred out of the
-/// layout pass (mutating `@Published` during a view update is disallowed) and guarded so the one-shot
-/// feedback settles instead of re-triggering. Mirrors the reporter pattern used by the overflow indicator.
-private func lineStructureReporter(for state: SeparatorLineStructure) -> @Sendable ([Int]) -> Void {
-    { lineOf in
-        Task { @MainActor in
-            if state.lineOf != lineOf { state.lineOf = lineOf }
+/// The shared body of both interleaving paths (``Group(subviews:)`` and the ``_VariadicView``
+/// fallback): emit each element followed by the separators for the gap after it, except after the last.
+/// `lineOf` is the layout-reported line structure used to give each separator a stable visual identity.
+@ViewBuilder
+private func interleavedContent<Elements: RandomAccessCollection>(
+    _ elements: Elements,
+    itemSeparator: (() -> AnyView)?,
+    lineSeparator: (() -> AnyView)?,
+    lineOf: [Int]
+) -> some View where Elements.Element: View & Identifiable {
+    let last = elements.count - 1
+    let positionsInLine = linePositions(for: lineOf)
+    ForEach(Array(elements.enumerated()), id: \.element.id) { item in
+        item.element
+        if item.offset < last {
+            separators(
+                afterIndex: item.offset,
+                itemSeparator: itemSeparator,
+                lineSeparator: lineSeparator,
+                lineOf: lineOf,
+                positionsInLine: positionsInLine
+            )
         }
     }
 }
-
-// MARK: - Separator injection
 
 /// Emits the separators that follow the content item at `index`: item and line separators live in
 /// every configured gap so the layout can decide which one is visible after line breaking.
@@ -232,19 +214,6 @@ struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
 
     @ViewBuilder
     func body(children: _VariadicView.Children) -> some View {
-        let last = children.count - 1
-        let positionsInLine = linePositions(for: lineOf)
-        ForEach(Array(children.enumerated()), id: \.element.id) { item in
-            item.element
-            if item.offset < last {
-                separators(
-                    afterIndex: item.offset,
-                    itemSeparator: itemSeparator,
-                    lineSeparator: lineSeparator,
-                    lineOf: lineOf,
-                    positionsInLine: positionsInLine
-                )
-            }
-        }
+        interleavedContent(children, itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineOf)
     }
 }

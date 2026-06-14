@@ -141,8 +141,10 @@ public struct HFlow<Content: View>: View {
 
     @inlinable
     public var body: some View {
-        if _itemSeparator != nil || _lineSeparator != nil || _overflowBuilder != nil {
-            _FlowWithSeparators(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
+        if _itemSeparator != nil || _lineSeparator != nil {
+            _FlowFeatureComposition(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
+        } else if let overflowBuilder = _overflowBuilder {
+            _FlowWithOverflow(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content, overflowBuilder: overflowBuilder)
         } else {
             let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
             effectiveLayout {

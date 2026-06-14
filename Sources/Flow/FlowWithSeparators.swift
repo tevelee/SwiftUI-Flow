@@ -2,55 +2,37 @@ import SwiftUI
 
 // MARK: - Separator wrapper
 
-/// Wraps a flow layout to draw separators between items and/or lines.
-///
-/// - Note: Do not use this type directly. Use ``HFlow/itemSeparator(_:)`` / ``HFlow/lineSeparator(_:)``
-///   (or the ``VFlow`` equivalents) instead.
-///
-/// The wrapper enumerates the content's subviews and injects a separator into each gap, tagging it with
-/// a ``SeparatorRole`` so the layout can fold item-separator breadth into line breaking and turn line
-/// separators into their own lines — separators take part in sizing rather than being painted on top.
+/// (Internal.) Enumerates a flow's content and injects separator subviews between items and/or lines.
+/// Created by `HFlow.body` / `VFlow.body` when any flow separator or overflow env key is set.
 ///
 /// Item separators are anchored to the content pair they sit between; line separators are anchored to
 /// the *visual* line boundary they fill (reported back by the layout), so a divider stays the same view
 /// as content rewraps through it instead of jumping. Enumeration uses `Group(subviews:)` where available
 /// and falls back to `_VariadicView` on earlier systems.
-public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this type_name
+@usableFromInline
+struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:this type_name
     @usableFromInline
     let makeLayout: (Int?) -> AnyLayout
     @usableFromInline
     let content: Content
-    @usableFromInline
-    var itemSeparator: (() -> AnyView)?
-    @usableFromInline
-    var lineSeparator: (() -> AnyView)?
-    @usableFromInline
-    var maxLinesOverride: Int?
-    @usableFromInline
-    var overflowBuilder: ((Int) -> AnyView)?
 
     @Environment(\.flexibility) private var flexibility
     @Environment(\.maxLines) private var maxLines
+    @Environment(\._flowItemSeparator) private var itemSeparator
+    @Environment(\._flowLineSeparator) private var lineSeparator
+    @Environment(\._flowOverflowBuilder) private var overflowBuilder
     @StateObject private var state = SeparatorLineStructure()
     @StateObject private var overflowState = SeparatorOverflowState()
 
-    @inlinable
-    init(
-        makeLayout: @escaping (Int?) -> AnyLayout,
-        content: Content,
-        itemSeparator: (() -> AnyView)?,
-        lineSeparator: (() -> AnyView)?
-    ) {
+    @usableFromInline
+    init(makeLayout: @escaping (Int?) -> AnyLayout, content: Content) {
         self.makeLayout = makeLayout
         self.content = content
-        self.itemSeparator = itemSeparator
-        self.lineSeparator = lineSeparator
-        maxLinesOverride = nil
-        overflowBuilder = nil
     }
 
-    public var body: some View {
-        let layout = makeLayout(maxLinesOverride ?? maxLines)
+    @usableFromInline
+    var body: some View {
+        let layout = makeLayout(maxLines)
         // Line separators need to know the line structure; item separators do not, so only pay for the
         // reporter when line separators are configured.
         let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructureReporter(for: state)
@@ -76,60 +58,61 @@ public struct _FlowWithSeparators<Content: View>: View {  // swiftlint:disable:t
 
     @ViewBuilder
     private func interleaved(reporter: (@Sendable ([Int]) -> Void)?) -> some View {
+        // Capture env values into locals so they're stable for the view-update scope and can be
+        // referenced safely inside @ViewBuilder and Group(subviews:) closures.
+        let itemSep = itemSeparator
+        let lineSep = lineSeparator
         let tagged =
             content
             .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
             .layoutValue(key: LineStructureReporterKey.self, value: reporter)
             .environment(\.maxLines, nil)
-        // `Group(subviews:)` ships in the Xcode 16 SDK (Swift 6+); earlier toolchains fall back to the
-        // `_VariadicView` SPI, which behaves the same back to the minimum deployment targets.
-        #if swift(>=6.0)
-            if #available(iOS 18, macOS 15, tvOS 18, watchOS 11, visionOS 2, *) {
-                Group(subviews: tagged) { subviews in
-                    let last = subviews.count - 1
-                    let lineOf = state.lineOf
-                    let positionsInLine = linePositions(for: lineOf)
-                    ForEach(Array(subviews.enumerated()), id: \.element.id) { item in
-                        item.element
-                        if item.offset < last {
-                            separators(
-                                afterIndex: item.offset,
-                                itemSeparator: itemSeparator,
-                                lineSeparator: lineSeparator,
-                                lineOf: lineOf,
-                                positionsInLine: positionsInLine
-                            )
+            .environment(\._flowItemSeparator, nil)
+            .environment(\._flowLineSeparator, nil)
+            .environment(\._flowOverflowBuilder, nil)
+        if itemSep != nil || lineSep != nil {
+            // `Group(subviews:)` ships in the Xcode 16 SDK (Swift 6+); earlier toolchains fall back to the
+            // `_VariadicView` SPI, which behaves the same back to the minimum deployment targets.
+            #if swift(>=6.0)
+                if #available(iOS 18, macOS 15, tvOS 18, watchOS 11, visionOS 2, *) {
+                    Group(subviews: tagged) { subviews in
+                        let last = subviews.count - 1
+                        let lineOf = state.lineOf
+                        let positionsInLine = linePositions(for: lineOf)
+                        ForEach(Array(subviews.enumerated()), id: \.element.id) { item in
+                            item.element
+                            if item.offset < last {
+                                separators(
+                                    afterIndex: item.offset,
+                                    itemSeparator: itemSep,
+                                    lineSeparator: lineSep,
+                                    lineOf: lineOf,
+                                    positionsInLine: positionsInLine
+                                )
+                            }
                         }
                     }
+                } else {
+                    variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
                 }
-            } else {
-                variadicInterleaved(tagged)
-            }
-        #else
-            variadicInterleaved(tagged)
-        #endif
+            #else
+                variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
+            #endif
+        } else {
+            tagged
+        }
     }
 
-    private func variadicInterleaved(_ tagged: some View) -> some View {
+    private func variadicInterleaved(
+        _ tagged: some View,
+        itemSeparator: (() -> AnyView)?,
+        lineSeparator: (() -> AnyView)?
+    ) -> some View {
         _VariadicView.Tree(
             SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: state.lineOf)
         ) {
             tagged
         }
-    }
-
-    @usableFromInline
-    func setting(itemSeparator: (() -> AnyView)?) -> Self {
-        var copy = self
-        copy.itemSeparator = itemSeparator
-        return copy
-    }
-
-    @usableFromInline
-    func setting(lineSeparator: (() -> AnyView)?) -> Self {
-        var copy = self
-        copy.lineSeparator = lineSeparator
-        return copy
     }
 }
 
@@ -263,140 +246,5 @@ struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
                 )
             }
         }
-    }
-}
-
-// MARK: - Public modifiers
-
-extension HFlow {
-    /// Draws `separator` between adjacent items on the same row.
-    ///
-    /// The separator participates in layout: its width is taken into account when breaking rows, and
-    /// its height contributes to the row's height. Separators appear only *between* items, never at the
-    /// leading or trailing edge, and a gap that wraps onto a new row shows a line separator (if any)
-    /// instead. Combine with ``lineSeparator(_:)`` to control both.
-    ///
-    /// ```swift
-    /// HFlow {
-    ///     ForEach(tags) { Text($0) }
-    /// }
-    /// .itemSeparator { Text("•").foregroundStyle(.secondary) }
-    /// ```
-    ///
-    /// - Parameter separator: A view builder producing a single separator view.
-    @MainActor
-    @inlinable
-    public func itemSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators<Content> {
-        _FlowWithSeparators(
-            makeLayout: { AnyLayout(layout.withMaxLines($0)) },
-            content: content,
-            itemSeparator: { AnyView(separator()) },
-            lineSeparator: nil
-        )
-    }
-
-    /// Draws `separator` between adjacent rows.
-    ///
-    /// The separator becomes its own line in the layout, so its height contributes to the overall
-    /// height and the row spacing applies on both sides of it. Separators appear only *between* rows,
-    /// never above the first or below the last. Combine with ``itemSeparator(_:)`` to control both.
-    ///
-    /// ```swift
-    /// HFlow {
-    ///     ForEach(tags) { Text($0) }
-    /// }
-    /// .lineSeparator { Divider() }
-    /// ```
-    ///
-    /// - Parameter separator: A view builder producing a single separator view.
-    @MainActor
-    @inlinable
-    public func lineSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators<Content> {
-        _FlowWithSeparators(
-            makeLayout: { AnyLayout(layout.withMaxLines($0)) },
-            content: content,
-            itemSeparator: nil,
-            lineSeparator: { AnyView(separator()) }
-        )
-    }
-}
-
-extension VFlow {
-    /// Draws `separator` between adjacent items in the same column.
-    ///
-    /// The separator participates in layout: its height is taken into account when breaking columns,
-    /// and its width contributes to the column's width. Separators appear only *between* items, never
-    /// at the top or bottom edge. Combine with ``lineSeparator(_:)`` to control both.
-    ///
-    /// - Parameter separator: A view builder producing a single separator view.
-    @MainActor
-    @inlinable
-    public func itemSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators<Content> {
-        _FlowWithSeparators(
-            makeLayout: { AnyLayout(layout.withMaxLines($0)) },
-            content: content,
-            itemSeparator: { AnyView(separator()) },
-            lineSeparator: nil
-        )
-    }
-
-    /// Draws `separator` between adjacent columns.
-    ///
-    /// The separator becomes its own line in the layout, so its width contributes to the overall width
-    /// and the column spacing applies on both sides of it. Separators appear only *between* columns,
-    /// never before the first or after the last. Combine with ``itemSeparator(_:)`` to control both.
-    ///
-    /// - Parameter separator: A view builder producing a single separator view.
-    @MainActor
-    @inlinable
-    public func lineSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators<Content> {
-        _FlowWithSeparators(
-            makeLayout: { AnyLayout(layout.withMaxLines($0)) },
-            content: content,
-            itemSeparator: nil,
-            lineSeparator: { AnyView(separator()) }
-        )
-    }
-}
-
-extension _FlowWithSeparators {
-    /// Adds (or replaces) the item separator drawn between adjacent items on the same line.
-    /// See ``HFlow/itemSeparator(_:)``.
-    @inlinable
-    public func itemSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators {
-        setting(itemSeparator: { AnyView(separator()) })
-    }
-
-    /// Adds (or replaces) the line separator drawn between adjacent lines.
-    /// See ``HFlow/lineSeparator(_:)``.
-    @inlinable
-    public func lineSeparator<Separator: View>(
-        @ViewBuilder _ separator: @escaping () -> Separator
-    ) -> _FlowWithSeparators {
-        setting(lineSeparator: { AnyView(separator()) })
-    }
-
-    /// Caps the separated flow and appends an overflow view at the end of the last visible line.
-    /// See ``HFlow/maxLines(_:overflow:)``.
-    @MainActor
-    @inlinable
-    public func maxLines<Overflow: View>(
-        _ limit: Int,
-        @ViewBuilder overflow: @escaping (Int) -> Overflow
-    ) -> _FlowWithSeparators {
-        var copy = self
-        copy.maxLinesOverride = limit
-        copy.overflowBuilder = { AnyView(overflow($0)) }
-        return copy
     }
 }

@@ -132,14 +132,24 @@ public struct HFlow<Content: View>: View {
     @Environment(\.flexibility) var flexibility
     @usableFromInline
     @Environment(\.maxLines) var _maxLinesCap
+    @usableFromInline
+    @Environment(\._flowItemSeparator) var _itemSeparator
+    @usableFromInline
+    @Environment(\._flowLineSeparator) var _lineSeparator
+    @usableFromInline
+    @Environment(\._flowOverflowBuilder) var _overflowBuilder
 
     @inlinable
     public var body: some View {
-        let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
-        effectiveLayout {
-            content
-                .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-                .environment(\.maxLines, nil)
+        if _itemSeparator != nil || _lineSeparator != nil || _overflowBuilder != nil {
+            _FlowWithSeparators(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
+        } else {
+            let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
+            effectiveLayout {
+                content
+                    .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
+                    .environment(\.maxLines, nil)
+            }
         }
     }
 }

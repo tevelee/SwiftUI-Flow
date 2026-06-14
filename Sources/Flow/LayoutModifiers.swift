@@ -51,4 +51,39 @@ extension View {
     @inlinable public func maxLines(_ limit: Int?) -> some View {
         environment(\.maxLines, limit)
     }
+
+    /// Caps the nearest enclosing ``HFlow`` or ``VFlow`` to `limit` lines and
+    /// appends `overflow` at the end of the last visible line to indicate how
+    /// many items were hidden.
+    ///
+    /// - Parameters:
+    ///   - limit: Maximum number of lines (rows for `HFlow`, columns for `VFlow`). Must be ≥ 1.
+    ///   - overflow: A view builder that receives the number of hidden items.
+    @inlinable
+    public func maxLines<O: View>(
+        _ limit: Int,
+        @ViewBuilder overflow: @escaping (Int) -> O
+    ) -> some View {
+        environment(\.maxLines, limit)
+            .environment(\._flowOverflowBuilder, { AnyView(overflow($0)) })
+    }
+
+    /// Draws `separator` between adjacent items on the same line in the nearest enclosing
+    /// ``HFlow`` or ``VFlow``. The separator participates in layout: its breadth factors into
+    /// line breaking and is suppressed at line boundaries.
+    ///
+    /// - Parameter separator: A view builder producing the separator view.
+    @inlinable
+    public func itemSeparator<S: View>(@ViewBuilder _ separator: @escaping () -> S) -> some View {
+        environment(\._flowItemSeparator, { AnyView(separator()) })
+    }
+
+    /// Draws `separator` between adjacent lines in the nearest enclosing ``HFlow`` or ``VFlow``.
+    /// The separator becomes its own line in the layout, with normal line spacing on both sides.
+    ///
+    /// - Parameter separator: A view builder producing the separator view.
+    @inlinable
+    public func lineSeparator<S: View>(@ViewBuilder _ separator: @escaping () -> S) -> some View {
+        environment(\._flowLineSeparator, { AnyView(separator()) })
+    }
 }

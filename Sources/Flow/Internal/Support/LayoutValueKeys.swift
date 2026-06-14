@@ -46,6 +46,24 @@ struct MaxLinesEnvironmentKey: EnvironmentKey {
     static let defaultValue: Int? = nil
 }
 
+@usableFromInline
+struct FlowItemSeparatorKey: EnvironmentKey {
+    @usableFromInline
+    static var defaultValue: (() -> AnyView)? { nil }
+}
+
+@usableFromInline
+struct FlowLineSeparatorKey: EnvironmentKey {
+    @usableFromInline
+    static var defaultValue: (() -> AnyView)? { nil }
+}
+
+@usableFromInline
+struct FlowOverflowBuilderKey: EnvironmentKey {
+    @usableFromInline
+    static var defaultValue: ((Int) -> AnyView)? { nil }
+}
+
 extension EnvironmentValues {
     @usableFromInline
     var flexibility: FlexibilityBehavior {
@@ -57,5 +75,23 @@ extension EnvironmentValues {
     var maxLines: Int? {
         get { self[MaxLinesEnvironmentKey.self] }
         set { self[MaxLinesEnvironmentKey.self] = newValue }
+    }
+
+    @usableFromInline
+    var _flowItemSeparator: (() -> AnyView)? {
+        get { self[FlowItemSeparatorKey.self] }
+        set { self[FlowItemSeparatorKey.self] = newValue }
+    }
+
+    @usableFromInline
+    var _flowLineSeparator: (() -> AnyView)? {
+        get { self[FlowLineSeparatorKey.self] }
+        set { self[FlowLineSeparatorKey.self] = newValue }
+    }
+
+    @usableFromInline
+    var _flowOverflowBuilder: ((Int) -> AnyView)? {
+        get { self[FlowOverflowBuilderKey.self] }
+        set { self[FlowOverflowBuilderKey.self] = newValue }
     }
 }

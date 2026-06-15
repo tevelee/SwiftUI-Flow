@@ -76,7 +76,7 @@ jobs:
         run: swift test --xunit-output /tmp/test-results-${{ matrix.swift }}.xml
       - name: Upload test results
         if: ${{ failure() && matrix.mode != 'build' }}
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-macos-swift-${{ matrix.swift }}
           path: /tmp/test-results-${{ matrix.swift }}.xml
@@ -127,7 +127,7 @@ jobs:
             -resultBundlePath /tmp/result-${{ matrix.platform }}.xcresult
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: test-results-${{ matrix.platform }}.xcresult
           path: /tmp/result-${{ matrix.platform }}.xcresult

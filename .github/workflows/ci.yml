@@ -32,6 +32,8 @@ jobs:
     name: Test · macOS · Swift ${{ matrix.swift }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -86,6 +88,8 @@ jobs:
     name: Test · ${{ matrix.platform }} Simulator
     runs-on: macos-26
     timeout-minutes: 20
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +140,8 @@ jobs:
   lint:
     name: Lint
     runs-on: macos-15
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/brew-bundle

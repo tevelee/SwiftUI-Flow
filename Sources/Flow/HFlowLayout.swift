@@ -82,6 +82,12 @@ extension HFlowLayout {
     public func withMaxLines(_ maxLines: Int?) -> HFlowLayout {
         HFlowLayout(layout: layout.withMaxLines(maxLines))
     }
+
+    /// Returns a copy of this layout using the given subview ordering strategy.
+    @inlinable
+    public func withSubviewOrdering(_ ordering: FlowSubviewOrdering) -> HFlowLayout {
+        HFlowLayout(layout: layout.withSubviewOrdering(ordering))
+    }
 }
 
 extension HFlowLayout: Layout {

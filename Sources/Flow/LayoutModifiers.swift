@@ -86,4 +86,41 @@ extension View {
     public func lineSeparator<S: View>(@ViewBuilder _ separator: @escaping () -> S) -> some View {
         environment(\._flowLineSeparator, { AnyView(separator()) })
     }
+
+    /// Sets the ordering strategy for the nearest enclosing ``HFlow`` or ``VFlow``.
+    ///
+    /// Pass `.packed` to reorder subviews by size (largest first) before layout,
+    /// minimizing the empty space left in each line. Pass `.natural` (the default)
+    /// to keep declaration order.
+    ///
+    /// When `.packed` is active, `LineBreak` views and `.startInNewLine()` modifiers
+    /// are silently ignored, and `distributeItemsEvenly` has no effect.
+    @inlinable
+    public func flowSubviewOrdering(_ ordering: FlowSubviewOrdering) -> some View {
+        environment(\.flowSubviewOrdering, ordering)
+    }
+}
+
+/// The ordering strategy applied to subviews before layout.
+public enum FlowSubviewOrdering: Sendable, Equatable {
+    /// Items appear in declaration order. This is the default.
+    case natural
+    /// Items are sorted by their ideal breadth, largest first (sorted-greedy packing).
+    /// Minimizes wasted space per line. `distributeItemsEvenly` and
+    /// `LineBreak`/`startInNewLine` modifiers are ignored when this is active.
+    case packed
+}
+
+@usableFromInline
+struct FlowSubviewOrderingKey: EnvironmentKey {
+    @usableFromInline
+    static let defaultValue: FlowSubviewOrdering = .natural
+}
+
+extension EnvironmentValues {
+    @usableFromInline
+    var flowSubviewOrdering: FlowSubviewOrdering {
+        get { self[FlowSubviewOrderingKey.self] }
+        set { self[FlowSubviewOrderingKey.self] = newValue }
+    }
 }

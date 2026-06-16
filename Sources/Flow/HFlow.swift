@@ -138,19 +138,27 @@ public struct HFlow<Content: View>: View {
     @Environment(\._flowLineSeparator) var _lineSeparator
     @usableFromInline
     @Environment(\._flowOverflowBuilder) var _overflowBuilder
+    @usableFromInline
+    @Environment(\.flowSubviewOrdering) var _subviewOrdering
 
     @inlinable
     public var body: some View {
         if _itemSeparator != nil || _lineSeparator != nil {
-            _FlowFeatureComposition(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
+            _FlowFeatureComposition(makeLayout: { AnyLayout(layout.withMaxLines($0).withSubviewOrdering(_subviewOrdering)) }, content: content)
         } else if let overflowBuilder = _overflowBuilder {
-            _FlowWithOverflow(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content, overflowBuilder: overflowBuilder)
+            _FlowWithOverflow(
+                layout: AnyLayout(layout.withMaxLines(_maxLinesCap).withSubviewOrdering(_subviewOrdering)),
+                content: content,
+                overflowBuilder: overflowBuilder
+            )
         } else {
-            let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
+            let effectiveLayout = (_maxLinesCap.map { layout.withMaxLines($0) } ?? layout)
+                .withSubviewOrdering(_subviewOrdering)
             effectiveLayout {
                 content
                     .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
                     .environment(\.maxLines, nil)
+                    .environment(\.flowSubviewOrdering, .natural)
             }
         }
     }

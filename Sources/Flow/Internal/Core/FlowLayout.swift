@@ -33,6 +33,9 @@ struct FlowLayout: Sendable {
     /// Nil means unlimited lines (no capping, no reporting).
     @usableFromInline
     var lineCap: LineCap?
+    /// The ordering strategy applied to subviews before line-breaking. Defaults to `.natural`.
+    @usableFromInline
+    var subviewOrdering: FlowSubviewOrdering = .natural
 
     @inlinable
     init(
@@ -59,6 +62,13 @@ struct FlowLayout: Sendable {
     func withMaxLines(_ maxLines: Int?) -> FlowLayout {
         var copy = self
         copy.lineCap = maxLines.map { LineCap(maxLines: $0) }
+        return copy
+    }
+
+    @inlinable
+    func withSubviewOrdering(_ ordering: FlowSubviewOrdering) -> FlowLayout {
+        var copy = self
+        copy.subviewOrdering = ordering
         return copy
     }
 
@@ -214,6 +224,9 @@ struct FlowLayout: Sendable {
         }
 
         var input = measuredItems(of: subviews, in: proposal, cache: cache)
+        if subviewOrdering == .packed {
+            sortByBreadthDescending(&input, cache: cache)
+        }
         if let lineCap {
             input = lineCap.excludeOverflowIndicator(from: input, cache: cache)
         }
@@ -226,7 +239,24 @@ struct FlowLayout: Sendable {
     }
 
     private var lineBreaker: any LineBreaking {
-        distributeItemsEvenly ? KnuthPlassLineBreaker() : GreedyLineBreaker()
+        switch subviewOrdering {
+            case .packed:
+                return GreedyLineBreaker()
+            case .natural:
+                return distributeItemsEvenly ? KnuthPlassLineBreaker() : GreedyLineBreaker()
+        }
+    }
+
+    private func sortByBreadthDescending(_ input: inout BreakerInput, cache: FlowLayoutCache) {
+        let paired = zip(input.items, input.subviewIndices).sorted { $0.0.size.lowerBound > $1.0.size.lowerBound }
+        input.items = paired.map(\.0)
+        input.subviewIndices = paired.map(\.1)
+        for i in input.items.indices {
+            input.items[i].isLineBreakView = false
+            input.items[i].shouldStartInNewLine = false
+            input.items[i].spacing =
+                i == 0 ? 0 : cache.spacing(from: input.subviewIndices[i - 1], to: input.subviewIndices[i], itemSpacing: itemSpacing, axis: axis)
+        }
     }
 }
 

@@ -82,6 +82,12 @@ extension VFlowLayout {
     public func withMaxLines(_ maxLines: Int?) -> VFlowLayout {
         VFlowLayout(layout: layout.withMaxLines(maxLines))
     }
+
+    /// Returns a copy of this layout using the given subview ordering strategy.
+    @inlinable
+    public func withSubviewOrdering(_ ordering: FlowSubviewOrdering) -> VFlowLayout {
+        VFlowLayout(layout: layout.withSubviewOrdering(ordering))
+    }
 }
 
 extension VFlowLayout: Layout {

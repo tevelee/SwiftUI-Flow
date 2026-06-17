@@ -3,34 +3,47 @@ tag-template: "$RESOLVED_VERSION"
 
 categories:
   - title: "🚀 Features"
-    labels: ["feature", "enhancement"]
+    when:
+      labels: ["feature", "enhancement"]
   - title: "🐛 Bug fixes"
-    labels: ["fix", "bugfix", "bug"]
+    when:
+      labels: ["fix", "bugfix", "bug"]
   - title: "🎨 Layout & rendering"
-    labels: ["layout", "alignment", "distribution"]
+    when:
+      labels: ["layout", "alignment", "distribution"]
   - title: "⚡ Performance"
-    labels: ["performance"]
+    when:
+      labels: ["performance"]
   - title: "🔒 Swift 6 / Sendable"
-    labels: ["swift6", "sendable", "concurrency"]
+    when:
+      labels: ["swift6", "sendable", "concurrency"]
   - title: "📚 Documentation"
-    labels: ["documentation", "docs"]
+    when:
+      labels: ["documentation", "docs"]
   - title: "🧰 Maintenance"
-    labels: ["chore", "ci", "dependencies", "maintenance"]
+    when:
+      labels: ["chore", "ci", "dependencies", "maintenance"]
+  - type: version-resolver
+    semver-increment: major
+    when:
+      labels: ["major", "breaking-change"]
+  - type: version-resolver
+    semver-increment: minor
+    when:
+      labels: ["minor", "feature", "enhancement"]
+  - type: version-resolver
+    semver-increment: patch
+    when:
+      labels: ["patch", "fix", "bugfix", "bug", "documentation", "maintenance", "ci", "performance"]
+  - type: pre-exclude
+    when:
+      labels: ["skip-changelog"]
 
 change-template: "- $TITLE @$AUTHOR (#$NUMBER)"
 change-title-escapes: '\<*_&'
 
 version-resolver:
-  major:
-    labels: ["major", "breaking-change"]
-  minor:
-    labels: ["minor", "feature", "enhancement"]
-  patch:
-    labels: ["patch", "fix", "bugfix", "bug", "documentation", "maintenance", "ci", "performance"]
   default: patch
-
-exclude-labels:
-  - "skip-changelog"
 
 autolabeler:
   - label: "ci"

@@ -33,7 +33,7 @@ jobs:
       FLOW_SNAPSHOT_TESTING: "1"
       FLOW_PROPERTY_TESTING: "1"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/swift-build-env
         with:
           xcode-version: "26.4"

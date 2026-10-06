@@ -82,10 +82,6 @@ struct FlowLayout: Sendable {
             size.breadth = proposedSize.value(on: axis)
         }
         rekeyLineBreaking(toResolvedBreadth: size.breadth, proposal: proposedSize, cache: &cache)
-        if proposedSize.value(on: axis).isFinite {
-            notifyOverflowReporter(hidden: result.hidden, cache: cache)
-            notifyLineStructureReporter(result.lineStructure, cache: cache)
-        }
         return CGSize(size: size, axis: axis)
     }
 

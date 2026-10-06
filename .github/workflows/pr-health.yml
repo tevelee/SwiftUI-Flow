@@ -1,7 +1,7 @@
 name: PR health checks
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize]
 
 permissions:
@@ -15,6 +15,10 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Run the local action from trusted base-branch code, never the PR's code.
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
 
       - name: Check for missing tests
         id: check

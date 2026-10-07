@@ -111,8 +111,10 @@ struct FlowLayout: Sendable {
             }
         }
         placeHiddenSubviews(result.hidden, of: subviews, in: bounds)
-        notifyOverflowReporter(hidden: result.hidden, cache: cache)
-        notifyLineStructureReporter(result.lineStructure, cache: cache)
+        if cache.reportingState?.isSuppressed != true {
+            notifyOverflowReporter(hidden: result.hidden, cache: cache)
+            notifyLineStructureReporter(result.lineStructure, cache: cache)
+        }
     }
 
     @usableFromInline
@@ -277,6 +279,28 @@ extension FlowLayout {
 // MARK: - Layout protocol
 
 extension FlowLayout: Layout {
+    @inlinable
+    func explicitAlignment(
+        of guide: HorizontalAlignment,
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) -> CGFloat? {
+        alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+    }
+
+    @inlinable
+    func explicitAlignment(
+        of guide: VerticalAlignment,
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) -> CGFloat? {
+        alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+    }
+
     @inlinable
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)

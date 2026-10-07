@@ -285,6 +285,28 @@ extension HFlow: Layout, Sendable where Content == EmptyView {
     }
 
     @inlinable
+    nonisolated public func explicitAlignment(
+        of guide: HorizontalAlignment,
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) -> CGFloat? {
+        layout.explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+    }
+
+    @inlinable
+    nonisolated public func explicitAlignment(
+        of guide: VerticalAlignment,
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: LayoutSubviews,
+        cache: inout FlowLayoutCache
+    ) -> CGFloat? {
+        layout.explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+    }
+
+    @inlinable
     nonisolated public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: .horizontal)
     }

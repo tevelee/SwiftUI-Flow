@@ -1,7 +1,7 @@
 import CoreFoundation
 import SwiftUI
 
-// Pipeline phase — placement, plus the reporters shared by measurement and placement.
+// Pipeline phase — placement, plus reporting the displayed structure.
 //
 // Walks the finished geometry and hands every subview to SwiftUI via `place(at:anchor:proposal:)`,
 // advancing the cursor by each block's leading space and size. Truncated subviews are parked

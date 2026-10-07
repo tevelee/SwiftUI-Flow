@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 /// Cache to store certain properties of subviews in the layout (flexibility, spacing preferences, layout priority).
@@ -79,6 +80,37 @@ public struct FlowLayoutCache {
     @usableFromInline
     let hasSeparators: Bool
 
+    @usableFromInline
+    let reportingState: ReportingState?
+
+    /// Shared by cache copies used by SwiftUI's default alignment calculation.
+    @usableFromInline
+    final class ReportingState {
+        private let lock = NSLock()
+        private var alignmentDepth = 0
+
+        @usableFromInline
+        init() {}
+
+        var isSuppressed: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return alignmentDepth > 0
+        }
+
+        func beginAlignment() {
+            lock.lock()
+            defer { lock.unlock() }
+            alignmentDepth += 1
+        }
+
+        func endAlignment() {
+            lock.lock()
+            defer { lock.unlock() }
+            alignmentDepth -= 1
+        }
+    }
+
     /// Single-entry memo of the most recent line-breaking result. `sizeThatFits`
     /// and `placeSubviews` run back-to-back with the same proposal, so caching the
     /// last result lets the second pass skip the (potentially expensive) line
@@ -122,6 +154,8 @@ public struct FlowLayoutCache {
             subviews[$0][IsOverflowLayoutValueKey.self] ? $0 : nil
         }
         hasSeparators = subviewsCache.contains { $0.separatorRole.isSeparator }
+        let hasReporters = subviewsCache.contains { $0.overflowReporter != nil || $0.lineStructureReporter != nil }
+        reportingState = hasReporters ? ReportingState() : nil
     }
 
     @inlinable

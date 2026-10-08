@@ -9,19 +9,6 @@ import SwiftUI
 // the view layer.
 
 extension FlowLayout {
-    /// Advances `target` along `axis` for one ``Spaced`` block: add its leading space, run `body` at
-    /// the block's origin, then add its size. Used for both lines (along depth) and items (along breadth).
-    func advance(
-        _ target: inout Size,
-        _ axis: WritableKeyPath<Size, CGFloat>,
-        for element: some Spaced,
-        body: (inout Size) -> Void
-    ) {
-        target[keyPath: axis] += element.leadingSpace
-        body(&target)
-        target[keyPath: axis] += element.size[keyPath: axis]
-    }
-
     func alignAndPlace(
         _ item: PlacedItem,
         in line: LayoutLine,

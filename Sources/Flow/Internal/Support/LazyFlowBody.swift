@@ -7,14 +7,12 @@ struct LazyFlowGeometry: Equatable, Sendable {
 
 /// Shared lazy-reveal engine for LazyHFlow and LazyVFlow.
 ///
-/// All lazy state lives here. The caller supplies the laid-out content for a
-/// given item count, a geometry transform for the scroll axis, and a modifier
-/// factory that applies the estimated total size hint to the revealed content.
+/// Owns the reveal state, scroll geometry, and estimated total size. The caller
+/// supplies the scroll axis and the laid-out content for a given item count.
 @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
-struct LazyFlowBody<LayoutView: View, SizeModifier: ViewModifier>: View {
+struct LazyFlowBody<LayoutView: View>: View {
     let count: Int
-    let geometryTransform: @Sendable (GeometryProxy) -> LazyFlowGeometry
-    let makeSizeModifier: (CGFloat?) -> SizeModifier
+    let scrollAxis: Axis
     let makeContent: (Int) -> LayoutView
 
     @State private var numberOfVisible = 1
@@ -28,8 +26,12 @@ struct LazyFlowBody<LayoutView: View, SizeModifier: ViewModifier>: View {
             let flowContent = makeContent(numberOfVisible)
             let minExtent: CGFloat? = numberOfVisible < count ? currentExtent / CGFloat(max(1, numberOfVisible)) * CGFloat(count) : nil
             flowContent
-                .onGeometryChange(for: LazyFlowGeometry.self) { [geometryTransform] proxy in
-                    geometryTransform(proxy)
+                .onGeometryChange(for: LazyFlowGeometry.self) { [scrollAxis] proxy in
+                    let bounds = proxy.bounds(of: .scrollView)
+                    return LazyFlowGeometry(
+                        scrollMax: (scrollAxis == .vertical ? bounds?.maxY : bounds?.maxX) ?? .infinity,
+                        contentExtent: proxy.size.value(on: scrollAxis)
+                    )
                 } action: { values in
                     scrollMax = values.scrollMax
                     currentExtent = values.contentExtent
@@ -38,9 +40,13 @@ struct LazyFlowBody<LayoutView: View, SizeModifier: ViewModifier>: View {
                 .onChange(of: numberOfVisible) {
                     revealMoreIfNeeded()
                 }
-                .modifier(makeSizeModifier(minExtent))
+                .frame(
+                    minWidth: scrollAxis == .horizontal ? minExtent : nil,
+                    minHeight: scrollAxis == .vertical ? minExtent : nil,
+                    alignment: scrollAxis == .horizontal ? .leading : .top
+                )
         #else
-            makeContent(count).modifier(makeSizeModifier(nil))
+            makeContent(count).frame(minWidth: nil, minHeight: nil, alignment: scrollAxis == .horizontal ? .leading : .top)
         #endif
     }
 

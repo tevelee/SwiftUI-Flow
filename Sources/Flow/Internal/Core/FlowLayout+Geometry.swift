@@ -27,16 +27,6 @@ struct LayoutLine {
     var depthGuide: CGFloat
 }
 
-/// A block the placement walk advances over: it contributes its `leadingSpace` before, then its
-/// `size` after. Both an item (along breadth) and a line (along depth) are placed this way.
-protocol Spaced {
-    var leadingSpace: CGFloat { get }
-    var size: Size { get }
-}
-
-extension PlacedItem: Spaced {}
-extension LayoutLine: Spaced {}
-
 extension FlowLayout {
     /// Turns the wrapped lines (breaker output, subview-index space) into placed geometry: each item
     /// measured at its proposed size, each line's metrics computed from its items.

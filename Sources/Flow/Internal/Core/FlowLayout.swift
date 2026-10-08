@@ -100,15 +100,14 @@ struct FlowLayout: Sendable {
         let result = resolveLayout(in: effectiveProposal(for: proposal, in: bounds), of: subviews, cache: &cache)
 
         for line in result.lines {
-            advance(&target, \.depth, for: line) { target in
-                target.breadth = bounds.minimumValue(on: axis)
-
-                for item in line.items {
-                    advance(&target, \.breadth, for: item) { target in
-                        alignAndPlace(item, in: line, at: target)
-                    }
-                }
+            target.depth += line.leadingSpace
+            target.breadth = bounds.minimumValue(on: axis)
+            for item in line.items {
+                target.breadth += item.leadingSpace
+                alignAndPlace(item, in: line, at: target)
+                target.breadth += item.size.breadth
             }
+            target.depth += line.size.depth
         }
         placeHiddenSubviews(result.hidden, of: subviews, in: bounds)
         let isAlignmentProbe = cache.alignmentDepth?.withLock { $0 > 0 } ?? false

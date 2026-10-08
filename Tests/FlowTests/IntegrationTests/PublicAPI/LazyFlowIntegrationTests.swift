@@ -438,4 +438,72 @@
             #expect(w == 100)
         }
     }
+    #if swift(>=6.0)
+        @Suite(.serialized, .tags(.requirements, .lazyLayout))
+        @MainActor
+        struct LazyFlowViewportTests {
+            @Test(arguments: [false, true])
+            func revealsMoreContent_whenScrollViewportGrows(verticalFlow: Bool) async throws {
+                guard #available(macOS 14, *) else { return }
+                let activity = Activity()
+                let host = NSHostingView(rootView: Scene(verticalFlow: verticalFlow, activity: activity))
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                    styleMask: .borderless,
+                    backing: .buffered,
+                    defer: true
+                )
+                window.contentView = host
+                defer { window.contentView = nil }
+                host.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(250))
+
+                let initiallyRevealed = activity.appeared.count
+                #expect(initiallyRevealed > 0 && initiallyRevealed < 100)
+                #expect(activity.contentExtent > 100, "The size estimate must keep unrevealed content scrollable")
+
+                window.setContentSize(NSSize(width: verticalFlow ? 200 : 100, height: verticalFlow ? 100 : 200))
+                host.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(250))
+                #expect(activity.appeared.count > initiallyRevealed)
+                #expect(activity.appeared.count < 100)
+                #expect(activity.contentExtent > 200)
+            }
+
+            private final class Activity {
+                var appeared: Set<Int> = []
+                var contentExtent: CGFloat = 0
+            }
+
+            @available(macOS 14, *)
+            private struct Scene: View {
+                let verticalFlow: Bool
+                let activity: Activity
+
+                var body: some View {
+                    ScrollView(verticalFlow ? .horizontal : .vertical) {
+                        flow
+                            .onGeometryChange(for: CGFloat.self) { [verticalFlow] proxy in
+                                verticalFlow ? proxy.size.width : proxy.size.height
+                            } action: {
+                                activity.contentExtent = $0
+                            }
+                    }
+                }
+
+                @ViewBuilder private var flow: some View {
+                    if verticalFlow {
+                        LazyVFlow(data: items(100), spacing: 0, content: cell)
+                    } else {
+                        LazyHFlow(data: items(100), spacing: 0, content: cell)
+                    }
+                }
+
+                private func cell(_ item: Item) -> some View {
+                    Color.clear.frame(width: 50, height: 50)
+                        .onAppear { activity.appeared.insert(item.id) }
+                }
+            }
+        }
+    #endif
 #endif

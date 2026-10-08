@@ -255,8 +255,7 @@ public struct LazyVFlow<LayoutContent: View>: View {
         let flexibility = flexibility
         LazyFlowBody(
             count: count,
-            geometryTransform: { LazyFlowGeometry(scrollMax: $0.bounds(of: .scrollView)?.maxX ?? .infinity, contentExtent: $0.size.width) },
-            makeSizeModifier: LazyVFlowSizeModifier.init,
+            scrollAxis: .horizontal,
             makeContent: { [flexibility] n in
                 layout {
                     makeContent(n)
@@ -264,12 +263,5 @@ public struct LazyVFlow<LayoutContent: View>: View {
                 }
             }
         )
-    }
-}
-
-private struct LazyVFlowSizeModifier: ViewModifier {
-    let minWidth: CGFloat?
-    func body(content: Content) -> some View {
-        content.frame(minWidth: minWidth, alignment: .leading)
     }
 }

@@ -13,12 +13,11 @@ import SwiftUI
 @usableFromInline
 struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this type_name
     @usableFromInline
-    let makeLayout: (Int?) -> AnyLayout
+    let layout: AnyLayout
     @usableFromInline
     let content: Content
 
     @Environment(\.flexibility) private var flexibility
-    @Environment(\.maxLines) private var maxLines
     @Environment(\._flowItemSeparator) private var itemSeparator
     @Environment(\._flowLineSeparator) private var lineSeparator
     @Environment(\._flowOverflowBuilder) private var overflowBuilder
@@ -26,14 +25,13 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     @StateObject private var overflowCount = Reported(0)
 
     @usableFromInline
-    init(makeLayout: @escaping (Int?) -> AnyLayout, content: Content) {
-        self.makeLayout = makeLayout
+    init(layout: AnyLayout, content: Content) {
+        self.layout = layout
         self.content = content
     }
 
     @usableFromInline
     var body: some View {
-        let layout = makeLayout(maxLines)
         // Line separators need to know the line structure; item separators do not, so only pay for the
         // reporter when line separators are configured.
         let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructure.reporter()

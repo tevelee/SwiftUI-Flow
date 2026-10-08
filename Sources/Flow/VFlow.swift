@@ -19,8 +19,8 @@ import SwiftUI
 ///     }
 ///
 /// For large datasets where the eager per-item measurement of this view is
-/// too expensive, see ``LazyVFlow``, which provides lazy rendering at the cost
-/// of exact flow layout (items are placed in a uniform adaptive grid instead).
+/// too expensive, see ``LazyVFlow``, which incrementally reveals content using
+/// the same flow layout.
 ///
 @frozen
 public struct VFlow<Content: View>: View {
@@ -142,7 +142,7 @@ public struct VFlow<Content: View>: View {
     @inlinable
     public var body: some View {
         if _itemSeparator != nil || _lineSeparator != nil {
-            _FlowFeatureComposition(makeLayout: { AnyLayout(layout.withMaxLines($0)) }, content: content)
+            _FlowFeatureComposition(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content)
         } else if let overflowBuilder = _overflowBuilder {
             _FlowWithOverflow(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content, overflowBuilder: overflowBuilder)
         } else {
@@ -308,12 +308,12 @@ extension VFlow: Layout, Sendable where Content == EmptyView {
 
     @inlinable
     nonisolated public func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
-        FlowLayoutCache(subviews, axis: .vertical)
+        layout.makeCache(subviews: subviews)
     }
 
     @inlinable
     nonisolated public func updateCache(_ cache: inout FlowLayoutCache, subviews: LayoutSubviews) {
-        layout.layout.refreshCache(&cache, subviews: subviews)
+        layout.updateCache(&cache, subviews: subviews)
     }
 
     @inlinable

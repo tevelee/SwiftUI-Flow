@@ -13,13 +13,6 @@ import SwiftUI
 ///
 /// Created only when a subview carries a non-`content` ``SeparatorRole`` (see ``init?(cache:axis:itemSpacing:)``).
 struct SeparatorLayout {
-    /// An item separator to draw in-line between two items on the same line.
-    private struct ItemSeparator {
-        var index: Int
-        var breadth: CGFloat
-        var leadingSpace: CGFloat
-    }
-
     private let plan: SeparatorPlan
     private let axis: Axis
     private let itemSpacing: CGFloat?
@@ -66,7 +59,7 @@ struct SeparatorLayout {
         let current = plan.contentIndices[position]
         let previous = plan.contentIndices[position - 1]
         if let separator = itemSeparator(before: current) {
-            return spacing(from: previous, to: separator.index) + separator.breadth + spacing(from: separator.index, to: current)
+            return spacing(from: previous, to: separator.index) + separator.size + spacing(from: separator.index, to: current)
         }
         return spacing(from: previous, to: current)
     }
@@ -145,8 +138,8 @@ struct SeparatorLayout {
         for indexInLine in line.indices {
             var output = line[indexInLine]
             if indexInLine > 0, let separator = itemSeparator(before: output.index) {
-                items.append(WrappedItem(index: separator.index, size: separator.breadth, leadingSpace: separator.leadingSpace))
-                output.leadingSpace -= separator.leadingSpace + separator.breadth
+                items.append(separator)
+                output.leadingSpace -= separator.leadingSpace + separator.size
             }
             items.append(output)
         }
@@ -164,15 +157,15 @@ struct SeparatorLayout {
     /// The eligible item separator drawn before content item `contentIndex`, or `nil` when its gap
     /// carries no in-line separator. Used by both seams — to reserve its breadth before wrapping, and
     /// to re-insert it after.
-    private func itemSeparator(before contentIndex: Int) -> ItemSeparator? {
+    private func itemSeparator(before contentIndex: Int) -> WrappedItem? {
         guard let position = plan.position(ofContentIndex: contentIndex),
             let gap = plan.gap(before: position),
             gap.isEligible,
             let separator = gap.itemSeparator
         else { return nil }
-        return ItemSeparator(
+        return WrappedItem(
             index: separator,
-            breadth: cache.subviewsCache[separator].ideal.breadth,
+            size: cache.subviewsCache[separator].ideal.breadth,
             leadingSpace: spacing(from: plan.contentIndices[position - 1], to: separator)
         )
     }

@@ -11,9 +11,9 @@ extension FlowLayout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        let reportingState = cache.reportingState
-        reportingState?.beginAlignment()
-        defer { reportingState?.endAlignment() }
+        let alignmentDepth = cache.alignmentDepth
+        alignmentDepth?.withLock { $0 += 1 }
+        defer { alignmentDepth?.withLock { $0 -= 1 } }
         return DefaultAlignmentLayout(layout: self).explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
@@ -25,9 +25,9 @@ extension FlowLayout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        let reportingState = cache.reportingState
-        reportingState?.beginAlignment()
-        defer { reportingState?.endAlignment() }
+        let alignmentDepth = cache.alignmentDepth
+        alignmentDepth?.withLock { $0 += 1 }
+        defer { alignmentDepth?.withLock { $0 -= 1 } }
         return DefaultAlignmentLayout(layout: self).explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 }

@@ -111,7 +111,8 @@ struct FlowLayout: Sendable {
             }
         }
         placeHiddenSubviews(result.hidden, of: subviews, in: bounds)
-        if cache.reportingState?.isSuppressed != true {
+        let isAlignmentProbe = cache.alignmentDepth?.withLock { $0 > 0 } ?? false
+        if !isAlignmentProbe {
             notifyOverflowReporter(hidden: result.hidden, cache: cache)
             notifyLineStructureReporter(result.lineStructure, cache: cache)
         }

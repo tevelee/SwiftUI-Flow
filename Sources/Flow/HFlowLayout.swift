@@ -103,7 +103,7 @@ extension HFlowLayout: Layout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        layout.alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+        layout.explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
     @inlinable
@@ -114,7 +114,7 @@ extension HFlowLayout: Layout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        layout.alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
+        layout.explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
     @inlinable

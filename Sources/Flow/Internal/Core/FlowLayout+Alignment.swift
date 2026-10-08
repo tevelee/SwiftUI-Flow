@@ -4,7 +4,7 @@ import SwiftUI
 extension FlowLayout {
     /// Preserve SwiftUI's cached guide calculation while suppressing reports from its placement probes.
     @usableFromInline
-    func alignment(
+    func explicitAlignment(
         of guide: HorizontalAlignment,
         in bounds: CGRect,
         proposal: ProposedViewSize,
@@ -18,7 +18,7 @@ extension FlowLayout {
     }
 
     @usableFromInline
-    func alignment(
+    func explicitAlignment(
         of guide: VerticalAlignment,
         in bounds: CGRect,
         proposal: ProposedViewSize,

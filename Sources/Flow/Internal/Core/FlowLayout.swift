@@ -280,28 +280,6 @@ extension FlowLayout {
 
 extension FlowLayout: Layout {
     @inlinable
-    func explicitAlignment(
-        of guide: HorizontalAlignment,
-        in bounds: CGRect,
-        proposal: ProposedViewSize,
-        subviews: LayoutSubviews,
-        cache: inout FlowLayoutCache
-    ) -> CGFloat? {
-        alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
-    }
-
-    @inlinable
-    func explicitAlignment(
-        of guide: VerticalAlignment,
-        in bounds: CGRect,
-        proposal: ProposedViewSize,
-        subviews: LayoutSubviews,
-        cache: inout FlowLayoutCache
-    ) -> CGFloat? {
-        alignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
-    }
-
-    @inlinable
     func makeCache(subviews: LayoutSubviews) -> FlowLayoutCache {
         makeCache(subviews)
     }

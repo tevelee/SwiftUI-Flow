@@ -124,6 +124,57 @@ struct FlowSeparatorRequirementTests {
 
     // MARK: - maxLines interaction
 
+    @Test(arguments: [false, true], [false, true])
+    func overflowIndicator_reusesSeparatorAfterLastVisibleItem(vertical: Bool, evenly: Bool) {
+        let content: [TestSubview] = vertical ? [10 × 30, 10 × 30, 10 × 30] : [30 × 10, 30 × 10, 30 × 10]
+        let subviews = interleaved(
+            content: content,
+            itemSeparator: { vertical ? 10 × 5 : 5 × 10 },
+            lineSeparator: { 2 × 2 }
+        )
+        let overflow: TestSubview = 10 × 10
+        overflow[IsOverflowLayoutValueKey.self] = true
+        let sut: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 2, distributeItemsEvenly: evenly, maxLines: 1)
+            : .horizontal(horizontalSpacing: 2, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
+        let result = FlowLayoutScenario(
+            layout: sut,
+            subviews: subviews + [overflow],
+            proposal: vertical ? 100 × 85 : 85 × 100
+        ).layoutThatFits()
+
+        #expect(result.reportedSize == (vertical ? 10 × 49 : 49 × 10))
+        #expect(content[0].placement?.position == .zero)
+        #expect(subviews[1].placement?.position == CGPoint(x: vertical ? 0 : 32, y: vertical ? 32 : 0))
+        #expect(overflow.placement?.position == CGPoint(x: vertical ? 0 : 39, y: vertical ? 39 : 0))
+        #expect(content.dropFirst().allSatisfy { isHidden($0, vertical: vertical) })
+        #expect(
+            subviews.dropFirst(2).filter { $0[SeparatorRoleLayoutValueKey.self].isSeparator }.allSatisfy {
+                isHidden($0, vertical: vertical)
+            }
+        )
+    }
+
+    @Test func overflowIndicator_alone_hasNoSeparatorOrLeadingSpacing() {
+        let subviews = interleaved(content: [30 × 10, 30 × 10], itemSeparator: { 5 × 10 })
+        let overflow: TestSubview = 10 × 10
+        overflow[IsOverflowLayoutValueKey.self] = true
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 2, verticalSpacing: 0, maxLines: 1),
+            subviews: subviews + [overflow],
+            proposal: 35 × 100
+        ).layoutThatFits()
+        #expect(result.reportedSize == (10 × 10))
+        #expect(overflow.placement?.position == .zero)
+        #expect(subviews.allSatisfy { isHidden($0, vertical: false) })
+    }
+
+    private func isHidden(_ subview: TestSubview, vertical: Bool) -> Bool {
+        guard let position = subview.placement?.position else { return false }
+        return position.y > 1000
+    }
+
     @Test func lineStructure_assignsSentinelToHiddenItems() {
         // 3 content items with line separators. Only the first two are "visible" — the third is capped.
         // lineStructure must return hiddenLineSentinel for the capped item so the view layer does not

@@ -41,7 +41,7 @@ struct LineCap: Sendable {
         _ lines: WrappedLines,
         available: CGFloat,
         cache: FlowLayoutCache,
-        spacingBefore: (Int) -> CGFloat
+        spacingBefore: (Int, Int) -> CGFloat
     ) -> LineAdaptation {
         var (visible, hidden) = splitAtLimit(lines)
         if let overflowIndex = cache.overflowSubviewIndex {
@@ -74,7 +74,7 @@ struct LineCap: Sendable {
         visible: inout WrappedLines,
         hidden: inout [Int],
         available: CGFloat,
-        spacingBefore: (Int) -> CGFloat,
+        spacingBefore: (Int, Int) -> CGFloat,
         sizeOf: (Int) -> CGFloat
     ) {
         guard !hidden.isEmpty, !visible.isEmpty else {
@@ -82,10 +82,11 @@ struct LineCap: Sendable {
             return
         }
         let overflowWidth = sizeOf(overflowIdx)
-        let overflowSpacing = spacingBefore(overflowIdx)
-        let trimmed = trimLastLine(&visible, toFit: overflowWidth + overflowSpacing, available: available)
+        let trimmed = trimLastLine(&visible, toFit: overflowWidth, available: available) { previous in
+            spacingBefore(overflowIdx, previous)
+        }
         hidden.append(contentsOf: trimmed)
-        let leadingSpace = visible[visible.count - 1].isEmpty ? 0 : overflowSpacing
+        let leadingSpace = visible[visible.count - 1].last.map { spacingBefore(overflowIdx, $0.index) } ?? 0
         visible[visible.count - 1].append(WrappedItem(index: overflowIdx, size: overflowWidth, leadingSpace: leadingSpace))
     }
 
@@ -94,13 +95,13 @@ struct LineCap: Sendable {
     private func trimLastLine(
         _ lines: inout WrappedLines,
         toFit needed: CGFloat,
-        available: CGFloat
+        available: CGFloat,
+        spacingAfter: (Int) -> CGFloat
     ) -> [Int] {
         guard !lines.isEmpty else { return [] }
         var removed: [Int] = []
         var lastLineWidth = lines[lines.count - 1].reduce(0) { $0 + $1.size + $1.leadingSpace }
-        while lastLineWidth + needed > available + 1e-9 {
-            guard !lines[lines.count - 1].isEmpty else { break }
+        while let last = lines[lines.count - 1].last, lastLineWidth + needed + spacingAfter(last.index) > available + 1e-9 {
             let item = lines[lines.count - 1].removeLast()
             removed.append(item.index)
             lastLineWidth -= (item.size + item.leadingSpace)

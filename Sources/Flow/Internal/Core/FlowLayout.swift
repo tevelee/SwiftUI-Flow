@@ -180,7 +180,10 @@ struct FlowLayout: Sendable {
                     adapted.lines,
                     available: availableLineBreakingSpace(in: proposal),
                     cache: cache,
-                    spacingBefore: { spacing(before: $0, cache: cache) }
+                    spacingBefore: { current, previous in
+                        separators?.spacing(before: current, after: previous)
+                            ?? cache.spacing(from: previous, to: current, itemSpacing: itemSpacing, axis: axis)
+                    }
                 )
             )
         }

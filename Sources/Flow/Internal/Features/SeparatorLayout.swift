@@ -58,7 +58,13 @@ struct SeparatorLayout {
         guard position > 0 else { return 0 }
         let current = plan.contentIndices[position]
         let previous = plan.contentIndices[position - 1]
-        if let separator = itemSeparator(before: current) {
+        return spacing(before: current, after: previous)
+    }
+
+    /// Reserves the same gap for wrapping and overflow fitting. An overflow chip takes the
+    /// separator following the last retained item, even when truncation changes that item.
+    func spacing(before current: Int, after previous: Int) -> CGFloat {
+        if let separator = itemSeparator(before: current, after: previous) {
             return spacing(from: previous, to: separator.index) + separator.size + spacing(from: separator.index, to: current)
         }
         return spacing(from: previous, to: current)
@@ -137,7 +143,7 @@ struct SeparatorLayout {
         items.reserveCapacity(line.count)
         for indexInLine in line.indices {
             var output = line[indexInLine]
-            if indexInLine > 0, let separator = itemSeparator(before: output.index) {
+            if indexInLine > 0, let separator = itemSeparator(before: output.index, after: line[indexInLine - 1].index) {
                 items.append(separator)
                 output.leadingSpace -= separator.leadingSpace + separator.size
             }
@@ -157,16 +163,18 @@ struct SeparatorLayout {
     /// The eligible item separator drawn before content item `contentIndex`, or `nil` when its gap
     /// carries no in-line separator. Used by both seams — to reserve its breadth before wrapping, and
     /// to re-insert it after.
-    private func itemSeparator(before contentIndex: Int) -> WrappedItem? {
-        guard let position = plan.position(ofContentIndex: contentIndex),
+    private func itemSeparator(before contentIndex: Int, after previous: Int) -> WrappedItem? {
+        let isOverflow = contentIndex == cache.overflowSubviewIndex
+        let position = isOverflow ? plan.position(ofContentIndex: previous).map { $0 + 1 } : plan.position(ofContentIndex: contentIndex)
+        guard let position,
             let gap = plan.gap(before: position),
-            gap.isEligible,
+            isOverflow ? !cache.subviewsCache[previous].layoutValues.isLineBreak : gap.isEligible,
             let separator = gap.itemSeparator
         else { return nil }
         return WrappedItem(
             index: separator,
             size: cache.subviewsCache[separator].ideal.breadth,
-            leadingSpace: spacing(from: plan.contentIndices[position - 1], to: separator)
+            leadingSpace: spacing(from: previous, to: separator)
         )
     }
 

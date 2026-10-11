@@ -11,6 +11,15 @@
     @MainActor
     struct FlowPublicAPIRenderingTests {
 
+        @Test func maxLines_itemSeparatorAppearsBeforeOverflow() {
+            let view = HFlow(itemSpacing: 2, rowSpacing: 0) {
+                ForEach(0 ..< 3) { _ in Color.clear.frame(width: 30, height: 10) }
+            }
+            .itemSeparator { Color.clear.frame(width: 5, height: 20) }
+            .maxLines(1) { _ in Color.clear.frame(width: 10, height: 10) }
+            #expect(measuredHeight(of: view, width: 85) == 20)
+        }
+
         @Test func lineBreak_forcesNewRow() {
             // 3 items × 50pt = 150pt fits in 200pt → 1 row without a break (height 50).
             // LineBreak() between item 1 and items 2–3 splits them: row1=50pt, row2=100pt → height 100.

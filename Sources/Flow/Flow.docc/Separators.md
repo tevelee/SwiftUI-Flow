@@ -56,3 +56,10 @@ HFlow {
 
 > Tip: Provide a single view from each builder. Pick a separator whose orientation matches the
 > axis — for example a `Divider()` reads naturally as a line separator in an `HFlow`.
+
+### Line limits and overflow
+
+With `.maxLines(_:overflow:)`, the item separator following the last retained item appears
+between that item and the overflow chip. Its size and spacing are included when making room
+for the chip. If the chip is alone on the last line, no item separator appears. Line separators
+are drawn only between retained content lines and never after the final visible line.

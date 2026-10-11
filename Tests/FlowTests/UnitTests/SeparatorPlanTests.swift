@@ -4,6 +4,31 @@ import Testing
 
 @Suite(.tags(.requirements))
 struct SeparatorPlanTests {
+    @Test(arguments: [false, true])
+    func explicitSeparator_overridesAutomaticSeparator(isEmpty: Bool) {
+        let plan = SeparatorPlan(
+            roles: [.content, .itemSeparator, .lineSeparator, .itemSeparatorOverride(isEmpty: isEmpty), .itemSeparator, .lineSeparator, .content],
+            isLineBreak: Array(repeating: false, count: 7)
+        )
+        #expect(plan.contentIndices == [0, 6])
+        #expect(plan.separatorIndices == [1, 2, 3, 4, 5])
+        #expect(plan.gap(before: 1) == .init(itemSeparator: isEmpty ? nil : 3, lineSeparator: 5, isEligible: true))
+    }
+
+    @Test func consecutiveExplicitSeparators_useLast_andIgnoreEdges() {
+        let plan = SeparatorPlan(
+            roles: [
+                .itemSeparatorOverride(isEmpty: false), .content, .itemSeparatorOverride(isEmpty: false),
+                .itemSeparatorOverride(isEmpty: true), .content, .itemSeparatorOverride(isEmpty: false),
+            ],
+            isLineBreak: Array(repeating: false, count: 6)
+        )
+        #expect(plan.contentIndices == [1, 4])
+        #expect(plan.gap(before: 0) == nil)
+        #expect(plan.gap(before: 1) == nil)
+        #expect(plan.gap(before: 2) == nil)
+    }
+
     @Test func noSeparators_yieldsAllContentNoGaps() {
         let plan = SeparatorPlan(
             roles: [.content, .content, .content],

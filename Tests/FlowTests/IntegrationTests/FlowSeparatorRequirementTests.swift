@@ -6,6 +6,52 @@ import Testing
 
 @Suite(.tags(.requirements))
 struct FlowSeparatorRequirementTests {
+    @Test(arguments: [false, true])
+    func explicitSeparator_yieldsToLineSeparatorWhenWrapped(evenly: Bool) {
+        let separator: TestSubview = 20 × 10
+        separator[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        let subviews = interleaved(
+            content: [30 × 10, separator, 30 × 10],
+            itemSeparator: { 5 × 10 },
+            lineSeparator: { stretchingSeparator(depth: 2) }
+        )
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 5, verticalSpacing: 0, distributeItemsEvenly: evenly),
+            subviews: subviews,
+            proposal: 89 × 100
+        ).layoutThatFits()
+        #expect(result.reportedSize == (30 × 22))
+        #expect(subviews[0].placement?.position == .zero)
+        #expect(subviews[5].placement?.position == CGPoint(x: 0, y: 10))
+        #expect(subviews[6].placement?.position == CGPoint(x: 0, y: 12))
+        #expect([1, 2, 3, 4].allSatisfy { isParked(subviews[$0], in: result.reportedSize) })
+        let cache = FlowLayoutCache(subviews, axis: .horizontal)
+        let separators = SeparatorLayout(cache: cache, axis: .horizontal, itemSpacing: 5)!
+        #expect(separators.lineStructure(of: [[.init(index: 0, size: 30, leadingSpace: 0)], [.init(index: 6, size: 30, leadingSpace: 0)]]) == [0, 0, 1])
+    }
+
+    @Test func explicitSeparators_doNotCountAsHiddenItems() {
+        final class Counts: @unchecked Sendable { var value: Int? }
+        let counts = Counts()
+        let custom: TestSubview = 20 × 10
+        custom[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        let empty: TestSubview = 0 × 0
+        empty[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
+        let overflow: TestSubview = 10 × 10
+        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[OverflowReporterKey.self] = { counts.value = $0 }
+        let subviews = interleaved(content: [30 × 10, custom, 30 × 10, empty, 30 × 10], itemSeparator: { 5 × 10 }) + [overflow]
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 2, verticalSpacing: 0, maxLines: 1),
+            subviews: subviews,
+            proposal: 85 × 100
+        ).layoutThatFits()
+        #expect(result.reportedSize == (64 × 10))
+        #expect(custom.placement?.position == CGPoint(x: 32, y: 0))
+        #expect(overflow.placement?.position == CGPoint(x: 54, y: 0))
+        #expect(counts.value == 2)
+    }
+
     // MARK: - Item separators
 
     @Test func itemSeparator_isPlacedBetweenTwoItemsOnTheSameLine() {

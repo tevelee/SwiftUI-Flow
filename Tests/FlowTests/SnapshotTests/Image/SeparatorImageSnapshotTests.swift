@@ -34,6 +34,36 @@
             assertSnapshot(of: view, as: .image(size: CGSize(width: 344, height: 220)))
         }
 
+        @Test func explicitItemSeparators() {
+            let view = HFlow(itemSpacing: 6, rowSpacing: 6) {
+                tag("Alpha")
+                ItemSeparator { Text("|").foregroundStyle(.black) }
+                tag("Beta")
+                tag("Gamma")
+                ItemSeparator { EmptyView() }
+                tag("Delta")
+            }
+            .itemSeparator { Text("•").foregroundStyle(.black) }
+            .lineSeparator { Divider() }
+            .frame(width: 260, alignment: .leading)
+            .padding(12)
+            .background(Color.white)
+            assertSnapshot(of: view, as: .image(size: CGSize(width: 284, height: 130)))
+        }
+
+        @Test func overflowItemSeparator() async {
+            let view = HFlow(itemSpacing: 6, rowSpacing: 6) {
+                ForEach(tags, id: \.self) { tag($0) }
+            }
+            .maxLines(1) { count in tag("+\(count)") }
+            .itemSeparator { Text("•").foregroundStyle(.black) }
+            .lineSeparator { Divider() }
+            .frame(width: 260, alignment: .leading)
+            .padding(12)
+            .background(Color.white)
+            await assertSnapshotSettled(view, size: CGSize(width: 284, height: 70))
+        }
+
         @Test func lineSeparator_dividers() {
             let view = HFlow(itemSpacing: 8, rowSpacing: 10) {
                 ForEach(tags, id: \.self) { tag($0) }

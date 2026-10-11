@@ -13,6 +13,8 @@ enum SeparatorRole: Sendable, Hashable {
     case content
     /// A separator drawn between two items on the same line.
     case itemSeparator
+    /// A caller-supplied boundary override. An empty override keeps ordinary item spacing.
+    case itemSeparatorOverride(isEmpty: Bool)
     /// A separator drawn between two lines.
     case lineSeparator
 
@@ -22,13 +24,13 @@ enum SeparatorRole: Sendable, Hashable {
     var isSeparator: Bool {
         switch self {
             case .content: false
-            case .itemSeparator, .lineSeparator: true
+            case .itemSeparator, .itemSeparatorOverride, .lineSeparator: true
         }
     }
 }
 
 @usableFromInline
-struct SeparatorRoleLayoutValueKey: LayoutValueKey {
+struct SeparatorRoleLayoutValueKey: LayoutValueKey, _ViewTraitKey {
     @usableFromInline
     static let defaultValue: SeparatorRole = .content
 }
@@ -46,9 +48,9 @@ struct LineStructureReporterKey: LayoutValueKey {
 /// A pure description of how separators relate to content items, derived once per layout pass from
 /// the subviews' ``SeparatorRole`` tags.
 ///
-/// The injected subview order is always `content, [itemSep], [lineSep], content, …`, i.e. each
-/// *gap* between two adjacent content items owns up to one item separator and up to one line
-/// separator. At most one of the two is ever drawn for a given gap: the item separator when the two
+/// Each gap between adjacent content items selects one item separator and one line separator.
+/// An explicit ``ItemSeparator`` replaces the automatic item separator; the last override wins,
+/// and an empty override selects no item separator. At most one separator is drawn: the item separator when the two
 /// items share a line, the line separator when the layout breaks between them. Edges have no gap, so
 /// separators never appear before the first or after the last item.
 ///
@@ -66,7 +68,7 @@ struct SeparatorPlan {
 
     /// Subview indices of content items, in order.
     let contentIndices: [Int]
-    /// Subview indices of every separator (item or line), used to hide the ones left unused.
+    /// Subview indices of every separator, including explicit overrides, used to hide the ones left unused.
     let separatorIndices: [Int]
     /// `gaps[p]` describes the gap *before* content position `p`. `gaps[0]` (if present) is `nil`.
     private let gaps: [Gap?]
@@ -92,12 +94,19 @@ struct SeparatorPlan {
                 lineSeparator: nil,
                 isEligible: !isLineBreak[previous] && !isLineBreak[current]
             )
+            var overrideIndex: Int?
             for between in (previous + 1) ..< current {
                 switch roles[between] {
                     case .itemSeparator: gap.itemSeparator = gap.itemSeparator ?? between
+                    case .itemSeparatorOverride: overrideIndex = between
                     case .lineSeparator: gap.lineSeparator = gap.lineSeparator ?? between
                     case .content: break
                 }
+            }
+            if let overrideIndex, case .itemSeparatorOverride(let isEmpty) = roles[overrideIndex] {
+                gap.itemSeparator = isEmpty ? nil : overrideIndex
+                // Anchor the line boundary after the override so the interleaver can identify it.
+                gap.lineSeparator = ((overrideIndex + 1) ..< current).first { roles[$0] == .lineSeparator } ?? gap.lineSeparator
             }
             gaps.append(gap.itemSeparator != nil || gap.lineSeparator != nil ? gap : nil)
         }

@@ -27,6 +27,31 @@ HFlow {
 }
 ```
 
+### Explicit item separators
+
+Place ``ItemSeparator`` between children to customize a specific boundary while keeping the
+flow-wide default for other gaps:
+
+```swift
+HFlow(itemSpacing: 6) {
+    Text("Alpha")
+    ItemSeparator { Text("|") }
+    Text("Beta")
+    Text("Gamma")
+}
+.itemSeparator { Text("•") }
+```
+
+This draws a pipe between Alpha and Beta and a dot between Beta and Gamma when the items share
+a line. Explicit separators also work without `.itemSeparator`. Their size affects wrapping,
+with `itemSpacing` on both sides. They disappear at line boundaries and at the flow's edges,
+and do not count as hidden items for `.maxLines`.
+
+Use `ItemSeparator { EmptyView() }` to omit the separator at a boundary while keeping one
+ordinary item-spacing gap. If several explicit separators occur between two items, the last
+one wins. Explicit separators do not replace line separators. With an overflow chip, the
+boundary after the last retained item determines the chip's item separator.
+
 ### Line separators
 
 A line separator becomes its own line between two rows (or columns), so spacing applies on

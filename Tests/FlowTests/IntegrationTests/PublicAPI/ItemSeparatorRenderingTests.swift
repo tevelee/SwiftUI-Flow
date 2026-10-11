@@ -1,0 +1,122 @@
+#if os(macOS)
+    import AppKit
+    import SwiftUI
+    import Testing
+
+    @testable import Flow
+
+    @Suite(.tags(.requirements))
+    @MainActor
+    struct ItemSeparatorRenderingTests {
+        @Test(arguments: [false, true])
+        func nilSpacing_usesSubviewPreferences(vertical: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                ItemSeparator { box(20, vertical: vertical) }
+                box(30, vertical: vertical)
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: nil, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: nil, rowSpacing: 0) { content }
+                }
+            }
+            #expect(size(view, breadth: 96, vertical: vertical) == dimensions(96, 10, vertical: vertical))
+            #expect(size(view, breadth: 95, vertical: vertical) == dimensions(30, 20, vertical: vertical))
+        }
+        @Test(arguments: [false, true], [false, true])
+        func explicitSeparator_replacesDefault_andReservesSpacing(vertical: Bool, legacy: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                ItemSeparator { box(20, vertical: vertical) }
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+            }
+            let view = flow(vertical: vertical, legacy: legacy, content: content)
+            #expect(size(view, breadth: 135, vertical: vertical) == dimensions(135, 10, vertical: vertical))
+            #expect(size(view, breadth: 89, vertical: vertical) == dimensions(75, 20, vertical: vertical))
+        }
+
+        @Test(arguments: [false, true], [false, true])
+        func emptySeparator_keepsSingleOrdinaryGap(vertical: Bool, legacy: Bool) {
+            let view = flow(
+                vertical: vertical,
+                legacy: legacy,
+                content: Group {
+                    box(30, vertical: vertical)
+                    ItemSeparator { EmptyView() }
+                    box(30, vertical: vertical)
+                }
+            )
+            #expect(size(view, breadth: 65, vertical: vertical) == dimensions(65, 10, vertical: vertical))
+            #expect(size(view, breadth: 64, vertical: vertical) == dimensions(30, 20, vertical: vertical))
+        }
+
+        @Test(arguments: [false, true])
+        func explicitSeparator_worksWithoutDefault_andIgnoresEdges(vertical: Bool) {
+            let content = Group {
+                ItemSeparator { box(100, vertical: vertical) }
+                box(30, vertical: vertical)
+                ItemSeparator { box(20, vertical: vertical) }
+                box(30, vertical: vertical)
+                ItemSeparator { box(100, vertical: vertical) }
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) { content }
+                }
+            }
+            #expect(size(view, breadth: 90, vertical: vertical) == dimensions(90, 10, vertical: vertical))
+            #expect(size(view, breadth: 89, vertical: vertical) == dimensions(30, 20, vertical: vertical))
+        }
+
+        @Test func builderGroupsMultipleViewsIntoOneSeparator() {
+            let view = HFlow(itemSpacing: 5, rowSpacing: 0) {
+                box(30, vertical: false)
+                ItemSeparator {
+                    box(20, vertical: false)
+                    box(10, vertical: false)
+                }
+                box(30, vertical: false)
+            }
+            #expect(size(view, breadth: 90, vertical: false) == CGSize(width: 90, height: 10))
+        }
+
+        @ViewBuilder
+        private func flow(vertical: Bool, legacy: Bool, content: some View) -> some View {
+            if legacy {
+                let layout = vertical ? AnyLayout(VFlowLayout(itemSpacing: 5, columnSpacing: 0)) : AnyLayout(HFlowLayout(itemSpacing: 5, rowSpacing: 0))
+                layout {
+                    _VariadicView.Tree(
+                        SeparatorInterleaver(
+                            itemSeparator: { AnyView(box(5, vertical: vertical)) },
+                            lineSeparator: nil,
+                            lineOf: []
+                        )
+                    ) { content }
+                }
+            } else if vertical {
+                VFlow(itemSpacing: 5, columnSpacing: 0) { content }.itemSeparator { box(5, vertical: vertical) }
+            } else {
+                HFlow(itemSpacing: 5, rowSpacing: 0) { content }.itemSeparator { box(5, vertical: vertical) }
+            }
+        }
+
+        private func box(_ breadth: CGFloat, vertical: Bool) -> some View {
+            Color.red.frame(width: vertical ? 10 : breadth, height: vertical ? breadth : 10)
+        }
+
+        private func dimensions(_ breadth: CGFloat, _ depth: CGFloat, vertical: Bool) -> CGSize {
+            CGSize(width: vertical ? depth : breadth, height: vertical ? breadth : depth)
+        }
+
+        private func size(_ view: some View, breadth: CGFloat, vertical: Bool) -> CGSize? {
+            let renderer = ImageRenderer(content: view)
+            renderer.proposedSize = ProposedViewSize(width: vertical ? nil : breadth, height: vertical ? breadth : nil)
+            return renderer.nsImage?.size
+        }
+    }
+#endif

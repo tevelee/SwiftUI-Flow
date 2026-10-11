@@ -36,7 +36,9 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
         // reporter when line separators are configured.
         let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructure.reporter()
         return layout {
-            interleaved(reporter: reporter)
+            interleaved()
+                // Attach after enumeration: legacy child proxies can drop source layout values.
+                .layoutValue(key: LineStructureReporterKey.self, value: reporter)
             if let overflowBuilder {
                 overflowBuilder(overflowCount.value)
                     .overflowIndicator(reporter: overflowCount.reporter())
@@ -45,7 +47,7 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     }
 
     @ViewBuilder
-    private func interleaved(reporter: (@Sendable ([Int]) -> Void)?) -> some View {
+    private func interleaved() -> some View {
         // Capture env values into locals so they're stable for the view-update scope and can be
         // referenced safely inside @ViewBuilder and Group(subviews:) closures.
         let itemSep = itemSeparator
@@ -53,7 +55,6 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
         let tagged =
             content
             .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-            .layoutValue(key: LineStructureReporterKey.self, value: reporter)
             .environment(\.maxLines, nil)
             .environment(\._flowItemSeparator, nil)
             .environment(\._flowLineSeparator, nil)
@@ -99,18 +100,25 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
 
 /// The shared body of both interleaving paths (``Group(subviews:)`` and the ``_VariadicView``
 /// fallback): emit each element followed by the separators for the gap after it, except after the last.
-/// `lineOf` is the layout-reported line structure used to give each separator a stable visual identity.
+/// `lineOf` follows caller subview order, including explicit separator overrides, and gives
+/// each injected separator a stable visual identity.
 @ViewBuilder
 private func interleavedContent<Elements: RandomAccessCollection>(
     _ elements: Elements,
     itemSeparator: (() -> AnyView)?,
     lineSeparator: (() -> AnyView)?,
-    lineOf: [Int]
+    lineOf: [Int],
+    separatorRole: ((Elements.Element) -> SeparatorRole)? = nil
 ) -> some View where Elements.Element: View & Identifiable {
     let last = elements.count - 1
     let positionsInLine = linePositions(for: lineOf)
     ForEach(Array(elements.enumerated()), id: \.element.id) { item in
-        item.element
+        if let separatorRole {
+            // Legacy subview proxies preserve traits but need their layout role restored.
+            item.element.layoutValue(key: SeparatorRoleLayoutValueKey.self, value: separatorRole(item.element))
+        } else {
+            item.element
+        }
         if item.offset < last {
             separators(
                 afterIndex: item.offset,
@@ -212,6 +220,12 @@ struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
 
     @ViewBuilder
     func body(children: _VariadicView.Children) -> some View {
-        interleavedContent(children, itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineOf)
+        interleavedContent(
+            children,
+            itemSeparator: itemSeparator,
+            lineSeparator: lineSeparator,
+            lineOf: lineOf,
+            separatorRole: { $0[SeparatorRoleLayoutValueKey.self] }
+        )
     }
 }

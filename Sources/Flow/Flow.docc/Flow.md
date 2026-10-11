@@ -46,6 +46,7 @@ lines, a flexibility model for stretching items, and manual line breaks.
 - <doc:Separators>
 - ``FlexibilityBehavior``
 - ``LineBreak``
+- ``ItemSeparator``
 
 ### Layout Conformances
 

@@ -98,17 +98,29 @@ struct SeparatorLayout {
         return LineAdaptation(lines: result, hidden: unusedSeparators(placed: placed), lineStructure: structure)
     }
 
-    /// The line index of every content item, in content order, derived from the content-only wrapping.
-    /// Reported back to the view layer so line separators can be identified by their visual position.
+    /// Line indices in caller subview order, including explicit separator overrides assigned the
+    /// preceding content item's line. This matches the interleaver's source positions so line
+    /// separators retain their visual identity when boundaries include overrides.
     /// Hidden items (capped by maxLines) are assigned `hiddenLineSentinel` so the view layer can
     /// distinguish them from visible items on line 0 and avoid injecting spurious separators.
     func lineStructure(of visible: WrappedLines) -> [Int] {
-        var lineOf = [Int](repeating: SeparatorLayout.hiddenLineSentinel, count: plan.contentIndices.count)
+        var lineBySubview: [Int: Int] = [:]
         for lineIndex in visible.indices {
             for item in visible[lineIndex] {
-                if let position = plan.position(ofContentIndex: item.index) {
-                    lineOf[position] = lineIndex
-                }
+                lineBySubview[item.index] = lineIndex
+            }
+        }
+        var lineOf: [Int] = []
+        var precedingLine = Self.hiddenLineSentinel
+        for index in cache.subviewsCache.indices {
+            switch cache.subviewsCache[index].separatorRole {
+                case .content:
+                    precedingLine = lineBySubview[index] ?? Self.hiddenLineSentinel
+                    lineOf.append(precedingLine)
+                case .itemSeparatorOverride:
+                    lineOf.append(precedingLine)
+                case .itemSeparator, .lineSeparator:
+                    break
             }
         }
         return lineOf

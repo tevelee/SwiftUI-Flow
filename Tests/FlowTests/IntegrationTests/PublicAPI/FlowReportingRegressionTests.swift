@@ -82,6 +82,9 @@
                     decorate(
                         VFlow {
                             ForEach(input.sizes.indices, id: \.self) { index in
+                                if feature == .combined, index > 0 {
+                                    ItemSeparator { Color.gray.frame(width: 1, height: 1) }
+                                }
                                 Color.red.frame(width: 20, height: input.sizes[index])
                             }
                         }
@@ -90,6 +93,9 @@
                     decorate(
                         HFlow {
                             ForEach(input.sizes.indices, id: \.self) { index in
+                                if feature == .combined, index > 0 {
+                                    ItemSeparator { Color.gray.frame(width: 1, height: 1) }
+                                }
                                 Color.red.frame(width: input.sizes[index], height: 20)
                             }
                         }
@@ -126,7 +132,7 @@
                     case .separators:
                         content.lineSeparator(separator)
                     case .combined:
-                        content.maxLines(1, overflow: badge).lineSeparator(separator)
+                        content.maxLines(1, overflow: badge).itemSeparator(separator).lineSeparator(separator)
                 }
             }
 

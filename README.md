@@ -245,11 +245,6 @@ HFlow {
 
 ## Separators
 
-Draw separators between items and/or lines. They only appear *between* elements — never at the
-edges — and they participate in layout: an item separator's width is accounted for when wrapping,
-and a line separator contributes its height. A gap that wraps onto a new line shows the line
-separator instead of the item separator.
-
 ```swift
 HFlow {
     ForEach(tags, id: \.self) { Text($0) }
@@ -257,28 +252,6 @@ HFlow {
 .itemSeparator { Text("•").foregroundStyle(.secondary) }
 .lineSeparator { Divider() }
 ```
-
-Customize a specific boundary with `ItemSeparator`, or omit its separator with
-`ItemSeparator { EmptyView() }` while keeping ordinary item spacing:
-
-```swift
-HFlow(itemSpacing: 6) {
-    Text("Alpha")
-    ItemSeparator { Text("|") }
-    Text("Beta")
-    ItemSeparator { EmptyView() }
-    Text("Gamma")
-}
-.itemSeparator { Text("•") }
-```
-
-Explicit separators work with both `HFlow` and `VFlow`, including without a flow-wide default.
-They appear only between visible items on the same line and do not count as hidden items.
-When using `.maxLines(_:overflow:)`, the boundary after the last retained item supplies the
-separator before the overflow chip, with its size and spacing included when making room.
-
-The two modifiers are independent; use either one on its own or both together. They are available
-on `HFlow` and `VFlow`.
 
 ![HFlow](Tests/FlowTests/SnapshotTests/Image/__Snapshots__/ReadmeSnapshotTests/hflow_separators.1.png)
 

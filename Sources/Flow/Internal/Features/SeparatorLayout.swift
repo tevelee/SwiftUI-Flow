@@ -177,11 +177,12 @@ struct SeparatorLayout {
     /// to re-insert it after.
     private func itemSeparator(before contentIndex: Int, after previous: Int) -> WrappedItem? {
         let isOverflow = contentIndex == cache.overflowSubviewIndex
-        // An explicit marker before overflow takes precedence over the inherited separator.
-        // Stop at content so the search stays within the overflow boundary.
+        // Only markers from the overflow builder override the inherited separator.
+        // Trailing markers in the main content remain orphaned at the flow's edge.
         if isOverflow {
             guard !cache.subviewsCache[previous].layoutValues.isLineBreak else { return nil }
             for index in (0 ..< contentIndex).reversed() {
+                guard cache.subviewsCache[index].isOverflow else { break }
                 switch cache.subviewsCache[index].separatorRole {
                     case .itemSeparatorOverride(let isEmpty):
                         guard !isEmpty else { return nil }

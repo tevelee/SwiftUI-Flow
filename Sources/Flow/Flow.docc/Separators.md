@@ -103,5 +103,8 @@ HFlow(itemSpacing: 6) {
 The empty separator keeps one ordinary item-spacing gap before the chip. A custom separator
 reserves its own size and item spacing on both sides when the layout makes room for the chip.
 
+An `ItemSeparator` at the end of the main content remains an ignored edge marker. Only a
+separator inside the overflow builder can override the chip's inherited separator.
+
 If the chip is alone on the last line, no item separator appears. Line separators are drawn
 only between retained content lines and never after the final visible line.

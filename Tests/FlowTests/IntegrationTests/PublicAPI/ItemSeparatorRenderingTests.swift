@@ -8,6 +8,148 @@
     @Suite(.tags(.requirements))
     @MainActor
     struct ItemSeparatorRenderingTests {
+        @Test(.tags(.regression), arguments: [false, true], [false, true])
+        func trailingContentSeparator_doesNotOverrideOverflow(vertical: Bool, empty: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                if empty {
+                    ItemSeparator { EmptyView() }
+                } else {
+                    ItemSeparator { box(50, vertical: vertical) }
+                }
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) { content }
+                }
+            }
+            .itemSeparator { box(5, vertical: vertical) }
+            .maxLines(1) { _ in box(20, vertical: vertical) }
+
+            #expect(size(view, breadth: 100, vertical: vertical) == dimensions(65, 10, vertical: vertical))
+        }
+
+        @Test(.tags(.regression), arguments: [false, true])
+        func trailingContentSeparator_withoutDefault_isIgnored(vertical: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                ItemSeparator { box(50, vertical: vertical) }
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) { content }
+                }
+            }
+            .maxLines(1) { _ in box(20, vertical: vertical) }
+
+            #expect(size(view, breadth: 70, vertical: vertical) == dimensions(55, 10, vertical: vertical))
+        }
+
+        @Test(.tags(.regression), arguments: [false, true], [false, true])
+        func legacyOverflowBuilder_preservesSeparatorOwnership(vertical: Bool, inOverflowBuilder: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                if !inOverflowBuilder {
+                    ItemSeparator { box(2, vertical: vertical) }
+                }
+            }
+            let interleaved = _VariadicView.Tree(
+                SeparatorInterleaver(
+                    itemSeparator: { AnyView(box(5, vertical: vertical)) },
+                    lineSeparator: nil,
+                    lineOf: []
+                )
+            ) { content }
+            let layout =
+                vertical
+                ? AnyLayout(VFlowLayout(itemSpacing: 5, columnSpacing: 0).withMaxLines(1))
+                : AnyLayout(HFlowLayout(itemSpacing: 5, rowSpacing: 0).withMaxLines(1))
+            let view = _FlowWithOverflow(layout: layout, content: interleaved) { _ in
+                Group {
+                    if inOverflowBuilder {
+                        ItemSeparator { box(2, vertical: vertical) }
+                    }
+                    box(20, vertical: vertical)
+                }
+            }
+
+            #expect(size(view, breadth: 107, vertical: vertical) == dimensions(inOverflowBuilder ? 107 : 65, 10, vertical: vertical))
+        }
+
+        @Test(arguments: [false, true], [0, 1, 2, 3])
+        func overflowBuilder_separator_controlsFitting(vertical: Bool, mode: Int) {
+            let content = Group {
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+                box(30, vertical: vertical)
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) { content }
+                }
+            }
+            .itemSeparator { box(5, vertical: vertical) }
+            .maxLines(1) { _ in
+                if mode == 1 {
+                    ItemSeparator { EmptyView() }
+                } else if mode == 2 {
+                    ItemSeparator { box(2, vertical: vertical) }
+                } else if mode == 3 {
+                    ItemSeparator { box(50, vertical: vertical) }
+                    ItemSeparator { EmptyView() }
+                }
+                box(20, vertical: vertical)
+            }
+            if mode == 0 {
+                #expect(size(view, breadth: 100, vertical: vertical) == dimensions(65, 10, vertical: vertical))
+            } else if mode == 2 {
+                #expect(size(view, breadth: 107, vertical: vertical) == dimensions(107, 10, vertical: vertical))
+                #expect(size(view, breadth: 106, vertical: vertical) == dimensions(62, 10, vertical: vertical))
+            } else {
+                #expect(size(view, breadth: 100, vertical: vertical) == dimensions(100, 10, vertical: vertical))
+                #expect(size(view, breadth: 99, vertical: vertical) == dimensions(55, 10, vertical: vertical))
+            }
+        }
+
+        @Test(arguments: [false, true])
+        func overflowBuilder_customSeparator_withoutDefault(vertical: Bool) {
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) {
+                        box(30, vertical: true)
+                        box(30, vertical: true)
+                        box(30, vertical: true)
+                    }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) {
+                        box(30, vertical: false)
+                        box(30, vertical: false)
+                        box(30, vertical: false)
+                    }
+                }
+            }
+            .maxLines(1) { _ in
+                ItemSeparator { box(2, vertical: vertical) }
+                box(20, vertical: vertical)
+            }
+            #expect(size(view, breadth: 97, vertical: vertical) == dimensions(97, 10, vertical: vertical))
+            #expect(size(view, breadth: 96, vertical: vertical) == dimensions(62, 10, vertical: vertical))
+            #expect(size(view, breadth: 20, vertical: vertical) == dimensions(20, 10, vertical: vertical))
+            #expect(size(view, breadth: 100, vertical: vertical) == dimensions(100, 10, vertical: vertical))
+        }
+
         @Test(arguments: [false, true])
         func nilSpacing_usesSubviewPreferences(vertical: Bool) {
             let content = Group {

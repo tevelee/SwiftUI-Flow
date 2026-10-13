@@ -38,6 +38,10 @@ public struct FlowLayoutCache {
             }
         }
 
+        /// Whether this subview belongs to the overflow builder, including its separator markers.
+        @usableFromInline
+        var isOverflow: Bool
+
         @usableFromInline
         var overflowReporter: (@Sendable (Int) -> Void)?
 
@@ -61,6 +65,7 @@ public struct FlowLayoutCache {
                 isLineBreak: subview[IsLineBreakLayoutValueKey.self],
                 flexibility: subview[FlexibilityLayoutValueKey.self]
             )
+            isOverflow = subview[IsOverflowLayoutValueKey.self]
             overflowReporter = subview[OverflowReporterKey.self]
             separatorRole = subview[SeparatorRoleLayoutValueKey.self]
             lineStructureReporter = subview[LineStructureReporterKey.self]
@@ -122,9 +127,10 @@ public struct FlowLayoutCache {
 
     @inlinable
     init(_ subviews: some Subviews, axis: Axis) {
-        subviewsCache = subviews.map { SubviewCache($0, axis: axis) }
+        let subviewsCache = subviews.map { SubviewCache($0, axis: axis) }
+        self.subviewsCache = subviewsCache
         overflowSubviewIndex = subviews.indices.last.flatMap {
-            subviews[$0][IsOverflowLayoutValueKey.self] ? $0 : nil
+            subviewsCache[$0].isOverflow ? $0 : nil
         }
         hasSeparators = subviewsCache.contains { $0.separatorRole.isSeparator }
         let hasReporters = subviewsCache.contains { $0.overflowReporter != nil || $0.lineStructureReporter != nil }

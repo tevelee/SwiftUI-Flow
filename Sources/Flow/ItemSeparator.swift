@@ -7,6 +7,9 @@ import SwiftUI
 /// items on the same line. Use `ItemSeparator { EmptyView() }` to omit a separator while
 /// keeping ordinary item spacing. Consecutive separators use the last one.
 ///
+/// Place the separator immediately before the overflow view in a `.maxLines(_:overflow:)`
+/// builder to replace the inherited separator.
+///
 /// Explicit separators do not count as hidden items and do not replace line separators.
 public struct ItemSeparator<Content: View>: View {
     private let content: Content

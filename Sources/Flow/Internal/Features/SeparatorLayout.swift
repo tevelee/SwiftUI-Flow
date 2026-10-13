@@ -177,10 +177,31 @@ struct SeparatorLayout {
     /// to re-insert it after.
     private func itemSeparator(before contentIndex: Int, after previous: Int) -> WrappedItem? {
         let isOverflow = contentIndex == cache.overflowSubviewIndex
+        // An explicit marker before overflow takes precedence over the inherited separator.
+        // Stop at content so the search stays within the overflow boundary.
+        if isOverflow {
+            guard !cache.subviewsCache[previous].layoutValues.isLineBreak else { return nil }
+            for index in (0 ..< contentIndex).reversed() {
+                switch cache.subviewsCache[index].separatorRole {
+                    case .itemSeparatorOverride(let isEmpty):
+                        guard !isEmpty else { return nil }
+                        return WrappedItem(
+                            index: index,
+                            size: cache.subviewsCache[index].ideal.breadth,
+                            leadingSpace: spacing(from: previous, to: index)
+                        )
+                    case .content:
+                        break
+                    case .itemSeparator, .lineSeparator:
+                        continue
+                }
+                break
+            }
+        }
         let position = isOverflow ? plan.position(ofContentIndex: previous).map { $0 + 1 } : plan.position(ofContentIndex: contentIndex)
         guard let position,
             let gap = plan.gap(before: position),
-            isOverflow ? !cache.subviewsCache[previous].layoutValues.isLineBreak : gap.isEligible,
+            isOverflow || gap.isEligible,
             let separator = gap.itemSeparator
         else { return nil }
         return WrappedItem(

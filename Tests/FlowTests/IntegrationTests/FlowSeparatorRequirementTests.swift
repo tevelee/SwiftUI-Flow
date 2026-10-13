@@ -6,6 +6,28 @@ import Testing
 
 @Suite(.tags(.requirements))
 struct FlowSeparatorRequirementTests {
+    @Test func overflowBoundary_emptyOverride_preservesCountAndOrdinarySeparators() {
+        final class Counts: @unchecked Sendable { var value: Int? }
+        let counts = Counts()
+        let marker: TestSubview = 0 × 0
+        marker[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
+        let overflow: TestSubview = 20 × 10
+        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[OverflowReporterKey.self] = { counts.value = $0 }
+        let subviews = interleaved(content: [30 × 10, 30 × 10, 30 × 10], itemSeparator: { 5 × 10 }) + [marker, overflow]
+        let result = FlowLayoutScenario(
+            layout: .horizontal(horizontalSpacing: 5, verticalSpacing: 0, maxLines: 1),
+            subviews: subviews,
+            proposal: 100 × 100
+        ).layoutThatFits()
+        #expect(result.reportedSize == (100 × 10))
+        #expect(subviews[1].placement?.position == CGPoint(x: 35, y: 0))
+        #expect(subviews[2].placement?.position == CGPoint(x: 45, y: 0))
+        #expect(overflow.placement?.position == CGPoint(x: 80, y: 0))
+        #expect(counts.value == 1)
+        #expect(isParked(marker, in: result.reportedSize))
+    }
+
     @Test(arguments: [false, true])
     func explicitSeparator_yieldsToLineSeparatorWhenWrapped(evenly: Bool) {
         let separator: TestSubview = 20 × 10
@@ -169,6 +191,30 @@ struct FlowSeparatorRequirementTests {
     }
 
     // MARK: - maxLines interaction
+
+    @Test(arguments: [false, true], [false, true])
+    func overflowOverride_afterRetainedLineBreak_isSuppressed(vertical: Bool, evenly: Bool) {
+        let lineBreak: TestSubview = 0 × 0
+        lineBreak[IsLineBreakLayoutValueKey.self] = true
+        let first: TestSubview = vertical ? 10 × 30 : 30 × 10
+        let second: TestSubview = vertical ? 10 × 30 : 30 × 10
+        let separator: TestSubview = vertical ? 10 × 5 : 5 × 10
+        separator[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        let overflow: TestSubview = 10 × 10
+        overflow[IsOverflowLayoutValueKey.self] = true
+        let layout: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
+            : .horizontal(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
+        let result = FlowLayoutScenario(
+            layout: layout,
+            subviews: [lineBreak, first, second, separator, overflow],
+            proposal: vertical ? 100 × 35 : 35 × 100
+        ).layoutThatFits()
+        #expect(result.reportedSize == (10 × 10))
+        #expect(overflow.placement?.position == .zero)
+        #expect(isParked(separator, in: result.reportedSize))
+    }
 
     @Test(arguments: [false, true], [false, true])
     func overflowIndicator_reusesSeparatorAfterLastVisibleItem(vertical: Bool, evenly: Bool) {

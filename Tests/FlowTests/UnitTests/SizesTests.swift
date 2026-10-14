@@ -68,28 +68,26 @@ struct SizesTests {
     }
 
     @Test func lineBreak_atPosition0_allowed() throws {
-        let items: IndexedMeasuredItems = [
-            (offset: 0, element: MeasuredItem(size: 0 ... 0, spacing: 0, isLineBreakView: true)),
-            (offset: 1, element: MeasuredItem(size: 30 ... 30, spacing: 10)),
-        ]
+        let items = indexed([
+            MeasuredItem(size: 0 ... 0, spacing: 0, isLineBreakView: true),
+            MeasuredItem(size: 30 ... 30, spacing: 10),
+        ])
         let result = try #require(sizes(of: items, availableSpace: 100))
         #expect(result.items[1].leadingSpace == 0, "Spacing after line break should be zeroed")
     }
 
     @Test func lineBreak_atPosition0_withOnlyMarker_returnsZeroSizedLine() throws {
-        let items: IndexedMeasuredItems = [
-            (offset: 0, element: MeasuredItem(size: 0 ... 0, spacing: 12, isLineBreakView: true))
-        ]
+        let items = indexed([MeasuredItem(size: 0 ... 0, spacing: 12, isLineBreakView: true)])
         let result = try #require(sizes(of: items, availableSpace: 100))
         #expect(result.items == [WrappedItem(index: 0, size: 0, leadingSpace: 0)])
         #expect(result.remainingSpace == 100)
     }
 
     @Test func lineBreak_atNonZeroPosition_returnsNil() {
-        let items: IndexedMeasuredItems = [
-            (offset: 0, element: MeasuredItem(size: 30 ... 30, spacing: 0)),
-            (offset: 1, element: MeasuredItem(size: 0 ... 0, spacing: 0, isLineBreakView: true)),
-        ]
+        let items = indexed([
+            MeasuredItem(size: 30 ... 30, spacing: 0),
+            MeasuredItem(size: 0 ... 0, spacing: 0, isLineBreakView: true),
+        ])
         #expect(sizes(of: items, availableSpace: 100) == nil)
     }
 
@@ -361,13 +359,13 @@ struct SizesTests {
     }
 }
 
-private func indexed(_ items: [MeasuredItem]) -> IndexedMeasuredItems {
-    Array(items.enumerated())
+private func indexed(_ items: [MeasuredItem]) -> ArraySlice<MeasuredItem> {
+    items[...]
 }
 
 /// Sizes a candidate line through ``LineSizer`` — the unit under test here.
 private func sizes(
-    of items: IndexedMeasuredItems,
+    of items: ArraySlice<MeasuredItem>,
     availableSpace: CGFloat,
     sourceLocation: SourceLocation = #_sourceLocation
 ) -> SizedLine? {

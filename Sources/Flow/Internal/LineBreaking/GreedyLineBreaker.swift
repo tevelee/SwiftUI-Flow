@@ -13,24 +13,23 @@ struct GreedyLineBreaker: LineBreaking {
     func wrapItemsToLines(items: [MeasuredItem], in availableSpace: CGFloat) -> WrappedLines {
         let sizer = LineSizer(availableSpace: availableSpace)
         var fitter = LineFitter(availableSpace: availableSpace)
-        var currentLine: IndexedMeasuredItems = []
+        var lineStart = items.startIndex
         var lines: WrappedLines = []
 
-        for item in items.enumerated() {
-            currentLine.append(item)
-            fitter.append(item.element)
+        for index in items.indices {
+            let item = items[index]
+            fitter.append(item)
             if fitter.remainingSpace == nil {
-                currentLine.removeLast()
-                if !currentLine.isEmpty {
-                    lines.append(sizer.resolvedLine(currentLine))
+                if lineStart < index {
+                    lines.append(sizer.resolvedLine(items[lineStart ..< index]))
                 }
-                currentLine = [item]
+                lineStart = index
                 fitter = LineFitter(availableSpace: availableSpace)
-                fitter.append(item.element)
+                fitter.append(item)
             }
         }
-        if !currentLine.isEmpty {
-            lines.append(sizer.resolvedLine(currentLine))
+        if lineStart < items.endIndex {
+            lines.append(sizer.resolvedLine(items[lineStart...]))
         }
         return lines
     }

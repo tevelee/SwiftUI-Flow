@@ -63,10 +63,6 @@ typealias WrappedLine = [WrappedItem]
 @usableFromInline
 typealias WrappedLines = [WrappedLine]
 
-/// Measured items carrying their original positions, used while sizing a candidate line.
-@usableFromInline
-typealias IndexedMeasuredItems = [(offset: Int, element: MeasuredItem)]
-
 /// Wraps a flat run of measured items into lines that each fit `availableSpace`.
 @usableFromInline
 protocol LineBreaking {

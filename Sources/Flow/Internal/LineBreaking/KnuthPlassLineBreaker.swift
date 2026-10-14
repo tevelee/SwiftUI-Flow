@@ -4,9 +4,9 @@ import CoreFoundation
 //
 // Where ``GreedyLineBreaker`` is greedy (fill each line, then wrap), this minimizes a global cost —
 // squared leftover space per line, plus a stretch penalty and a small bias toward fewer lines — via
-// dynamic programming over break points. Each start extends its candidates forward, so non-growing
-// candidates share one incremental ``LineFitter``; flexible candidates use ``LineSizer`` to score
-// stretch. Only costs and break points are retained, and chosen lines are sized during reconstruction.
+// dynamic programming over break points. Each start extends its candidates with one incremental
+// ``LineFitter``. ``LineSizer`` scores growth without a wrapped-item buffer for uniform candidates.
+// Only costs and break points are retained, and chosen lines are sized during reconstruction.
 
 @usableFromInline
 struct KnuthPlassLineBreaker: LineBreaking {
@@ -33,8 +33,6 @@ struct KnuthPlassSolver {
     let availableSpace: CGFloat
     var costs: [CGFloat]
     var breaks: [Int?]
-    /// Finite minima and zero growth make stretch zero; scoring needs no sized-item array.
-    let canScoreWithoutSizing: Bool
     /// Appending non-negative sizes and spacing cannot shrink a candidate's minimum breadth.
     /// Structural violations also persist as it grows. Negative spacing can make a later
     /// candidate fit again, so scanning must continue after overflow when it is present.
@@ -44,7 +42,6 @@ struct KnuthPlassSolver {
     init(items: [MeasuredItem], availableSpace: CGFloat) {
         self.items = items
         self.availableSpace = availableSpace
-        canScoreWithoutSizing = items.allSatisfy { $0.growingPotential == 0 && $0.size.lowerBound.isFinite }
         costs = Array(repeating: .infinity, count: items.count + 1)
         breaks = Array(repeating: nil, count: items.count + 1)
         // Only the spacing between items (every spacing except the first item's, which
@@ -69,11 +66,15 @@ struct KnuthPlassSolver {
         // The cost of reaching `start` is final: every earlier start has already offered
         // its candidates. Extend each candidate in encounter order to preserve fit arithmetic.
         var fitter = LineFitter(availableSpace: availableSpace)
+        var canScoreWithoutSizing = true
         for end in (start + 1) ... items.count {
             let range = start ..< end
-            if canScoreWithoutSizing { fitter.append(items[end - 1]) }
-            let remainingSpace = canScoreWithoutSizing ? fitter.remainingSpace : nil
-            guard let penalties = penalties(for: range, remainingSpace: remainingSpace) else {
+            let item = items[end - 1]
+            // A structural break cannot be recovered by later negative spacing.
+            if range.count > 1, item.isLineBreakView || item.shouldStartInNewLine { break }
+            fitter.append(item)
+            canScoreWithoutSizing = canScoreWithoutSizing && item.growingPotential == 0 && item.size.lowerBound.isFinite
+            guard let penalties = penalties(for: range, remainingSpace: fitter.remainingSpace, canScoreWithoutSizing: canScoreWithoutSizing) else {
                 if range.count > 1, mayStopAtFirstOverflow { break }
                 continue
             }
@@ -87,14 +88,14 @@ struct KnuthPlassSolver {
         }
     }
 
-    private func penalties(for range: Range<Int>, remainingSpace: CGFloat?) -> (space: CGFloat, stretch: CGFloat)? {
-        if canScoreWithoutSizing {
-            if let remaining = remainingSpace { return (space: remaining * remaining, stretch: 0) }
-        } else if let calculation = LineSizer(availableSpace: availableSpace).sizes(of: indexedItems(in: range)) {
+    private func penalties(for range: Range<Int>, remainingSpace: CGFloat?, canScoreWithoutSizing: Bool) -> (space: CGFloat, stretch: CGFloat)? {
+        if let remainingSpace {
+            if canScoreWithoutSizing { return (space: remainingSpace * remainingSpace, stretch: 0) }
+            let calculation = LineSizer(availableSpace: availableSpace).metrics(of: items[range], remainingSpace: remainingSpace)
             let remaining = calculation.remainingSpace
             return (
                 space: remaining * remaining,
-                stretch: stretchPenalty(for: calculation, in: range)
+                stretch: calculation.squaredGrowth
             )
         }
 
@@ -113,13 +114,6 @@ struct KnuthPlassSolver {
         CGFloat(items.count - start) * 5
     }
 
-    private func stretchPenalty(for calculation: SizedLine, in range: Range<Int>) -> CGFloat {
-        zip(range, calculation.items).sum { index, output in
-            let deviation = output.size - items[index].size.lowerBound
-            return deviation * deviation
-        }
-    }
-
     private func overflowPenalty(for item: MeasuredItem) -> CGFloat? {
         let overflow = item.size.lowerBound - availableSpace
         return overflow > 0 ? overflow : nil
@@ -130,7 +124,7 @@ struct KnuthPlassSolver {
         var end = items.count
         while let start = breaks[end] {
             let range = start ..< end
-            let line = LineSizer(availableSpace: availableSpace).resolvedLine(indexedItems(in: range))
+            let line = LineSizer(availableSpace: availableSpace).resolvedLine(items[range])
             result.append(line)
             end = start
         }
@@ -138,7 +132,4 @@ struct KnuthPlassSolver {
         return result
     }
 
-    private func indexedItems(in range: Range<Int>) -> IndexedMeasuredItems {
-        range.map { ($0, items[$0]) }
-    }
 }

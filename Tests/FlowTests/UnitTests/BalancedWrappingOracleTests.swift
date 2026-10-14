@@ -30,6 +30,58 @@ struct BalancedWrappingOracleTests {
             }
         }
     }
+
+    @Test func uniformFlexibleLayouts_minimizeExhaustiveCost() {
+        // Exhaust every partition and use the closed-form cost of equal growth limits.
+        // This independently checks the buffer-free scorer against the sizes actually placed.
+        for count in 1 ... 6 {
+            for code in 0 ..< (1 << count) {
+                let minima = (0 ..< count).map { CGFloat(code & (1 << $0) == 0 ? 2 : 5) }
+                let items = minima.map { MeasuredItem(size: $0 ... ($0 + 3), spacing: 1) }
+                for breadth: CGFloat in [3, 6, 12, 20] {
+                    let lines = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: breadth)
+                    #expect(lines.flatMap { $0.map(\.index) } == Array(items.indices))
+                    let actual: CGFloat = lines.sum { line in
+                        let remaining = breadth - line.sum { $0.size + $0.leadingSpace }
+                        let stretch: CGFloat = line.sum { item in
+                            let growth = item.size - minima[item.index]
+                            return growth * growth
+                        }
+                        return remaining * remaining + stretch + CGFloat(count - line[0].index) * 5
+                    }
+                    let best = exhaustiveUniformCost(minima: minima, growth: 3, breadth: breadth)
+                    #expect(abs(actual - best) < 1e-7, "count:\(count) case:\(code) breadth:\(breadth)")
+                }
+            }
+        }
+    }
+}
+
+private func exhaustiveUniformCost(minima: [CGFloat], growth: CGFloat, breadth: CGFloat) -> CGFloat {
+    var best = CGFloat.infinity
+    for mask in 0 ..< (1 << (minima.count - 1)) {
+        let starts = [0] + (1 ..< minima.count).filter { mask & (1 << ($0 - 1)) != 0 }
+        let ends = Array(starts.dropFirst()) + [minima.count]
+        var cost: CGFloat = 0
+        for (start, end) in zip(starts, ends) {
+            let count = CGFloat(end - start)
+            let used = minima[start ..< end].reduce(0, +) + count - 1
+            if used > breadth {
+                guard end == start + 1 else {
+                    cost = .infinity
+                    break
+                }
+                cost += (used - breadth) * (used - breadth)
+            } else {
+                let allocation = min(growth, (breadth - used) / count)
+                let remaining = breadth - used - allocation * count
+                cost += remaining * remaining + allocation * allocation * count
+            }
+            cost += CGFloat(minima.count - start) * 5
+        }
+        best = min(best, cost)
+    }
+    return best
 }
 
 /// Enumerates every partition; no dynamic programming, production fitting, or production sizing.

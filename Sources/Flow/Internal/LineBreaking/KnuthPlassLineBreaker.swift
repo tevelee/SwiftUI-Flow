@@ -4,8 +4,9 @@ import CoreFoundation
 //
 // Where ``GreedyLineBreaker`` is greedy (fill each line, then wrap), this minimizes a global cost —
 // squared leftover space per line, plus a stretch penalty and a small bias toward fewer lines — via
-// dynamic programming over break points. ``SegmentSizingCache`` memoizes the per-segment sizing
-// (shared with the greedy path through ``LineSizer`` in `LineSizing.swift`).
+// dynamic programming over break points. Non-growing candidates need only ``LineFitter``; flexible
+// candidates use ``LineSizer`` to score stretch. Only costs and break points are retained, and
+// chosen lines are sized during reconstruction.
 
 @usableFromInline
 struct KnuthPlassLineBreaker: LineBreaking {
@@ -32,7 +33,8 @@ struct KnuthPlassSolver {
     let availableSpace: CGFloat
     var costs: [CGFloat]
     var breaks: [Int?]
-    var sizeCache: SegmentSizingCache
+    /// Finite minima and zero growth make stretch zero; scoring needs no sized-item array.
+    let canScoreWithoutSizing: Bool
     /// Whether `chooseBestBreak` may stop as soon as a multi-item range overflows.
     /// Widening a range by an earlier item grows its minimum width by that item's
     /// (non-negative) size plus the following spacing, so with non-negative spacing
@@ -45,9 +47,9 @@ struct KnuthPlassSolver {
     init(items: [MeasuredItem], availableSpace: CGFloat) {
         self.items = items
         self.availableSpace = availableSpace
+        canScoreWithoutSizing = items.allSatisfy { $0.growingPotential == 0 && $0.size.lowerBound.isFinite }
         costs = Array(repeating: .infinity, count: items.count + 1)
         breaks = Array(repeating: nil, count: items.count + 1)
-        sizeCache = SegmentSizingCache(items: items, availableSpace: availableSpace)
         // Only the spacing between items (every spacing except the first item's, which
         // never contributes to a line's width) can turn the minimum width non-monotonic.
         mayStopAtFirstOverflow = items.dropFirst().allSatisfy { $0.spacing >= 0 }
@@ -86,15 +88,19 @@ struct KnuthPlassSolver {
         }
     }
 
-    private mutating func candidateCost(for range: Range<Int>) -> CGFloat? {
+    private func candidateCost(for range: Range<Int>) -> CGFloat? {
         guard let penalties = penalties(for: range) else {
             return nil
         }
         return costs[range.lowerBound] + penalties.space + penalties.stretch + lineCountBias(for: range.lowerBound)
     }
 
-    private mutating func penalties(for range: Range<Int>) -> (space: CGFloat, stretch: CGFloat)? {
-        if let calculation = sizeCache.calculation(for: range) {
+    private func penalties(for range: Range<Int>) -> (space: CGFloat, stretch: CGFloat)? {
+        if canScoreWithoutSizing {
+            var fitter = LineFitter(availableSpace: availableSpace)
+            for item in items[range] { fitter.append(item) }
+            if let remaining = fitter.remainingSpace { return (space: remaining * remaining, stretch: 0) }
+        } else if let calculation = LineSizer(availableSpace: availableSpace).sizes(of: indexedItems(in: range)) {
             let remaining = calculation.remainingSpace
             return (
                 space: remaining * remaining,
@@ -129,45 +135,17 @@ struct KnuthPlassSolver {
         return overflow > 0 ? overflow : nil
     }
 
-    private mutating func rebuildLines() -> WrappedLines {
+    private func rebuildLines() -> WrappedLines {
         var result: WrappedLines = []
         var end = items.count
         while let start = breaks[end] {
             let range = start ..< end
-            let line = sizeCache.calculation(for: range)?.items ?? sizeCache.fallbackWrappedLine(for: range)
+            let line = LineSizer(availableSpace: availableSpace).resolvedLine(indexedItems(in: range))
             result.append(line)
             end = start
         }
         result.reverse()
         return result
-    }
-}
-
-@usableFromInline
-struct SegmentSizingCache {
-    let items: [MeasuredItem]
-    let availableSpace: CGFloat
-    private var computed: Set<Range<Int>> = []
-    private var calculations: [Range<Int>: SizedLine] = [:]
-
-    @usableFromInline
-    init(items: [MeasuredItem], availableSpace: CGFloat) {
-        self.items = items
-        self.availableSpace = availableSpace
-    }
-
-    mutating func calculation(for range: Range<Int>) -> SizedLine? {
-        if computed.contains(range) {
-            return calculations[range]
-        }
-        let result = LineSizer(availableSpace: availableSpace).sizes(of: indexedItems(in: range))
-        computed.insert(range)
-        calculations[range] = result
-        return result
-    }
-
-    func fallbackWrappedLine(for range: Range<Int>) -> WrappedLine {
-        LineSizer(availableSpace: availableSpace).fallbackLine(indexedItems(in: range))
     }
 
     private func indexedItems(in range: Range<Int>) -> IndexedMeasuredItems {

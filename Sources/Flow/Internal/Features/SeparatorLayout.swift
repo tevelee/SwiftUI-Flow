@@ -89,7 +89,10 @@ struct SeparatorLayout {
             result.append(expandItemSeparators(in: lines[index]))
         }
 
-        let placed = Set(result.flatMap { $0.map(\.index) })
+        var placed = [Bool](repeating: false, count: cache.subviewsCache.count)
+        for line in result {
+            for item in line { placed[item.index] = true }
+        }
         return LineAdaptation(lines: result, hidden: unusedSeparators(placed: placed), lineStructure: structure)
     }
 
@@ -99,7 +102,7 @@ struct SeparatorLayout {
     /// Hidden items (capped by maxLines) are assigned `hiddenLineSentinel` so the view layer can
     /// distinguish them from visible items on line 0 and avoid injecting spurious separators.
     func lineStructure(of visible: WrappedLines) -> [Int] {
-        var lineBySubview: [Int: Int] = [:]
+        var lineBySubview = [Int](repeating: Self.hiddenLineSentinel, count: cache.subviewsCache.count)
         for lineIndex in visible.indices {
             for item in visible[lineIndex] {
                 lineBySubview[item.index] = lineIndex
@@ -110,7 +113,7 @@ struct SeparatorLayout {
         for index in cache.subviewsCache.indices {
             switch cache.subviewsCache[index].role {
                 case .content, .lineBreak:
-                    precedingLine = lineBySubview[index] ?? Self.hiddenLineSentinel
+                    precedingLine = lineBySubview[index]
                     lineOf.append(precedingLine)
                 case .itemSeparatorOverride:
                     lineOf.append(precedingLine)
@@ -152,8 +155,8 @@ struct SeparatorLayout {
 
     /// Separators left unused — orphaned at an edge, mid-line, or in a truncated/ineligible gap. They
     /// must still be placed once and collapsed off-screen, like truncated content.
-    private func unusedSeparators(placed: Set<Int>) -> [Int] {
-        plan.separatorIndices.filter { !placed.contains($0) }
+    private func unusedSeparators(placed: [Bool]) -> [Int] {
+        plan.separatorIndices.filter { !placed[$0] }
     }
 
     // MARK: - Shared geometry

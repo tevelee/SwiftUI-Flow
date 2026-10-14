@@ -249,6 +249,22 @@ struct LineBreakingTests {
             )
         }
 
+        @Test func minimumFlexibility_balancesWithoutGrowingUnboundedItems() {
+            let items: [MeasuredItem] = [
+                .init(size: 10 ... .infinity, spacing: 0, flexibility: .minimum),
+                .init(size: 10 ... 30, spacing: 10, flexibility: .minimum),
+                .init(size: .rigid(10), spacing: 10),
+                .init(size: 10 ... .infinity, spacing: 10, flexibility: .minimum),
+            ]
+            let result = KnuthPlassLineBreaker().wrapItemsToLines(items: items, in: 50)
+            #expect(
+                result == [
+                    [.init(index: 0, size: 10, leadingSpace: 0), .init(index: 1, size: 10, leadingSpace: 10)],
+                    [.init(index: 2, size: 10, leadingSpace: 0), .init(index: 3, size: 10, leadingSpace: 10)],
+                ]
+            )
+        }
+
         @Test func asymmetricRigidItems_rebalancesTrailingSingleItemWithoutReordering() {
             let items: [MeasuredItem] = [
                 .init(size: .rigid(10), spacing: 0),

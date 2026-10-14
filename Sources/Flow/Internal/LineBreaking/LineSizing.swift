@@ -1,13 +1,12 @@
 import CoreFoundation
-import Foundation
 
 /// Sizes a single candidate line for a fixed available breadth.
 ///
 /// Given the items considered for one line, it decides whether they fit (honoring minimum widths and
 /// the structural rules around line breaks) and, if so, resolves each item's breadth — distributing
 /// any leftover space by layout priority and flexibility. ``GreedyLineBreaker`` checks feasibility
-/// while filling a line and sizes only completed lines; ``KnuthPlassLineBreaker`` sizes candidates
-/// to score their remaining space and stretch.
+/// while filling a line and sizes only completed lines; ``KnuthPlassLineBreaker`` sizes flexible
+/// candidates to score stretch and uses feasibility alone when no items can grow.
 @usableFromInline
 struct LineSizer {
     @usableFromInline
@@ -21,7 +20,7 @@ struct LineSizer {
     /// Whether a candidate fits, without allocating wrapped items or distributing flexible space.
     @inlinable
     func fits(_ items: IndexedMeasuredItems) -> Bool {
-        fittingItems(items) != nil
+        remainingSpace(for: items) != nil
     }
 
     /// The fitted line for `items`, or `nil` when they cannot fit — their minimum widths exceed the
@@ -39,21 +38,12 @@ struct LineSizer {
     /// spacing normalization after manual breaks and the collective demands of `.maximum` items.
     @usableFromInline
     func fittingItems(_ items: IndexedMeasuredItems) -> (items: IndexedMeasuredItems, remainingSpace: CGFloat)? {
-        guard let items = normalizedItemsForSizing(items) else {
-            return nil
+        guard let remainingSpace = remainingSpace(for: items) else { return nil }
+        var normalized = items
+        if items.count > 1, items[0].element.isLineBreakView {
+            normalized[1].element.spacing = 0
         }
-
-        let totalMinimumSize = totalMinimumSize(of: items)
-        guard totalMinimumSize <= availableSpace + roundingTolerance(for: totalMinimumSize) else {
-            return nil
-        }
-
-        let remainingSpace = max(0, availableSpace - totalMinimumSize)
-        guard maximumFlexItemsFit(items, remainingSpace: remainingSpace) else {
-            return nil
-        }
-
-        return (items, remainingSpace)
+        return (normalized, remainingSpace)
     }
 
     /// The fitted line when `items` fit, otherwise the minimum-size fallback — always returns a line.
@@ -72,55 +62,12 @@ struct LineSizer {
     }
 
     @usableFromInline
-    func normalizedItemsForSizing(_ items: IndexedMeasuredItems) -> IndexedMeasuredItems? {
-        guard !items.isEmpty else {
-            return nil
+    func remainingSpace(for items: IndexedMeasuredItems) -> CGFloat? {
+        var fitter = LineFitter(availableSpace: availableSpace)
+        for item in items {
+            fitter.append(item.element)
         }
-
-        let positionOfLineBreak = items.lastIndex(where: \.element.isLineBreakView)
-        if let positionOfLineBreak, positionOfLineBreak > 0 {
-            return nil
-        }
-
-        if items.dropFirst().contains(where: \.element.shouldStartInNewLine) {
-            return nil
-        }
-
-        var normalized = items
-        if let positionOfLineBreak {
-            let afterLineBreak = normalized.index(after: positionOfLineBreak)
-            if afterLineBreak < normalized.endIndex {
-                normalized[afterLineBreak].element.spacing = 0
-            }
-        }
-        return normalized
-    }
-
-    @usableFromInline
-    func totalMinimumSize(of items: IndexedMeasuredItems) -> CGFloat {
-        items.sum(of: \.element.size.lowerBound) + items.dropFirst().sum(of: \.element.spacing)
-    }
-
-    @usableFromInline
-    func roundingTolerance(for totalMinimumSize: CGFloat) -> CGFloat {
-        max(totalMinimumSize.magnitude, availableSpace.magnitude, 1) * CGFloat.ulpOfOne
-    }
-
-    @usableFromInline
-    func maximumFlexItemsFit(_ items: IndexedMeasuredItems, remainingSpace: CGFloat) -> Bool {
-        // Each `.maximum` item wants to grow toward filling the line; account for their
-        // growth cumulatively so several of them on one segment cannot each claim the
-        // same remaining space independently.
-        var remainingForMaximumItems = remainingSpace
-        for item in items where item.element.flexibility == .maximum {
-            let size = max(item.element.size.lowerBound, min(availableSpace, item.element.size.upperBound))
-            let growth = size - item.element.size.lowerBound
-            if growth > remainingForMaximumItems {
-                return false
-            }
-            remainingForMaximumItems -= growth
-        }
-        return true
+        return fitter.remainingSpace
     }
 
     @usableFromInline
@@ -142,7 +89,7 @@ struct LineSizer {
         let priorities = itemsInPriorityOrder.keys.sorted(by: >)
         for priority in priorities where remainingSpace > 0 {
             let items = itemsInPriorityOrder[priority] ?? []
-            let itemsInFlexibilityOrder = items.sorted(using: KeyPathComparator(\.element.element.growingPotential))
+            let itemsInFlexibilityOrder = items.sorted { $0.element.element.growingPotential < $1.element.element.growingPotential }
             var remainingItemCount = items.count
             for (index, item) in itemsInFlexibilityOrder {
                 let offer = remainingSpace / CGFloat(remainingItemCount)

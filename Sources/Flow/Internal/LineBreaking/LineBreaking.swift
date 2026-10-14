@@ -5,7 +5,7 @@ import CoreFoundation
 // A breaker turns measured items into wrapped lines. Two implementations exist — the greedy
 // ``GreedyLineBreaker`` (the default) in `GreedyLineBreaker.swift` and the optimal
 // ``KnuthPlassLineBreaker`` (for `distributeItemsEvenly`) in `KnuthPlassLineBreaker.swift` — and both use
-// the shared ``LineSizer`` in `LineSizing.swift` for feasibility rules and resolved item breadths.
+// the shared ``LineFitter`` for feasibility rules and ``LineSizer`` for resolved item breadths.
 //
 // The vocabulary names the two sides apart: a `MeasuredItem` goes *in*, a `WrappedItem` (on a
 // `WrappedLine`) comes *out*. Downstream, geometry turns those into `PlacedItem`/`LayoutLine`, so a

@@ -11,8 +11,8 @@
         let id: Int
     }
 
-    private func items(_ count: Int) -> [Item] {
-        (0 ..< count).map { Item(id: $0) }
+    private func items(_ count: Int, startingAt offset: Int = 0) -> [Item] {
+        (0 ..< count).map { Item(id: $0 + offset) }
     }
 
     /// Renders `view` at `width` inside a deferred NSWindow (off-screen) so
@@ -442,6 +442,83 @@
         @Suite(.serialized, .tags(.requirements, .lazyLayout))
         @MainActor
         struct LazyFlowViewportTests {
+            @available(macOS 14, *)
+            @Test(arguments: [false, true])
+            func retainedFlow_handlesEmptyShrinkRegrowAndReplacement(verticalFlow: Bool) async throws {
+                let activity = Activity()
+                let data = ContentCount()
+                let host = NSHostingView(rootView: Scene(verticalFlow: verticalFlow, activity: activity, data: data))
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                    styleMask: .borderless,
+                    backing: .buffered,
+                    defer: true
+                )
+                window.contentView = host
+                defer { window.contentView = nil }
+                let initial = try await waitForLayout(in: host) { activity.visible.count > 1 && activity.contentExtent > 100 }
+                try #require(initial)
+                #expect(activity.visible.count < 100)
+
+                data.count = 0
+                let emptied = try await waitForLayout(in: host) { activity.visible.isEmpty && activity.contentExtent == 0 }
+                try #require(emptied)
+                data.count = 1
+                let repopulated = try await waitForLayout(in: host) { activity.visible == [0] && activity.contentExtent == 50 }
+                try #require(repopulated)
+                data.count = 100
+                let regrown = try await waitForLayout(in: host) { activity.visible.count > 1 && activity.contentExtent > 100 }
+                try #require(regrown)
+                #expect(activity.visible.count < 100)
+
+                data.count = 2
+                // Hosted ScrollView sizing varies across runtimes. Both cells must be revealed and the
+                // old large-data estimate must disappear; their full extent fits within this viewport.
+                let shrunk = try await waitForLayout(in: host) {
+                    activity.visible == [0, 1] && (50 ... 100).contains(activity.contentExtent)
+                }
+                try #require(shrunk, "Rendered IDs: \(activity.visible); content extent: \(activity.contentExtent)")
+                data.count = 100
+                let grownAgain = try await waitForLayout(in: host) { activity.visible.count >= 2 && activity.contentExtent > 100 }
+                try #require(grownAgain)
+                data.firstID = 1000
+                let replaced = try await waitForLayout(in: host) {
+                    !activity.visible.isEmpty && activity.visible.allSatisfy { $0 >= 1000 }
+                }
+                #expect(replaced)
+                #expect(activity.visible.count < 100)
+                #expect(activity.contentExtent > 100)
+            }
+
+            @available(macOS 14, *)
+            @Test(arguments: [false, true])
+            func dataGrowth_revealsMoreWhenRenderedPrefixHasNotChanged(verticalFlow: Bool) async throws {
+                let activity = Activity()
+                let data = ContentCount(count: 1)
+                let host = NSHostingView(rootView: Scene(verticalFlow: verticalFlow, activity: activity, data: data))
+                let window = NSWindow(
+                    contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+                    styleMask: .borderless,
+                    backing: .buffered,
+                    defer: true
+                )
+                window.contentView = host
+                defer { window.contentView = nil }
+                let initiallyRendered = try await waitForLayout(in: host) {
+                    activity.appeared == [0] && activity.contentExtent == 50
+                }
+                try #require(initiallyRendered)
+
+                // The one-item prefix still measures 50pt after growth. Geometry alone cannot
+                // trigger another reveal; the retained view must react to the changed data count.
+                data.count = 100
+                let filledViewport = try await waitForLayout(in: host) { activity.appeared.count > 1 }
+
+                #expect(filledViewport)
+                #expect(activity.appeared.count < 100)
+                #expect(activity.contentExtent > 100, "Unrevealed content must remain scrollable")
+            }
+
             @Test(arguments: [false, true])
             func revealsMoreContent_whenScrollViewportGrows(verticalFlow: Bool) async throws {
                 guard #available(macOS 14, *) else { return }
@@ -472,13 +549,34 @@
 
             private final class Activity {
                 var appeared: Set<Int> = []
+                var visible: Set<Int> = []
                 var contentExtent: CGFloat = 0
+            }
+
+            private final class ContentCount: ObservableObject {
+                @Published var count: Int
+                @Published var firstID = 0
+
+                init(count: Int = 100) {
+                    self.count = count
+                }
+            }
+
+            private func waitForLayout(in host: NSView, until condition: () -> Bool) async throws -> Bool {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+                while ContinuousClock.now < deadline {
+                    host.layoutSubtreeIfNeeded()
+                    if condition() { return true }
+                    try await Task.sleep(for: .milliseconds(10))
+                }
+                return condition()
             }
 
             @available(macOS 14, *)
             private struct Scene: View {
                 let verticalFlow: Bool
                 let activity: Activity
+                @ObservedObject var data = ContentCount()
 
                 var body: some View {
                     ScrollView(verticalFlow ? .horizontal : .vertical) {
@@ -493,15 +591,19 @@
 
                 @ViewBuilder private var flow: some View {
                     if verticalFlow {
-                        LazyVFlow(data: items(100), spacing: 0, content: cell)
+                        LazyVFlow(data: items(data.count, startingAt: data.firstID), spacing: 0, content: cell)
                     } else {
-                        LazyHFlow(data: items(100), spacing: 0, content: cell)
+                        LazyHFlow(data: items(data.count, startingAt: data.firstID), spacing: 0, content: cell)
                     }
                 }
 
                 private func cell(_ item: Item) -> some View {
                     Color.clear.frame(width: 50, height: 50)
-                        .onAppear { activity.appeared.insert(item.id) }
+                        .onAppear {
+                            activity.appeared.insert(item.id)
+                            activity.visible.insert(item.id)
+                        }
+                        .onDisappear { activity.visible.remove(item.id) }
                 }
             }
         }

@@ -5,6 +5,40 @@ import Testing
 
 @Suite(.tags(.requirements))
 struct SizesTests {
+    @Test func equalPriorityAndGrowth_preserveDifferentMinimumSizes() throws {
+        let items = indexed([
+            MeasuredItem(size: 10 ... 30, spacing: 0, priority: 2),
+            MeasuredItem(size: 20 ... 40, spacing: 0, priority: 2),
+            MeasuredItem(size: 0 ... 20, spacing: 0, priority: 2),
+        ])
+        let result = try #require(sizes(of: items, availableSpace: 75))
+        #expect(
+            result.items == [
+                WrappedItem(index: 0, size: 25, leadingSpace: 0),
+                WrappedItem(index: 1, size: 35, leadingSpace: 0),
+                WrappedItem(index: 2, size: 15, leadingSpace: 0),
+            ]
+        )
+        #expect(result.remainingSpace == 0)
+    }
+
+    @Test func equalPriorityAndGrowth_leaveSpaceAfterReachingMaximumSizes() throws {
+        let items = indexed([
+            MeasuredItem(size: 10 ... 30, spacing: 0),
+            MeasuredItem(size: 20 ... 40, spacing: 0),
+            MeasuredItem(size: 0 ... 20, spacing: 0),
+        ])
+        let result = try #require(sizes(of: items, availableSpace: 100))
+        #expect(
+            result.items == [
+                WrappedItem(index: 0, size: 30, leadingSpace: 0),
+                WrappedItem(index: 1, size: 40, leadingSpace: 0),
+                WrappedItem(index: 2, size: 20, leadingSpace: 0),
+            ]
+        )
+        #expect(result.remainingSpace == 10)
+    }
+
     @Test func emptyInput_returnsNil() {
         #expect(sizes(of: [], availableSpace: 100) == nil)
     }

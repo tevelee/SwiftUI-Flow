@@ -85,6 +85,22 @@ struct LineSizer {
             return result
         }
 
+        // Equal priorities and growth limits already have their final allocation order.
+        // Avoid grouping and sorting this common case, preserving sequential rounding.
+        let first = items[0].element
+        let growth = first.growingPotential
+        if items.allSatisfy({ $0.element.priority == first.priority && $0.element.growingPotential == growth }) {
+            var remainingItemCount = items.count
+            for index in result.indices {
+                let offer = remainingSpace / CGFloat(remainingItemCount)
+                let allocation = min(growth, offer)
+                result[index].size += allocation
+                remainingSpace -= allocation
+                remainingItemCount -= 1
+            }
+            return result
+        }
+
         let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)
         let priorities = itemsInPriorityOrder.keys.sorted(by: >)
         for priority in priorities where remainingSpace > 0 {

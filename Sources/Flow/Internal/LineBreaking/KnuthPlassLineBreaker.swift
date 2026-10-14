@@ -4,9 +4,9 @@ import CoreFoundation
 //
 // Where ``GreedyLineBreaker`` is greedy (fill each line, then wrap), this minimizes a global cost —
 // squared leftover space per line, plus a stretch penalty and a small bias toward fewer lines — via
-// dynamic programming over break points. Non-growing candidates need only ``LineFitter``; flexible
-// candidates use ``LineSizer`` to score stretch. Only costs and break points are retained, and
-// chosen lines are sized during reconstruction.
+// dynamic programming over break points. Each start extends its candidates forward, so non-growing
+// candidates share one incremental ``LineFitter``; flexible candidates use ``LineSizer`` to score
+// stretch. Only costs and break points are retained, and chosen lines are sized during reconstruction.
 
 @usableFromInline
 struct KnuthPlassLineBreaker: LineBreaking {
@@ -35,12 +35,9 @@ struct KnuthPlassSolver {
     var breaks: [Int?]
     /// Finite minima and zero growth make stretch zero; scoring needs no sized-item array.
     let canScoreWithoutSizing: Bool
-    /// Whether `chooseBestBreak` may stop as soon as a multi-item range overflows.
-    /// Widening a range by an earlier item grows its minimum width by that item's
-    /// (non-negative) size plus the following spacing, so with non-negative spacing
-    /// the minimum width is monotonic: once a range overflows, every wider range
-    /// overflows too. Negative spacing breaks that monotonicity — a wider range can
-    /// shrink back under the limit and fit — so we must keep scanning in that case.
+    /// Appending non-negative sizes and spacing cannot shrink a candidate's minimum breadth.
+    /// Structural violations also persist as it grows. Negative spacing can make a later
+    /// candidate fit again, so scanning must continue after overflow when it is present.
     let mayStopAtFirstOverflow: Bool
 
     @usableFromInline
@@ -62,44 +59,37 @@ struct KnuthPlassSolver {
         }
 
         costs[0] = 0
-        for end in 1 ... items.count {
-            chooseBestBreak(endingAt: end)
+        for start in items.indices {
+            chooseBestBreak(startingAt: start)
         }
         return rebuildLines()
     }
 
-    private mutating func chooseBestBreak(endingAt end: Int) {
-        for start in (0 ..< end).reversed() {
+    private mutating func chooseBestBreak(startingAt start: Int) {
+        // The cost of reaching `start` is final: every earlier start has already offered
+        // its candidates. Extend each candidate in encounter order to preserve fit arithmetic.
+        var fitter = LineFitter(availableSpace: availableSpace)
+        for end in (start + 1) ... items.count {
             let range = start ..< end
-            guard let candidateCost = candidateCost(for: range) else {
-                // A multi-item range that doesn't fit means all wider ranges (lower
-                // start values) also won't fit: overflow only grows (when spacing is
-                // non-negative, see `mayStopAtFirstOverflow`), and structural violations
-                // (line-break / shouldStartInNewLine at non-first position) move further
-                // from position 0 as start decreases. Negative spacing can shrink a wider
-                // range back under the limit, so keep scanning when it is present.
+            if canScoreWithoutSizing { fitter.append(items[end - 1]) }
+            let remainingSpace = canScoreWithoutSizing ? fitter.remainingSpace : nil
+            guard let penalties = penalties(for: range, remainingSpace: remainingSpace) else {
                 if range.count > 1, mayStopAtFirstOverflow { break }
                 continue
             }
-            if candidateCost < costs[end] {
+            let candidateCost = costs[start] + penalties.space + penalties.stretch + lineCountBias(for: start)
+            // Starts arrive in ascending order. Replace equal finite costs to retain the
+            // previous reverse scan's preference for the latest break point.
+            if candidateCost < costs[end] || (candidateCost == costs[end] && breaks[end] != nil) {
                 costs[end] = candidateCost
                 breaks[end] = start
             }
         }
     }
 
-    private func candidateCost(for range: Range<Int>) -> CGFloat? {
-        guard let penalties = penalties(for: range) else {
-            return nil
-        }
-        return costs[range.lowerBound] + penalties.space + penalties.stretch + lineCountBias(for: range.lowerBound)
-    }
-
-    private func penalties(for range: Range<Int>) -> (space: CGFloat, stretch: CGFloat)? {
+    private func penalties(for range: Range<Int>, remainingSpace: CGFloat?) -> (space: CGFloat, stretch: CGFloat)? {
         if canScoreWithoutSizing {
-            var fitter = LineFitter(availableSpace: availableSpace)
-            for item in items[range] { fitter.append(item) }
-            if let remaining = fitter.remainingSpace { return (space: remaining * remaining, stretch: 0) }
+            if let remaining = remainingSpace { return (space: remaining * remaining, stretch: 0) }
         } else if let calculation = LineSizer(availableSpace: availableSpace).sizes(of: indexedItems(in: range)) {
             let remaining = calculation.remainingSpace
             return (

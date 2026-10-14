@@ -202,6 +202,45 @@ struct LineBreakingTests {
     @Suite("KnuthPlassLineBreaker")
     struct KnuthPlassLineBreakerTests {
 
+        @Test func equalCosts_preferLatestBreakPoint() {
+            let result = KnuthPlassLineBreaker().wrapItemsToLines(
+                items: [
+                    .init(size: .rigid(1.5), spacing: 0),
+                    .init(size: .rigid(5), spacing: 0),
+                    .init(size: .rigid(1), spacing: 0),
+                ],
+                in: 6.5
+            )
+            // Both two-line layouts cost 50.25. Preserve the preference for filling
+            // the earlier line when candidate starts are visited in ascending order.
+            #expect(
+                result == [
+                    [.init(index: 0, size: 1.5, leadingSpace: 0), .init(index: 1, size: 5, leadingSpace: 0)],
+                    [.init(index: 2, size: 1, leadingSpace: 0)],
+                ]
+            )
+        }
+
+        @Test func negativeSpacing_recoversAfterAnOverflowingPrefix() {
+            let result = KnuthPlassLineBreaker().wrapItemsToLines(
+                items: [
+                    .init(size: .rigid(60), spacing: 0),
+                    .init(size: .rigid(60), spacing: 0),
+                    .init(size: .rigid(60), spacing: -90),
+                ],
+                in: 100
+            )
+            #expect(
+                result == [
+                    [
+                        .init(index: 0, size: 60, leadingSpace: 0),
+                        .init(index: 1, size: 60, leadingSpace: 0),
+                        .init(index: 2, size: 60, leadingSpace: -90),
+                    ]
+                ]
+            )
+        }
+
         @Test func basic() {
             let sut = KnuthPlassLineBreaker()
             let breakpoints = sut.wrapItemsToLines(

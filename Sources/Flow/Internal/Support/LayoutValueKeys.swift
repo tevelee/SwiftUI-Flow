@@ -5,13 +5,13 @@ import SwiftUI
 // Structural roles live in `FlowSubviewRole.swift`.
 
 @usableFromInline
-struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
+struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey, _ViewTraitKey {
     @usableFromInline
     static let defaultValue = false
 }
 
 @usableFromInline
-struct FlexibilityLayoutValueKey: LayoutValueKey {
+struct FlexibilityLayoutValueKey: LayoutValueKey, _ViewTraitKey {
     @usableFromInline
     static let defaultValue: FlexibilityBehavior = .natural
 }

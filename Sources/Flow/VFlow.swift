@@ -147,6 +147,7 @@ public struct VFlow<Content: View>: View {
             content: content,
             flexibility: flexibility,
             hasSeparators: _itemSeparator != nil || _lineSeparator != nil,
+            isCapped: _maxLinesCap != nil,
             overflowBuilder: _overflowBuilder
         )
     }

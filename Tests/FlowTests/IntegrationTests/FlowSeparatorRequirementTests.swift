@@ -26,7 +26,10 @@ struct FlowSeparatorRequirementTests {
 
         #expect(result.reportedSize == .zero)
         #expect(subviews.allSatisfy { isParked($0, in: result.reportedSize) })
-        #expect(reports.withLock { $0 } == FlowLayoutReport(overflowCount: 2, lineStructure: [-1, -1, -1, -1]))
+        let report = reports.withLock { $0 }
+        #expect(report.overflowCount == 2)
+        #expect(report.lineStructure == [-1, -1, -1, -1])
+        #expect(Set(report.hiddenSubviews) == Set(subviews.indices))
     }
 
     @Test(.tags(.regression), arguments: [false, true], [false, true])

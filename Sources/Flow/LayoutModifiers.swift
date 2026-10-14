@@ -30,6 +30,7 @@ extension View {
     @inlinable
     public func startInNewLine(_ enabled: Bool = true) -> some View {
         layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: enabled)
+            ._trait(ShouldStartInNewLineLayoutValueKey.self, enabled)
     }
 
     /// Allows modifying the flexibility behavior of views so that flow can layout them accordingly.
@@ -38,6 +39,7 @@ extension View {
     @inlinable
     public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
         layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
+            ._trait(FlexibilityLayoutValueKey.self, behavior)
             .environment(\.flexibility, behavior)
     }
 

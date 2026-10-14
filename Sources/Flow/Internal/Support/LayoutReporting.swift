@@ -103,13 +103,18 @@ extension Reported where Value == FlowLayoutReport {
         let registration = register()
         let reporter: @Sendable (FlowLayoutReport, CGSize) -> Void = { value, size in
             registration.report(
-                FlowLayoutReport(overflowCount: value.overflowCount, lineStructure: reportLineStructure ? value.lineStructure : []),
+                FlowLayoutReport(
+                    overflowCount: value.overflowCount,
+                    lineStructure: reportLineStructure ? value.lineStructure : [],
+                    hiddenSubviews: value.hiddenSubviews
+                ),
                 size
             )
         }
         return layout {
             // Attach after enumeration: legacy child proxies can drop source layout values.
-            content(value).layoutValue(key: PlacementReporterKey.self, value: reporter)
+            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews))
+                .layoutValue(key: PlacementReporterKey.self, value: reporter)
         }
         .observeLayoutGeometry(using: registration)
     }
@@ -129,6 +134,7 @@ struct LayoutReportRegistration<Value: Sendable>: Sendable {
 struct FlowLayoutReport: Equatable, Sendable {
     var overflowCount = 0
     var lineStructure: [Int] = []
+    var hiddenSubviews: [Int] = []
 }
 
 @usableFromInline

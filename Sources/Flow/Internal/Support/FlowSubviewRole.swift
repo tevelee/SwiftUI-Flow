@@ -41,7 +41,7 @@ enum FlowSubviewOrigin: Sendable {
 }
 
 @usableFromInline
-struct FlowSubviewOriginLayoutValueKey: LayoutValueKey {
+struct FlowSubviewOriginLayoutValueKey: LayoutValueKey, _ViewTraitKey {
     @usableFromInline
     static let defaultValue: FlowSubviewOrigin = .flowContent
 }

@@ -6,6 +6,7 @@ on:
     paths:
       - "Sources/**"
       - "Tests/**"
+      - "Example/**"
       - "Package*.swift"
       - ".swiftlint.yml"
       - ".swift-format"
@@ -16,6 +17,7 @@ on:
     paths:
       - "Sources/**"
       - "Tests/**"
+      - "Example/**"
       - "Package*.swift"
       - ".swiftlint.yml"
       - ".swift-format"
@@ -135,6 +137,31 @@ jobs:
         with:
           name: test-results-${{ matrix.platform }}.xcresult
           path: /tmp/result-${{ matrix.platform }}.xcresult
+          retention-days: 7
+
+  test-accessibility:
+    name: Test · macOS accessibility and keyboard interaction
+    runs-on: macos-26
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/swift-build-env
+        with:
+          xcode-version: "26.4"
+      - name: Enable keyboard navigation between controls
+        run: defaults write NSGlobalDomain AppleKeyboardUIMode -int 2
+      - name: Run example accessibility UI tests
+        run: >-
+          xcodebuild test -project Example/FlowExample.xcodeproj -scheme FlowExample
+          -destination 'platform=macOS' -derivedDataPath .derived-data-accessibility
+          -resultBundlePath /tmp/accessibility.xcresult
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: accessibility-ui-results
+          path: /tmp/accessibility.xcresult
           retention-days: 7
 
   lint:

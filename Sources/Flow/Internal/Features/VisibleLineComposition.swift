@@ -50,12 +50,14 @@ struct VisibleLineComposition {
                 spacingBefore: { spacing(before: $0, after: $1) }
             ) ?? LineAdaptation(lines: wrapped)
         let materialized = separators?.materialize(in: capped.lines, justified: justified, proposal: proposal)
+        let hidden = capped.hidden + (materialized?.hidden ?? [])
         return Result(
             lines: materialized?.lines ?? capped.lines,
-            hidden: capped.hidden + (materialized?.hidden ?? []),
+            hidden: hidden,
             report: FlowLayoutReport(
                 overflowCount: overflowCount(hidden: capped.hidden),
-                lineStructure: materialized?.lineStructure ?? []
+                lineStructure: materialized?.lineStructure ?? [],
+                hiddenSubviews: hidden
             )
         )
     }

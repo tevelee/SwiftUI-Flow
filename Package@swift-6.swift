@@ -10,6 +10,7 @@ func isEnabled(_ name: String) -> Bool {
 let doccPlugin = isEnabled("FLOW_DOCC")
 let propertyTesting = isEnabled("FLOW_PROPERTY_TESTING")
 let snapshotTesting = isEnabled("FLOW_SNAPSHOT_TESTING")
+let benchmarking = isEnabled("FLOW_BENCHMARKS")
 
 let package = Package(
     name: "Flow",
@@ -66,4 +67,20 @@ if snapshotTesting {
     testTarget.exclude.append("SnapshotTests/Image/__Snapshots__")
 } else {
     testTarget.exclude.append("SnapshotTests")
+}
+
+// Benchmark is a macOS development tool, excluded from normal library/platform builds.
+if benchmarking {
+    package.dependencies.append(.package(url: "https://github.com/ordo-one/benchmark", from: "1.38.0"))
+    // Release benchmarks exercise the engine through @testable without exporting new interfaces.
+    package.targets[0].swiftSettings?.append(.unsafeFlags(["-enable-testing"], .when(configuration: .release)))
+    package.targets.append(
+        .executableTarget(
+            name: "FlowBenchmarks",
+            dependencies: ["Flow", .product(name: "Benchmark", package: "benchmark")],
+            path: "Benchmarks/FlowBenchmarks",
+            swiftSettings: [.enableUpcomingFeature("ExistentialAny"), .swiftLanguageMode(.v6)],
+            plugins: [.plugin(name: "BenchmarkPlugin", package: "benchmark")]
+        )
+    )
 }

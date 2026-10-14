@@ -43,12 +43,33 @@ extension FlowLayout {
         of subviews: some Subviews,
         cache: FlowLayoutCache
     ) -> LayoutLine {
-        let naturalDepth = wrappedLine.map { cache.subviewsCache[$0.index].ideal.depth }.max() ?? 0
-        let items = wrappedLine.map {
-            placedItem(from: $0, naturalDepth: naturalDepth, of: subviews, cache: cache)
+        var naturalDepth = wrappedLine.first.map { cache.subviewsCache[$0.index].ideal.depth } ?? 0
+        for item in wrappedLine.dropFirst() {
+            let depth = cache.subviewsCache[item.index].ideal.depth
+            if naturalDepth < depth { naturalDepth = depth }
         }
-        let metrics = lineMetrics(for: items)
-        return LayoutLine(items: items, size: metrics.size, leadingSpace: 0, depthGuide: metrics.depthGuide)
+        // Accumulate metrics while constructing items: separate scans copy every PlacedItem,
+        // including its ViewSpacing storage. Seed maxima from the first item so negative
+        // alignment guides retain their original ascent/descent semantics.
+        var items: [PlacedItem] = []
+        items.reserveCapacity(wrappedLine.count)
+        var breadth: CGFloat = 0
+        var ascent: CGFloat = 0
+        var descent: CGFloat = 0
+        for wrappedItem in wrappedLine {
+            let item = placedItem(from: wrappedItem, naturalDepth: naturalDepth, of: subviews, cache: cache)
+            let belowGuide = item.size.depth - item.depthGuide
+            if items.isEmpty {
+                ascent = item.depthGuide
+                descent = belowGuide
+            } else {
+                if ascent < item.depthGuide { ascent = item.depthGuide }
+                if descent < belowGuide { descent = belowGuide }
+            }
+            breadth += item.size.breadth + item.leadingSpace
+            items.append(item)
+        }
+        return LayoutLine(items: items, size: Size(breadth: breadth, depth: ascent + descent), leadingSpace: 0, depthGuide: ascent)
     }
 
     private func placedItem(
@@ -85,15 +106,5 @@ extension FlowLayout {
         // natural size (identical to an unspecified proposal for non-expandable views).
         let canExpandDepth = subviewCache.max.depth.isInfinite && subviewCache.ideal.depth.isFinite
         return canExpandDepth ? naturalDepth : .infinity
-    }
-
-    private func lineMetrics(for items: [PlacedItem]) -> (size: Size, depthGuide: CGFloat) {
-        // Depth is baseline-aware: enough room for the deepest guide (ascent)
-        // plus the deepest extent below it (descent). For top/center/bottom
-        // guides this reduces to the tallest item.
-        let ascent = items.map(\.depthGuide).max() ?? 0
-        let descent = items.map { $0.size.depth - $0.depthGuide }.max() ?? 0
-        let breadth = items.sum { $0.size.breadth + $0.leadingSpace }
-        return (size: Size(breadth: breadth, depth: ascent + descent), depthGuide: ascent)
     }
 }

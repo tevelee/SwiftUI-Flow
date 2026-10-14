@@ -97,6 +97,44 @@ struct FlowAlignmentRequirementTests {
         )
     }
 
+    @Test func HFlow_negativeBaselines_preserveNegativeAscent() {
+        let first = TestSubview(size: 3 × 4)
+        first.firstBaseline = -3
+        let second = TestSubview(size: 3 × 10)
+        second.firstBaseline = -8
+        FlowLayoutScenario(
+            layout: .horizontal(verticalAlignment: .firstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0),
+            subviews: [first, second],
+            proposal: 100 × 100
+        )
+        .assertExpectedLayout(
+            size: 6 × 15,
+            placements: [
+                .init(position: (0, 0), size: 3 × 4),
+                .init(position: (3, 5), size: 3 × 10),
+            ]
+        )
+    }
+
+    @Test func HFlow_baselinesBelowBounds_preserveNegativeDescent() {
+        let first = TestSubview(size: 3 × 4)
+        first.firstBaseline = 8
+        let second = TestSubview(size: 3 × 10)
+        second.firstBaseline = 12
+        FlowLayoutScenario(
+            layout: .horizontal(verticalAlignment: .firstTextBaseline, horizontalSpacing: 0, verticalSpacing: 0),
+            subviews: [first, second],
+            proposal: 100 × 100
+        )
+        .assertExpectedLayout(
+            size: 6 × 10,
+            placements: [
+                .init(position: (0, 4), size: 3 × 4),
+                .init(position: (3, 0), size: 3 × 10),
+            ]
+        )
+    }
+
     @Test(arguments: VFlowCombinedAlignmentCase.allCases)
     func VFlow_combinedHorizontalAndVerticalAlignment_placesItemsAtExpectedOffsets(_ testCase: VFlowCombinedAlignmentCase) {
         FlowLayoutScenario(

@@ -444,6 +444,44 @@
         struct LazyFlowViewportTests {
             @available(macOS 14, *)
             @Test(arguments: [false, true])
+            func retainedItemSizeChange_refillsViewportWithoutChangingDataCount(verticalFlow: Bool) async throws {
+                let activity = Activity()
+                let data = ContentCount()
+                let host = NSHostingView(rootView: Scene(verticalFlow: verticalFlow, activity: activity, data: data))
+                let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 100, height: 100), styleMask: .borderless, backing: .buffered, defer: true)
+                window.contentView = host
+                defer { window.contentView = nil }
+                let initial = try await waitForLayout(in: host) { activity.visible.count > 1 && activity.contentExtent > 100 }
+                try #require(initial)
+                let initialCount = activity.visible.count
+
+                data.cellExtent = 20
+                let refilled = try await waitForLayout(in: host) { activity.visible.count > initialCount && activity.contentExtent > 100 }
+                #expect(refilled)
+                #expect(activity.visible.count < 100)
+            }
+
+            @available(macOS 14, *)
+            @Test(arguments: [false, true])
+            func sameCountReorder_replacesTheRevealedPrefix(verticalFlow: Bool) async throws {
+                let activity = Activity()
+                let data = ContentCount()
+                let host = NSHostingView(rootView: Scene(verticalFlow: verticalFlow, activity: activity, data: data))
+                let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 100, height: 100), styleMask: .borderless, backing: .buffered, defer: true)
+                window.contentView = host
+                defer { window.contentView = nil }
+                let initial = try await waitForLayout(in: host) { activity.visible.count > 1 && activity.contentExtent > 100 }
+                try #require(initial)
+                let initialCount = activity.visible.count
+                data.reversed = true
+                let expected = Set((0 ..< 100).reversed().prefix(initialCount))
+                let reordered = try await waitForLayout(in: host) { activity.visible == expected }
+                #expect(reordered)
+                #expect(activity.contentExtent > 100)
+            }
+
+            @available(macOS 14, *)
+            @Test(arguments: [false, true])
             func retainedFlow_handlesEmptyShrinkRegrowAndReplacement(verticalFlow: Bool) async throws {
                 let activity = Activity()
                 let data = ContentCount()
@@ -556,6 +594,8 @@
             private final class ContentCount: ObservableObject {
                 @Published var count: Int
                 @Published var firstID = 0
+                @Published var cellExtent: CGFloat = 50
+                @Published var reversed = false
 
                 init(count: Int = 100) {
                     self.count = count
@@ -591,19 +631,24 @@
 
                 @ViewBuilder private var flow: some View {
                     if verticalFlow {
-                        LazyVFlow(data: items(data.count, startingAt: data.firstID), spacing: 0, content: cell)
+                        LazyVFlow(data: orderedItems, spacing: 0, content: cell)
                     } else {
-                        LazyHFlow(data: items(data.count, startingAt: data.firstID), spacing: 0, content: cell)
+                        LazyHFlow(data: orderedItems, spacing: 0, content: cell)
                     }
                 }
 
                 private func cell(_ item: Item) -> some View {
-                    Color.clear.frame(width: 50, height: 50)
+                    Color.clear.frame(width: data.cellExtent, height: data.cellExtent)
                         .onAppear {
                             activity.appeared.insert(item.id)
                             activity.visible.insert(item.id)
                         }
                         .onDisappear { activity.visible.remove(item.id) }
+                }
+
+                private var orderedItems: [Item] {
+                    let content = items(data.count, startingAt: data.firstID)
+                    return data.reversed ? Array(content.reversed()) : content
                 }
             }
         }

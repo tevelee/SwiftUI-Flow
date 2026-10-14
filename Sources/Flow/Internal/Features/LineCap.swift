@@ -2,13 +2,9 @@ import CoreFoundation
 
 /// The line-cap feature: truncation to `maxLines` and optional overflow-indicator placement.
 ///
-/// All `.maxLines()` logic lives here so the core `FlowLayout` algorithm stays unaware of line limits.
-/// ``FlowLayout`` calls it at the two pipeline seams:
-///
-/// * ``excludeOverflowIndicator(from:cache:)`` keeps the overflow indicator out of line breaking — it
-///   is placed separately, so it must not consume space or affect where items wrap.
-/// * ``truncate(_:available:cache:spacingBefore:)`` drops lines beyond the limit and places the
-///   overflow indicator on the last visible line.
+/// ``FlowLayout`` excludes the overflow indicator when preparing capped content for line breaking.
+/// This module then drops lines beyond the limit and fits the indicator on the last visible line,
+/// using the same separator-aware spacing as input preparation and materialization.
 @usableFromInline
 struct LineCap: Sendable {
     @usableFromInline var maxLines: Int
@@ -17,23 +13,6 @@ struct LineCap: Sendable {
     init(maxLines: Int) {
         self.maxLines = maxLines
     }
-
-    // MARK: - Input seam
-
-    /// Removes the overflow indicator from the breaker input. It is placed separately on the last
-    /// visible line in ``truncate(_:available:cache:spacingBefore:)``, so it must not take part
-    /// in line breaking.
-    func excludeOverflowIndicator(from input: BreakerInput, cache: FlowLayoutCache) -> BreakerInput {
-        guard let overflowIndex = cache.overflowSubviewIndex,
-            let position = input.subviewIndices.firstIndex(of: overflowIndex)
-        else { return input }
-        var input = input
-        input.items.remove(at: position)
-        input.subviewIndices.remove(at: position)
-        return input
-    }
-
-    // MARK: - Output seam
 
     /// Truncates the wrapped lines to `maxLines`, returning the hidden subviews, and places the
     /// overflow indicator (if any) on the last visible line.

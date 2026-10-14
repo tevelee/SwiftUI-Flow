@@ -3,19 +3,33 @@ import SwiftUI
 
 // Pipeline phase — measurement.
 //
-// Turns the subviews into one ``MeasuredItem`` each (a breadth range, spacing, priority, flags), the
-// raw material the line breaker consumes. Produces a ``BreakerInput`` with an identity index map; the
-// input-seam feature steps may then rewrite it.
+// Measures the content selected for line breaking (breadth range, spacing, priority, flags).
+// Plain content uses direct indices; separator preparation selects content and reserves gap breadth.
+// Overflow indicators and separators retain their cached measurements for the output feature steps.
 
 extension FlowLayout {
-    /// One breaker item per subview, in order, with an identity index map. The input-seam steps may
-    /// then filter or rewrite this (excluding an overflow indicator, breaking only over content items).
+    /// Prepares only the items that enter line breaking. With no separators, their positions already
+    /// match subview indices, even when a cap excludes the trailing overflow indicator.
     func measuredItems(
         of subviews: some Subviews,
         in proposal: ProposedViewSize,
-        cache: FlowLayoutCache
+        cache: FlowLayoutCache,
+        separators: SeparatorLayout?
     ) -> BreakerInput {
-        let items = subviews.indices.map { offset in
+        let overflowIndex = lineCap == nil ? nil : cache.overflowSubviewIndex
+        if let separators {
+            return separators.prepareInput(excluding: overflowIndex) { offset, leadingSpace in
+                breakerItem(
+                    for: subviews[offset],
+                    at: offset,
+                    leadingSpace: leadingSpace,
+                    in: proposal,
+                    cache: cache
+                )
+            }
+        }
+        let indices = subviews.indices.dropLast(overflowIndex == nil ? 0 : 1)
+        let items = indices.map { offset in
             breakerItem(
                 for: subviews[offset],
                 at: offset,
@@ -24,7 +38,7 @@ extension FlowLayout {
                 cache: cache
             )
         }
-        return BreakerInput(items: items, subviewIndices: Array(subviews.indices))
+        return BreakerInput(items: items)
     }
 
     private func breakerItem(

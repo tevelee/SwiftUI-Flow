@@ -1,4 +1,4 @@
-/// A pure description of how separators relate to content items, derived once per layout pass from
+/// A pure description of how separators relate to content items, derived once per cache refresh from
 /// the subviews' ``FlowSubviewRole`` tags.
 ///
 /// Each gap between adjacent content items selects one item separator and one line separator.
@@ -9,6 +9,7 @@
 ///
 /// The plan owns separator selection for both ordinary gaps and the overflow gap. Fitting and
 /// materialization ask the same interface, with the current retained predecessor after trimming.
+@usableFromInline
 struct SeparatorPlan {
     /// All structural tags for one subview share its position in the input collection.
     struct Subview {

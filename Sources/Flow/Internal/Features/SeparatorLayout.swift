@@ -4,9 +4,9 @@ import SwiftUI
 /// The separator feature: draws separators between items and between lines, much as ``LineCap``
 /// handles line limits. ``FlowLayout`` calls it at the two pipeline seams:
 ///
-/// * ``foldIntoContent(_:)`` (input seam) reduces the breaker input to content items only, folding
-///   each item separator's breadth into the following item's spacing so wrapping accounts for it
-///   while the breaker stays separator-agnostic.
+/// * ``prepareInput(excluding:measure:)`` (input seam) measures content items only, folding each
+///   item separator's breadth into the following item's spacing so wrapping accounts for it while
+///   the breaker stays separator-agnostic.
 /// * ``materialize(in:justified:proposal:)`` (output seam) re-materializes those separators once the
 ///   lines are known — item separators as ordinary in-line items, line separators as their own
 ///   single-item lines — so the core line-construction code treats them like any other subview.
@@ -19,12 +19,8 @@ struct SeparatorLayout {
     private let cache: FlowLayoutCache
 
     init?(cache: FlowLayoutCache, axis: Axis, itemSpacing: CGFloat?) {
-        guard cache.hasSeparators else { return nil }
-        plan = SeparatorPlan(
-            subviews: cache.subviewsCache.map {
-                SeparatorPlan.Subview(role: $0.role, origin: $0.origin)
-            }
-        )
+        guard let plan = cache.separatorPlan else { return nil }
+        self.plan = plan
         self.axis = axis
         self.itemSpacing = itemSpacing
         self.cache = cache
@@ -32,23 +28,21 @@ struct SeparatorLayout {
 
     // MARK: - Input seam
 
-    /// Reduces the breaker input to content items only: each content item keeps its sizing but its
-    /// leading spacing folds in the preceding item separator's breadth. Separator subviews are dropped
-    /// from line breaking entirely and re-materialized in ``materialize(in:justified:proposal:)``.
-    func foldIntoContent(_ input: BreakerInput) -> BreakerInput {
-        let itemBySubview = Dictionary(uniqueKeysWithValues: zip(input.subviewIndices, input.items))
-        var items: [MeasuredItem] = []
-        var subviewIndices: [Int] = []
-        items.reserveCapacity(plan.contentIndices.count)
-        subviewIndices.reserveCapacity(plan.contentIndices.count)
-        for position in plan.contentIndices.indices {
-            let subviewIndex = plan.contentIndices[position]
-            guard var item = itemBySubview[subviewIndex] else { continue }
-            item.spacing = breakerSpacing(beforeContentPosition: position)
-            items.append(item)
-            subviewIndices.append(subviewIndex)
+    /// Measures content directly in breaker order, reserving separator breadth in leading spacing.
+    /// The optional overflow indicator is always the last subview; excluding it preserves positions
+    /// in the cached content order. Separators use their cached ideal sizes until materialization.
+    func prepareInput(
+        excluding overflowIndex: Int?,
+        measure: (Int, CGFloat) -> MeasuredItem
+    ) -> BreakerInput {
+        var indices = plan.contentIndices
+        if let overflowIndex, indices.last == overflowIndex {
+            indices.removeLast()
         }
-        return BreakerInput(items: items, subviewIndices: subviewIndices)
+        let items = indices.enumerated().map { position, index in
+            measure(index, breakerSpacing(beforeContentPosition: position))
+        }
+        return BreakerInput(items: items, subviewIndices: indices)
     }
 
     /// Leading space the breaker reserves before the content item at `position`: the normal spacing,
@@ -178,5 +172,14 @@ struct SeparatorLayout {
 
     private func spacing(from previous: Int, to current: Int) -> CGFloat {
         cache.spacing(from: previous, to: current, itemSpacing: itemSpacing, axis: axis)
+    }
+}
+
+extension SeparatorPlan {
+    /// Cache construction is the only place that scans structural tags. Plain flows keep no plan.
+    @usableFromInline
+    init?(cachedSubviews: [FlowLayoutCache.SubviewCache]) {
+        guard cachedSubviews.contains(where: { $0.role.isSeparator }) else { return nil }
+        self.init(subviews: cachedSubviews.map { Subview(role: $0.role, origin: $0.origin) })
     }
 }

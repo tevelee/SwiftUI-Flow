@@ -196,8 +196,8 @@ struct FlowLayout: Sendable {
         return LayoutResult(lines: placed, hidden: adapted.hidden, lineStructure: adapted.lineStructure)
     }
 
-    /// The cacheable prefix: measure every subview, adapt the breaker input for the active features
-    /// (input seam, fixed order), break into lines, and resolve positions back to subview indices.
+    /// The cacheable prefix: prepare measured content for the active features, break into lines,
+    /// and resolve positions back to subview indices only when separators were filtered out.
     /// Keyed on the proposed size, so the back-to-back `sizeThatFits`/`placeSubviews` passes share it.
     private func wrappedContentLines(
         of subviews: some Subviews,
@@ -210,13 +210,7 @@ struct FlowLayout: Sendable {
             return cached
         }
 
-        var input = measuredItems(of: subviews, in: proposal, cache: cache)
-        if let lineCap {
-            input = lineCap.excludeOverflowIndicator(from: input, cache: cache)
-        }
-        if let separators {
-            input = separators.foldIntoContent(input)
-        }
+        let input = measuredItems(of: subviews, in: proposal, cache: cache, separators: separators)
         let wrapped = input.resolve(lineBreaker.wrapItemsToLines(items: input.items, in: availableLineBreakingSpace(in: proposal)))
         cache.cacheLineBreaking(wrapped, for: key)
         return wrapped

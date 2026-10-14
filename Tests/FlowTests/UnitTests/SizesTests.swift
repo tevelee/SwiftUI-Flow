@@ -344,6 +344,13 @@ private func indexed(_ items: [MeasuredItem]) -> IndexedMeasuredItems {
 }
 
 /// Sizes a candidate line through ``LineSizer`` — the unit under test here.
-private func sizes(of items: IndexedMeasuredItems, availableSpace: CGFloat) -> SizedLine? {
-    LineSizer(availableSpace: availableSpace).sizes(of: items)
+private func sizes(
+    of items: IndexedMeasuredItems,
+    availableSpace: CGFloat,
+    sourceLocation: SourceLocation = #_sourceLocation
+) -> SizedLine? {
+    let sizer = LineSizer(availableSpace: availableSpace)
+    let result = sizer.sizes(of: items)
+    #expect(sizer.fits(items) == (result != nil), "Feasibility and sizing must agree", sourceLocation: sourceLocation)
+    return result
 }

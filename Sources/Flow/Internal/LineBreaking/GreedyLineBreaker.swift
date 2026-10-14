@@ -1,8 +1,10 @@
 import CoreFoundation
 
 /// The default line breaker: greedy. It fills the current line until the next item no longer fits,
-/// then starts a new line — a single forward pass, no backtracking. Each line's item breadths are
-/// resolved by ``LineSizer``; the optimal alternative is ``KnuthPlassLineBreaker``.
+/// then starts a new line, without backtracking. ``LineSizer`` checks whether each growing candidate
+/// fits; flexibility and priority distribution run only when a line is complete. Feasibility still
+/// scans the candidate, so long lines can take quadratic work. The optimal alternative is
+/// ``KnuthPlassLineBreaker``.
 @usableFromInline
 struct GreedyLineBreaker: LineBreaking {
     @inlinable
@@ -16,7 +18,7 @@ struct GreedyLineBreaker: LineBreaking {
 
         for item in items.enumerated() {
             currentLine.append(item)
-            if sizer.sizes(of: currentLine) == nil {
+            if !sizer.fits(currentLine) {
                 currentLine.removeLast()
                 if !currentLine.isEmpty {
                     lines.append(sizer.resolvedLine(currentLine))

@@ -64,10 +64,13 @@ public struct FlowLayoutCache {
     @usableFromInline
     let overflowSubviewIndex: Int?
 
-    /// Whether any subview carries a separator role; explicit line breaks do not enable separators. When `false` the layout skips
-    /// all separator handling, so flows without separators incur no extra work and no behavior change.
+    /// Structural separator relationships, built only when a subview carries a separator role.
+    /// Reused across proposals and measurement/placement passes until the subviews are refreshed.
     @usableFromInline
-    let hasSeparators: Bool
+    let separatorPlan: SeparatorPlan?
+
+    @usableFromInline
+    var hasSeparators: Bool { separatorPlan != nil }
 
     /// The subview carrying the report route. Read its current callback during placement: a
     /// body update can replace the registration while SwiftUI reuses an alignment cache.
@@ -120,7 +123,7 @@ public struct FlowLayoutCache {
                 case .overflowBuilder: $0
             }
         }
-        hasSeparators = subviewsCache.contains { $0.role.isSeparator }
+        separatorPlan = SeparatorPlan(cachedSubviews: subviewsCache)
         placementReporterIndex = subviews.indices.first { subviews[$0][PlacementReporterKey.self] != nil }
     }
 

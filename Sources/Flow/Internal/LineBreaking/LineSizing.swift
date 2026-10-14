@@ -5,8 +5,9 @@ import Foundation
 ///
 /// Given the items considered for one line, it decides whether they fit (honoring minimum widths and
 /// the structural rules around line breaks) and, if so, resolves each item's breadth — distributing
-/// any leftover space by layout priority and flexibility. Both ``GreedyLineBreaker`` and
-/// ``KnuthPlassLineBreaker`` size every candidate line through this one type.
+/// any leftover space by layout priority and flexibility. ``GreedyLineBreaker`` checks feasibility
+/// while filling a line and sizes only completed lines; ``KnuthPlassLineBreaker`` sizes candidates
+/// to score their remaining space and stretch.
 @usableFromInline
 struct LineSizer {
     @usableFromInline
@@ -17,11 +18,27 @@ struct LineSizer {
         self.availableSpace = availableSpace
     }
 
+    /// Whether a candidate fits, without allocating wrapped items or distributing flexible space.
+    @inlinable
+    func fits(_ items: IndexedMeasuredItems) -> Bool {
+        fittingItems(items) != nil
+    }
+
     /// The fitted line for `items`, or `nil` when they cannot fit — their minimum widths exceed the
     /// available space, or a structural rule forbids them sharing a line (a line break or a
     /// `shouldStartInNewLine` item anywhere but first).
     @inlinable
     func sizes(of items: IndexedMeasuredItems) -> SizedLine? {
+        guard let fitted = fittingItems(items) else { return nil }
+        var remainingSpace = fitted.remainingSpace
+        let result = distributeRemainingSpace(in: fitted.items, remainingSpace: &remainingSpace)
+        return SizedLine(items: result, remainingSpace: remainingSpace)
+    }
+
+    /// Shared feasibility rules keep the greedy and balanced breakers consistent, including
+    /// spacing normalization after manual breaks and the collective demands of `.maximum` items.
+    @usableFromInline
+    func fittingItems(_ items: IndexedMeasuredItems) -> (items: IndexedMeasuredItems, remainingSpace: CGFloat)? {
         guard let items = normalizedItemsForSizing(items) else {
             return nil
         }
@@ -31,13 +48,12 @@ struct LineSizer {
             return nil
         }
 
-        var remainingSpace = max(0, availableSpace - totalMinimumSize)
+        let remainingSpace = max(0, availableSpace - totalMinimumSize)
         guard maximumFlexItemsFit(items, remainingSpace: remainingSpace) else {
             return nil
         }
 
-        let result = distributeRemainingSpace(in: items, remainingSpace: &remainingSpace)
-        return SizedLine(items: result, remainingSpace: remainingSpace)
+        return (items, remainingSpace)
     }
 
     /// The fitted line when `items` fit, otherwise the minimum-size fallback — always returns a line.
@@ -116,6 +132,10 @@ struct LineSizer {
         // between flexible views.
         var result = items.enumerated().map { i, item in
             WrappedItem(index: item.offset, size: item.element.size.lowerBound, leadingSpace: i == 0 ? 0 : item.element.spacing)
+        }
+
+        guard remainingSpace > 0, items.contains(where: { $0.element.growingPotential > 0 }) else {
+            return result
         }
 
         let itemsInPriorityOrder = Dictionary(grouping: items.enumerated(), by: \.element.element.priority)

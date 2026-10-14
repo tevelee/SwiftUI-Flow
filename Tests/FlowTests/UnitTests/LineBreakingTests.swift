@@ -8,7 +8,7 @@ struct LineBreakingTests {
     @Suite("GreedyLineBreaker")
     struct GreedyLineBreakerTests {
 
-        @Test func basic() {
+        @Test func wrapsIntoThreeRows() {
             let sut = GreedyLineBreaker()
             let breakpoints = sut.wrapItemsToLines(
                 items: [
@@ -21,13 +21,13 @@ struct LineBreakingTests {
                 ],
                 in: 80
             )
-            #expect(
-                breakpoints == [
-                    [.init(index: 0, size: 10, leadingSpace: 0), .init(index: 1, size: 20, leadingSpace: 10), .init(index: 2, size: 30, leadingSpace: 10)],
-                    [.init(index: 3, size: 40, leadingSpace: 0), .init(index: 4, size: 20, leadingSpace: 10)],
-                    [.init(index: 5, size: 30, leadingSpace: 0)],
-                ]
-            )
+            expectWrappedLines(breakpoints, unit: 10) {
+                """
+                A BB CCC
+                DDDD EE
+                FFF
+                """
+            }
         }
 
         @Test func emptyInput() {
@@ -44,11 +44,7 @@ struct LineBreakingTests {
                 ],
                 in: 100
             )
-            #expect(
-                result == [
-                    [.init(index: 0, size: 50, leadingSpace: 0)]
-                ]
-            )
+            expectWrappedLines(result, unit: 10) { "AAAAA" }
         }
 
         @Test func allFitOnOneLine() {
@@ -61,11 +57,7 @@ struct LineBreakingTests {
                 ],
                 in: 100
             )
-            #expect(
-                result == [
-                    [.init(index: 0, size: 20, leadingSpace: 0), .init(index: 1, size: 30, leadingSpace: 10), .init(index: 2, size: 20, leadingSpace: 10)]
-                ]
-            )
+            expectWrappedLines(result, unit: 10) { "AA BBB CC" }
         }
 
         @Test func eachItemOwnLine() {
@@ -78,13 +70,13 @@ struct LineBreakingTests {
                 ],
                 in: 100
             )
-            #expect(
-                result == [
-                    [.init(index: 0, size: 100, leadingSpace: 0)],
-                    [.init(index: 1, size: 100, leadingSpace: 0)],
-                    [.init(index: 2, size: 100, leadingSpace: 0)],
-                ]
-            )
+            expectWrappedLines(result, unit: 10) {
+                """
+                AAAAAAAAAA
+                BBBBBBBBBB
+                CCCCCCCCCC
+                """
+            }
         }
 
         @Test func flexibleItem_expands() {
@@ -96,11 +88,7 @@ struct LineBreakingTests {
                 ],
                 in: 100
             )
-            #expect(
-                result == [
-                    [.init(index: 0, size: 30, leadingSpace: 0), .init(index: 1, size: 60, leadingSpace: 10)]
-                ]
-            )
+            expectWrappedLines(result, unit: 10) { "AAA BBBBBB" }
         }
 
         @Test func lineBreakView() {

@@ -17,8 +17,7 @@ struct SeparatorPlanTests {
         ])
         #expect(plan.contentIndices == [0, 6])
         #expect(plan.separatorIndices == [1, 2, 3, 4, 5])
-        #expect(plan.itemSeparator(before: 6, after: 0) == (isEmpty ? nil : 3))
-        #expect(plan.lineSeparator(before: 6) == 5)
+        #expect(separatorPlanDiagram(plan) == (isEmpty ? "A -- item:none / line:F --> G" : "A -- item:D / line:F --> G"))
     }
 
     @Test func consecutiveExplicitSeparators_useLast_andIgnoreEdges() {
@@ -57,8 +56,7 @@ struct SeparatorPlanTests {
         ])
         #expect(plan.contentIndices == [0, 3])
         #expect(plan.separatorIndices == [1, 2])
-        #expect(plan.itemSeparator(before: 3, after: 0) == 1)
-        #expect(plan.lineSeparator(before: 3) == 2)
+        #expect(separatorPlanDiagram(plan) == "A -- item:B / line:C --> D")
         #expect(plan.itemSeparator(before: 0, after: 0) == nil)
         #expect(plan.lineSeparator(before: 0) == nil)
     }

@@ -12,13 +12,7 @@ struct SizesTests {
             MeasuredItem(size: 0 ... 20, spacing: 0, priority: 2),
         ])
         let result = try #require(sizes(of: items, availableSpace: 75))
-        #expect(
-            result.items == [
-                WrappedItem(index: 0, size: 25, leadingSpace: 0),
-                WrappedItem(index: 1, size: 35, leadingSpace: 0),
-                WrappedItem(index: 2, size: 15, leadingSpace: 0),
-            ]
-        )
+        expectWrappedLines([result.items], unit: 5) { "AAAAABBBBBBBCCC" }
         #expect(result.remainingSpace == 0)
     }
 
@@ -29,13 +23,7 @@ struct SizesTests {
             MeasuredItem(size: 0 ... 20, spacing: 0),
         ])
         let result = try #require(sizes(of: items, availableSpace: 100))
-        #expect(
-            result.items == [
-                WrappedItem(index: 0, size: 30, leadingSpace: 0),
-                WrappedItem(index: 1, size: 40, leadingSpace: 0),
-                WrappedItem(index: 2, size: 20, leadingSpace: 0),
-            ]
-        )
+        expectWrappedLines([result.items], unit: 10) { "AAABBBBCC" }
         #expect(result.remainingSpace == 10)
     }
 

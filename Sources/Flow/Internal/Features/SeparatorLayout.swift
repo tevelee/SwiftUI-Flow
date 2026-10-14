@@ -2,7 +2,7 @@ import CoreFoundation
 import SwiftUI
 
 /// The separator feature: draws separators between items and between lines, much as ``LineCap``
-/// handles line limits. ``FlowLayout`` calls it at the two pipeline seams:
+/// handles line limits. ``VisibleLineComposition`` calls it at the two adaptation seams:
 ///
 /// * ``prepareInput(excluding:measure:)`` (input seam) measures content items only, folding each
 ///   item separator's breadth into the following item's spacing so wrapping accounts for it while

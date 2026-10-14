@@ -7,6 +7,28 @@ import os
 
 @Suite(.tags(.requirements))
 struct FlowSeparatorRequirementTests {
+    @Test(arguments: [false, true], [false, true])
+    func zeroLineCap_hidesEverySubviewAndReportsOnlyContent(vertical: Bool, evenly: Bool) {
+        let reports = OSAllocatedUnfairLock(initialState: FlowLayoutReport())
+        let lineBreak: TestSubview = 0 × 0
+        lineBreak[FlowSubviewRoleLayoutValueKey.self] = .lineBreak
+        let content: [TestSubview] = [vertical ? 10 × 30 : 30 × 10, lineBreak, vertical ? 10 × 30 : 30 × 10]
+        let overflow: TestSubview = vertical ? 10 × 20 : 20 × 10
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in reports.withLock { $0 = report } }
+        let subviews = interleaved(content: content, itemSeparator: { 5 × 5 }, lineSeparator: { 2 × 2 }) + [overflow]
+        let layout: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 0)
+            : .horizontal(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 0)
+
+        let result = FlowLayoutScenario(layout: layout, subviews: subviews, proposal: 100 × 100).layoutThatFits()
+
+        #expect(result.reportedSize == .zero)
+        #expect(subviews.allSatisfy { isParked($0, in: result.reportedSize) })
+        #expect(reports.withLock { $0 } == FlowLayoutReport(overflowCount: 2, lineStructure: [-1, -1, -1, -1]))
+    }
+
     @Test(.tags(.regression), arguments: [false, true], [false, true])
     func placementCandidate_carriesOverflowAndLineStructure(vertical: Bool, evenly: Bool) {
         let reports = OSAllocatedUnfairLock(initialState: (counts: [Int](), lines: [[Int]]()))

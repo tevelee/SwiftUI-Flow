@@ -55,20 +55,12 @@ extension FlowLayout {
 
     // MARK: - Reporting
 
-    private func overflowCount(hidden: [Int], cache: FlowLayoutCache) -> Int {
-        guard let overflowIdx = cache.overflowSubviewIndex else { return 0 }
-        return hidden.filter {
-            $0 != overflowIdx
-                && cache.subviewsCache[$0].role == .content
-        }.count
-    }
-
     /// Alignment placements are candidates, not publications. The view validates their bounds
     /// before accepting them, including when SwiftUI reuses a probe and omits final placement.
     func notifyPlacementReporter(_ result: LayoutResult, size: CGSize, subviews: some Subviews, cache: FlowLayoutCache) {
         guard let index = cache.placementReporterIndex, let reporter = subviews[index][PlacementReporterKey.self] else { return }
         reporter(
-            FlowLayoutReport(overflowCount: overflowCount(hidden: result.hidden, cache: cache), lineStructure: result.lineStructure ?? []),
+            result.report,
             size
         )
     }

@@ -11,8 +11,8 @@ import SwiftUI
 ///   measure → adapt input → break → adapt output → build geometry → distribute space → place
 ///
 /// `FlowLayout+Measurement`, ``LineBreaking``, `FlowLayout+Geometry`, `FlowLayout+SpaceDistribution`,
-/// and `FlowLayout+Placement` hold the phases; ``LineCap`` and ``SeparatorLayout`` are the optional
-/// feature collaborators woven in at the two adaptation seams.
+/// and `FlowLayout+Placement` hold the phases; ``VisibleLineComposition`` owns content selection,
+/// line limits, separators and their reports across the two adaptation seams.
 @usableFromInline
 struct FlowLayout: Sendable {
     @usableFromInline
@@ -148,52 +148,27 @@ struct FlowLayout: Sendable {
     struct LayoutResult {
         var lines: [LayoutLine]
         var hidden: [Int]
-        /// Line index of every content item (content order), or `nil` when no step reports it.
-        var lineStructure: [Int]?
+        var report: FlowLayoutReport
     }
 
-    /// The whole layout, top to bottom. Measurement and line breaking are cached together as the
-    /// expensive prefix (``wrappedContentLines(of:in:cache:separators:)``); the remaining steps run
-    /// every pass. ``LineCap`` (line limits) and ``SeparatorLayout`` (separators) are optional
-    /// collaborators woven in at two seams, always in the same order — capping before separators, so
-    /// truncation counts content lines (and drops their separators) before separators are materialized.
+    /// Measurement and line breaking form the cached prefix. Visible-line composition owns the
+    /// feature rules around that prefix; geometry, space distribution and placement remain here.
     func resolveLayout(
         in proposal: ProposedViewSize,
         of subviews: some Subviews,
         cache: inout FlowLayoutCache
     ) -> LayoutResult {
-        let separators = SeparatorLayout(cache: cache, axis: axis, itemSpacing: itemSpacing)
-
-        // Measure + adapt input + break, in subview-index space (cached as a unit).
-        let wrapped = wrappedContentLines(of: subviews, in: proposal, cache: &cache, separators: separators)
-
-        // Output seam: adapt the wrapped lines for whichever features are active (same fixed order).
-        // Each step returns an adaptation of the current lines, which folds onto the running result.
-        var adapted = LineAdaptation(lines: wrapped)
-        if let lineCap {
-            adapted.apply(
-                lineCap.truncate(
-                    adapted.lines,
-                    available: availableLineBreakingSpace(in: proposal),
-                    cache: cache,
-                    spacingBefore: { current, previous in
-                        separators?.spacing(before: current, after: previous)
-                            ?? cache.spacing(from: previous, to: current, itemSpacing: itemSpacing, axis: axis)
-                    }
-                )
-            )
-        }
-        if let separators {
-            adapted.apply(separators.materialize(in: adapted.lines, justified: justified, proposal: proposal))
-        }
+        let composition = VisibleLineComposition(cache: cache, axis: axis, itemSpacing: itemSpacing, lineCap: lineCap)
+        let wrapped = wrappedContentLines(of: subviews, in: proposal, cache: &cache, composition: composition)
+        let visible = composition.compose(wrapped, in: proposal, justified: justified)
 
         // Build geometry, then distribute leftover space across each line.
-        var placed = buildGeometry(of: adapted.lines, of: subviews, cache: cache)
+        var placed = buildGeometry(of: visible.lines, of: subviews, cache: cache)
         distributeJustifiedSpace(in: &placed, proposal: proposal)
         applyLineSpacing(in: &placed)
         applyCrossAxisAlignment(in: &placed)
 
-        return LayoutResult(lines: placed, hidden: adapted.hidden, lineStructure: adapted.lineStructure)
+        return LayoutResult(lines: placed, hidden: visible.hidden, report: visible.report)
     }
 
     /// The cacheable prefix: prepare measured content for the active features, break into lines,
@@ -203,14 +178,16 @@ struct FlowLayout: Sendable {
         of subviews: some Subviews,
         in proposal: ProposedViewSize,
         cache: inout FlowLayoutCache,
-        separators: SeparatorLayout?
+        composition: VisibleLineComposition
     ) -> WrappedLines {
         let key = FlowLayoutCache.LineBreakingKey(proposedSize: proposal, axis: axis)
         if let cached = cache.cachedLineBreaking(for: key) {
             return cached
         }
 
-        let input = measuredItems(of: subviews, in: proposal, cache: cache, separators: separators)
+        let input = composition.prepareInput { index, leadingSpace in
+            breakerItem(for: subviews[index], at: index, leadingSpace: leadingSpace, in: proposal, cache: cache)
+        }
         let wrapped = input.resolve(lineBreaker.wrapItemsToLines(items: input.items, in: availableLineBreakingSpace(in: proposal)))
         cache.cacheLineBreaking(wrapped, for: key)
         return wrapped

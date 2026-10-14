@@ -2,7 +2,7 @@ import CoreFoundation
 
 /// The line-cap feature: truncation to `maxLines` and optional overflow-indicator placement.
 ///
-/// ``FlowLayout`` excludes the overflow indicator when preparing capped content for line breaking.
+/// ``VisibleLineComposition`` excludes the overflow indicator when preparing capped content for line breaking.
 /// This module then drops lines beyond the limit and fits the indicator on the last visible line,
 /// using the same separator-aware spacing as input preparation and materialization.
 @usableFromInline

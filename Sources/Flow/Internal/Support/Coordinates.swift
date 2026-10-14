@@ -1,6 +1,11 @@
 import CoreFoundation
 import SwiftUI
 
+/// Axis-relative breadth and depth used by the layout engine.
+@usableFromInline
+typealias AxisSize = Size
+
+// Keep the original nominal type identity for existing inline clients.
 @usableFromInline
 struct Size: Sendable {
     @usableFromInline
@@ -15,7 +20,7 @@ struct Size: Sendable {
     }
 
     @usableFromInline
-    static let zero = Size(breadth: 0, depth: 0)
+    static let zero = AxisSize(breadth: 0, depth: 0)
 
     @usableFromInline
     subscript(axis: Axis) -> CGFloat {
@@ -28,7 +33,7 @@ struct Size: Sendable {
     }
 
     @usableFromInline
-    func keyPath(on axis: Axis) -> WritableKeyPath<Size, CGFloat> {
+    func keyPath(on axis: Axis) -> WritableKeyPath<AxisSize, CGFloat> {
         switch axis {
             case .horizontal: \.breadth
             case .vertical: \.depth
@@ -48,24 +53,24 @@ extension Axis {
 
 // MARK: - Axis-relative conversion
 
-/// A concrete 2D value (point, size, proposal) that converts to and from axis-relative ``Size``
+/// A concrete 2D value (point, size, proposal) that converts to and from axis-relative ``AxisSize``
 /// (breadth/depth) terms, so the axis-agnostic algorithm can read and write it without caring which
 /// axis maps to x and which to y.
 protocol AxisConvertible {
-    init(size: Size, axis: Axis)
+    init(size: AxisSize, axis: Axis)
     func value(on axis: Axis) -> CGFloat
 }
 
 extension AxisConvertible {
     @inlinable
-    func size(on axis: Axis) -> Size {
-        Size(breadth: value(on: axis), depth: value(on: axis.perpendicular))
+    func size(on axis: Axis) -> AxisSize {
+        AxisSize(breadth: value(on: axis), depth: value(on: axis.perpendicular))
     }
 }
 
 extension CGPoint: AxisConvertible {
     @inlinable
-    init(size: Size, axis: Axis) {
+    init(size: AxisSize, axis: Axis) {
         self.init(x: size[axis], y: size[axis.perpendicular])
     }
 
@@ -80,7 +85,7 @@ extension CGPoint: AxisConvertible {
 
 extension CGSize: AxisConvertible {
     @inlinable
-    init(size: Size, axis: Axis) {
+    init(size: AxisSize, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 
@@ -103,7 +108,7 @@ extension CGSize: AxisConvertible {
 
 extension ProposedViewSize: AxisConvertible {
     @inlinable
-    init(size: Size, axis: Axis) {
+    init(size: AxisSize, axis: Axis) {
         self.init(width: size[axis], height: size[axis.perpendicular])
     }
 

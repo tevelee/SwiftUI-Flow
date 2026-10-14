@@ -4,7 +4,7 @@ import SwiftUI
 /// The axis-agnostic engine behind ``HFlow`` and ``VFlow``.
 ///
 /// `FlowLayout` works in *breadth* (along the lines) and *depth* (across the lines) rather than width
-/// and height, so one implementation serves both axes (see ``Size``). This file holds the type itself,
+/// and height, so one implementation serves both axes (see ``AxisSize``). This file holds the type itself,
 /// its SwiftUI `Layout` entry points, and the pipeline spine; each pipeline phase lives in its own
 /// `FlowLayout+…` file so the directory reads as a table of contents for the algorithm:
 ///
@@ -67,15 +67,15 @@ struct FlowLayout: Sendable {
     @usableFromInline
     func sizeThatFits(
         proposal proposedSize: ProposedViewSize,
-        subviews: some Subviews,
+        subviews: some FlowSubviews,
         cache: inout FlowLayoutCache
     ) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
 
         let result = resolveLayout(in: proposedSize, of: subviews, cache: &cache)
         let lines = result.lines
-        var size = lines.reduce(Size.zero) { acc, line in
-            Size(breadth: max(acc.breadth, line.size.breadth), depth: acc.depth + line.size.depth + line.leadingSpace)
+        var size = lines.reduce(AxisSize.zero) { acc, line in
+            AxisSize(breadth: max(acc.breadth, line.size.breadth), depth: acc.depth + line.size.depth + line.leadingSpace)
         }
         // Justification needs a finite proposal to stretch to.
         if justified, proposedSize.value(on: axis).isFinite {
@@ -89,7 +89,7 @@ struct FlowLayout: Sendable {
     func placeSubviews(
         in bounds: CGRect,
         proposal: ProposedViewSize,
-        subviews: some Subviews,
+        subviews: some FlowSubviews,
         cache: inout FlowLayoutCache
     ) {
         guard !subviews.isEmpty else { return }
@@ -114,12 +114,12 @@ struct FlowLayout: Sendable {
     }
 
     @usableFromInline
-    func makeCache(_ subviews: some Subviews) -> FlowLayoutCache {
+    func makeCache(_ subviews: some FlowSubviews) -> FlowLayoutCache {
         FlowLayoutCache(subviews, axis: axis)
     }
 
     @usableFromInline
-    func refreshCache(_ cache: inout FlowLayoutCache, subviews: some Subviews) {
+    func refreshCache(_ cache: inout FlowLayoutCache, subviews: some FlowSubviews) {
         cache = FlowLayoutCache(subviews, axis: axis)
     }
 
@@ -135,7 +135,7 @@ struct FlowLayout: Sendable {
         guard !proposal.value(on: axis).isFinite, resolvedBreadth.isFinite else { return }
         let key = FlowLayoutCache.LineBreakingKey(
             proposedSize: ProposedViewSize(
-                size: Size(breadth: resolvedBreadth, depth: proposal.value(on: axis.perpendicular)),
+                size: AxisSize(breadth: resolvedBreadth, depth: proposal.value(on: axis.perpendicular)),
                 axis: axis
             ),
             axis: axis
@@ -155,7 +155,7 @@ struct FlowLayout: Sendable {
     /// feature rules around that prefix; geometry, space distribution and placement remain here.
     func resolveLayout(
         in proposal: ProposedViewSize,
-        of subviews: some Subviews,
+        of subviews: some FlowSubviews,
         cache: inout FlowLayoutCache
     ) -> LayoutResult {
         let composition = VisibleLineComposition(cache: cache, axis: axis, itemSpacing: itemSpacing, lineCap: lineCap)
@@ -175,7 +175,7 @@ struct FlowLayout: Sendable {
     /// and resolve positions back to subview indices only when separators were filtered out.
     /// Keyed on the proposed size, so the back-to-back `sizeThatFits`/`placeSubviews` passes share it.
     private func wrappedContentLines(
-        of subviews: some Subviews,
+        of subviews: some FlowSubviews,
         in proposal: ProposedViewSize,
         cache: inout FlowLayoutCache,
         composition: VisibleLineComposition

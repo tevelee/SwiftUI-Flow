@@ -14,7 +14,7 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
     @usableFromInline
     let overflowBuilder: (Int) -> Overflow
 
-    @StateObject private var state = Reported(FlowLayoutReport())
+    @StateObject private var state = LayoutReportState(FlowLayoutReport())
 
     @inlinable
     init(layout: AnyLayout, content: Content, overflowBuilder: @escaping (Int) -> Overflow) {

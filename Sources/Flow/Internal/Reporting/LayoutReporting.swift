@@ -9,7 +9,7 @@ import os
 /// reports additionally require confirmation of the rendered bounds. Held as a `@StateObject`
 /// so the reference survives body re-evaluations.
 @MainActor
-final class Reported<Value: Equatable & Sendable>: ObservableObject {
+final class LayoutReportState<Value: Equatable & Sendable>: ObservableObject {
     @Published var value: Value
     private let pending = OSAllocatedUnfairLock(initialState: Pending())
 
@@ -92,7 +92,7 @@ final class Reported<Value: Equatable & Sendable>: ObservableObject {
     }
 }
 
-extension Reported where Value == FlowLayoutReport {
+extension LayoutReportState where Value == FlowLayoutReport {
     /// Builds one reported layout pass while keeping generation, child tags and rendered geometry together.
     /// State ownership stays with the caller; content only needs the latest confirmed report.
     func flowLayout<Content: View>(

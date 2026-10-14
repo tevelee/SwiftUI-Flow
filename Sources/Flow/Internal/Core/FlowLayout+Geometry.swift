@@ -11,9 +11,9 @@ import SwiftUI
 /// One item placed on a line. `depthGuide` is the item's own cross-axis alignment guide — e.g. its
 /// text baseline — measured from the line's leading depth edge.
 struct PlacedItem {
-    var subview: any Subview
+    var subview: any FlowSubview
     var cache: FlowLayoutCache.SubviewCache
-    var size: Size
+    var size: AxisSize
     var leadingSpace: CGFloat
     var depthGuide: CGFloat
 }
@@ -22,7 +22,7 @@ struct PlacedItem {
 /// guides, i.e. the ascent — onto which each item's own guide is aligned.
 struct LayoutLine {
     var items: [PlacedItem]
-    var size: Size
+    var size: AxisSize
     var leadingSpace: CGFloat
     var depthGuide: CGFloat
 }
@@ -32,7 +32,7 @@ extension FlowLayout {
     /// measured at its proposed size, each line's metrics computed from its items.
     func buildGeometry(
         of wrapped: WrappedLines,
-        of subviews: some Subviews,
+        of subviews: some FlowSubviews,
         cache: FlowLayoutCache
     ) -> [LayoutLine] {
         wrapped.map { layoutLine(from: $0, of: subviews, cache: cache) }
@@ -40,7 +40,7 @@ extension FlowLayout {
 
     private func layoutLine(
         from wrappedLine: WrappedLine,
-        of subviews: some Subviews,
+        of subviews: some FlowSubviews,
         cache: FlowLayoutCache
     ) -> LayoutLine {
         var naturalDepth = wrappedLine.first.map { cache.subviewsCache[$0.index].ideal.depth } ?? 0
@@ -69,19 +69,19 @@ extension FlowLayout {
             breadth += item.size.breadth + item.leadingSpace
             items.append(item)
         }
-        return LayoutLine(items: items, size: Size(breadth: breadth, depth: ascent + descent), leadingSpace: 0, depthGuide: ascent)
+        return LayoutLine(items: items, size: AxisSize(breadth: breadth, depth: ascent + descent), leadingSpace: 0, depthGuide: ascent)
     }
 
     private func placedItem(
         from wrappedItem: WrappedItem,
         naturalDepth: CGFloat,
-        of subviews: some Subviews,
+        of subviews: some FlowSubviews,
         cache: FlowLayoutCache
     ) -> PlacedItem {
         let subview = subviews[wrappedItem.index]
         let subviewCache = cache.subviewsCache[wrappedItem.index]
         let proposal = ProposedViewSize(
-            size: Size(
+            size: AxisSize(
                 breadth: wrappedItem.size,
                 depth: proposedDepth(for: subviewCache, naturalDepth: naturalDepth)
             ),

@@ -2,9 +2,10 @@ import CoreFoundation
 
 /// Geometry for the rendered prefix, rather than for the estimated full scroll extent.
 struct LazyFlowGeometry: Equatable, Sendable {
-    var scrollMax: CGFloat
+    /// Maximum viewport coordinate along the scroll axis; infinity means no scroll viewport.
+    var viewportEnd: CGFloat
     var contentExtent: CGFloat
-    var measuredCount: Int
+    var measuredItemCount: Int
 }
 
 /// Owns lazy reveal progress and the extent estimate across data and geometry changes.
@@ -13,13 +14,13 @@ struct LazyRevealState {
     private var revealed = 1
     private var geometry: LazyFlowGeometry?
 
-    func visibleCount(for total: Int) -> Int {
+    func revealedItemCount(for total: Int) -> Int {
         max(0, min(revealed, total))
     }
 
     func estimatedExtent(for total: Int) -> CGFloat? {
-        guard visibleCount(for: total) < total, let geometry, geometry.measuredCount > 0 else { return nil }
-        return geometry.contentExtent / CGFloat(geometry.measuredCount) * CGFloat(total)
+        guard revealedItemCount(for: total) < total, let geometry, geometry.measuredItemCount > 0 else { return nil }
+        return geometry.contentExtent / CGFloat(geometry.measuredItemCount) * CGFloat(total)
     }
 
     /// Data growth can need another reveal even when the rendered prefix keeps the same size.
@@ -28,10 +29,10 @@ struct LazyRevealState {
     mutating func update(total: Int, geometry: LazyFlowGeometry? = nil) {
         revealed = max(0, min(max(1, revealed), total))
         if let geometry { self.geometry = geometry }
-        guard revealed < total, let geometry = self.geometry, geometry.measuredCount == revealed else { return }
-        if geometry.scrollMax.isInfinite {
+        guard revealed < total, let geometry = self.geometry, geometry.measuredItemCount == revealed else { return }
+        if geometry.viewportEnd.isInfinite {
             revealed = total
-        } else if geometry.scrollMax > geometry.contentExtent {
+        } else if geometry.viewportEnd > geometry.contentExtent {
             revealed += 1
         }
     }

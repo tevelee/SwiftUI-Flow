@@ -1,9 +1,9 @@
 import SwiftUI
 
 @usableFromInline
-protocol Subviews: RandomAccessCollection where Element: Subview, Index == Int {}
+protocol Subviews: RandomAccessCollection where Element: FlowSubview, Index == Int {}
 
-extension LayoutSubviews: Subviews {}
+extension LayoutSubviews: FlowSubviews {}
 
 @usableFromInline
 protocol Subview {
@@ -15,13 +15,12 @@ protocol Subview {
     subscript<K: LayoutValueKey>(key: K.Type) -> K.Value { get }
 }
 
-// SwiftUI also defines a `Subview` type starting in newer SDK versions. Tests should
-// use these typealiases to avoid ambiguity when `@testable import Flow` is combined with
-// `import SwiftUI`.
+// Use the Flow-prefixed names at call sites to avoid SwiftUI's Subview name collision.
+// Preserve the original protocol declarations for existing inline clients.
 @usableFromInline typealias FlowSubview = Subview
 @usableFromInline typealias FlowSubviews = Subviews
 
-extension LayoutSubview: Subview {
+extension LayoutSubview: FlowSubview {
     @usableFromInline
     func dimensions(_ proposal: ProposedViewSize) -> any Dimensions {
         dimensions(in: proposal)
@@ -40,8 +39,8 @@ extension ViewDimensions: Dimensions {}
 
 extension Dimensions {
     @usableFromInline
-    func size(on axis: Axis) -> Size {
-        Size(
+    func size(on axis: Axis) -> AxisSize {
+        AxisSize(
             breadth: value(on: axis),
             depth: value(on: axis.perpendicular)
         )

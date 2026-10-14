@@ -21,7 +21,7 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     @Environment(\._flowItemSeparator) private var itemSeparator
     @Environment(\._flowLineSeparator) private var lineSeparator
     @Environment(\._flowOverflowBuilder) private var overflowBuilder
-    @StateObject private var report = Reported(FlowLayoutReport())
+    @StateObject private var report = LayoutReportState(FlowLayoutReport())
 
     @usableFromInline
     init(layout: AnyLayout, content: Content) {

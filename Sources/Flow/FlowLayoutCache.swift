@@ -11,9 +11,9 @@ public struct FlowLayoutCache {
         @usableFromInline
         var spacing: ViewSpacing
         @usableFromInline
-        var ideal: Size
+        var ideal: AxisSize
         @usableFromInline
-        var max: Size
+        var max: AxisSize
         @usableFromInline
         var layoutValues: LayoutValues
         @usableFromInline
@@ -42,7 +42,7 @@ public struct FlowLayoutCache {
         var role: FlowSubviewRole
 
         @inlinable
-        init(_ subview: some Subview, axis: Axis) {
+        init(_ subview: some FlowSubview, axis: Axis) {
             priority = subview.priority
             spacing = subview.spacing
             ideal = subview.dimensions(.unspecified).size(on: axis)
@@ -114,7 +114,7 @@ public struct FlowLayoutCache {
     }
 
     @inlinable
-    init(_ subviews: some Subviews, axis: Axis) {
+    init(_ subviews: some FlowSubviews, axis: Axis) {
         let subviewsCache = subviews.map { SubviewCache($0, axis: axis) }
         self.subviewsCache = subviewsCache
         overflowSubviewIndex = subviews.indices.last.flatMap {

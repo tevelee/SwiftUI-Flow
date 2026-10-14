@@ -8,7 +8,7 @@ import SwiftUI
 
 extension FlowLayout {
     func breakerItem(
-        for subview: some Subview,
+        for subview: some FlowSubview,
         at offset: Int,
         leadingSpace: CGFloat,
         in proposal: ProposedViewSize,
@@ -28,7 +28,7 @@ extension FlowLayout {
     }
 
     private func minimumBreadth(
-        for subview: some Subview,
+        for subview: some FlowSubview,
         cache subviewCache: FlowLayoutCache.SubviewCache,
         in proposal: ProposedViewSize
     ) -> CGFloat {

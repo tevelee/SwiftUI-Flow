@@ -11,9 +11,9 @@ import Testing
 
 @Suite(.tags(.requirements, .regression))
 @MainActor
-struct ReportedValueTests {
+struct LayoutReportStateTests {
     @Test func synchronousReports_publishOnlyTheLatestValue() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let firstPublished = await firstPublication(from: reported) {
             let registration = reported.register()
             registration.confirm(CGSize(width: 75, height: 22))
@@ -27,7 +27,7 @@ struct ReportedValueTests {
     }
 
     @Test func sizedReports_ignoreUnacceptedProbeGeometry() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let registration = reported.register()
         let firstPublished = await firstPublication(from: reported) {
             registration.report(1, CGSize(width: 75, height: 22))
@@ -39,7 +39,7 @@ struct ReportedValueTests {
     }
 
     @Test func sizedReports_ignoreCallbacksFromPreviousContent() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let previous = reported.register()
         let registration = reported.register()
         let firstPublished = await firstPublication(from: reported) {
@@ -53,7 +53,7 @@ struct ReportedValueTests {
     }
 
     @Test func sizedReports_acceptGeometryBeforeTheCandidateArrives() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let registration = reported.register()
         let firstPublished = await firstPublication(from: reported) {
             registration.confirm(CGSize(width: 75, height: 22))
@@ -64,7 +64,7 @@ struct ReportedValueTests {
 
     @Test(arguments: [false, true])
     func sizedReports_reuseCandidateAfterConfirmingAnotherGeometry(probeFirst: Bool) async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let registration = reported.register()
         let displayed = CGSize(width: 75, height: 22)
         let probe = CGSize(width: 210, height: 10)
@@ -83,7 +83,7 @@ struct ReportedValueTests {
     }
 
     @Test func placement_usesCurrentRegistrationWhenLayoutCacheIsReused() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let previous = reported.register()
         let layout = FlowLayout.horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
         let overflow: TestSubview = 1 × 1
@@ -107,7 +107,7 @@ struct ReportedValueTests {
     #if os(macOS)
         @Test func geometryObserver_reconfirmsUnchangedBoundsForNewContent() async {
             _ = NSApplication.shared
-            let reported = Reported(0)
+            let reported = LayoutReportState(0)
             let size = CGSize(width: 75, height: 22)
             let host = NSHostingView(rootView: AnyView(EmptyView()))
             let window = NSWindow(contentRect: CGRect(origin: .zero, size: size), styleMask: .borderless, backing: .buffered, defer: true)
@@ -130,7 +130,7 @@ struct ReportedValueTests {
     #endif
 
     @Test func sizedReports_requireGeometryFromCurrentContent() async {
-        let reported = Reported(0)
+        let reported = LayoutReportState(0)
         let previous = reported.register()
         previous.confirm(CGSize(width: 75, height: 22))
         previous.report(0, CGSize(width: 75, height: 22))
@@ -147,7 +147,7 @@ struct ReportedValueTests {
         #expect(confirmed == 2)
     }
 
-    private func firstPublication(from reported: Reported<Int>, timeout: Duration = .seconds(10), perform: () -> Void) async -> Int? {
+    private func firstPublication(from reported: LayoutReportState<Int>, timeout: Duration = .seconds(10), perform: () -> Void) async -> Int? {
         let channel = AsyncStream<Int>.makeStream()
         let subscription = reported.$value.dropFirst().sink { channel.continuation.yield($0) }
         perform()

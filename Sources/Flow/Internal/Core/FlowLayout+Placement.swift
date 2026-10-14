@@ -12,10 +12,10 @@ extension FlowLayout {
     func alignAndPlace(
         _ item: PlacedItem,
         in line: LayoutLine,
-        at target: Size
+        at target: AxisSize
     ) {
         var position = target
-        let size = Size(breadth: item.size.breadth, depth: line.size.depth)
+        let size = AxisSize(breadth: item.size.breadth, depth: line.size.depth)
         let proposedSize = ProposedViewSize(size: size, axis: axis)
         // Align the item's guide (e.g. its baseline) onto the line's common guide.
         let offset = line.depthGuide - item.depthGuide
@@ -35,7 +35,7 @@ extension FlowLayout {
             return proposal
         }
         return ProposedViewSize(
-            size: Size(
+            size: AxisSize(
                 breadth: bounds.size.value(on: axis),
                 depth: proposal.value(on: axis.perpendicular)
             ),
@@ -45,7 +45,7 @@ extension FlowLayout {
 
     /// Places truncated subviews. SwiftUI requires every subview be placed exactly once, so collapse
     /// them with a zero proposal and park them well outside the visible bounds where they won't draw.
-    func placeHiddenSubviews(_ indices: [Int], of subviews: some Subviews, in bounds: CGRect) {
+    func placeHiddenSubviews(_ indices: [Int], of subviews: some FlowSubviews, in bounds: CGRect) {
         guard !indices.isEmpty else { return }
         let sentinel = CGPoint(x: bounds.minX, y: bounds.maxY + hiddenSubviewOffset).finite(or: 0)
         for index in indices {
@@ -57,7 +57,7 @@ extension FlowLayout {
 
     /// Alignment placements are candidates, not publications. The view validates their bounds
     /// before accepting them, including when SwiftUI reuses a probe and omits final placement.
-    func notifyPlacementReporter(_ result: LayoutResult, size: CGSize, subviews: some Subviews, cache: FlowLayoutCache) {
+    func notifyPlacementReporter(_ result: LayoutResult, size: CGSize, subviews: some FlowSubviews, cache: FlowLayoutCache) {
         guard let index = cache.placementReporterIndex, let reporter = subviews[index][PlacementReporterKey.self] else { return }
         reporter(
             result.report,

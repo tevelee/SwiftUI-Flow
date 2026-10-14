@@ -1,17 +1,17 @@
 import SwiftUI
 
-/// A view that arranges its children in a horizontal flow layout, loading items
-/// lazily as they become visible in a scroll view.
+/// A view that arranges its children in a vertical flow layout, loading items
+/// lazily as they become visible in a horizontal scroll view.
 ///
-/// The layout is identical to ``HFlow``: each item is measured at its natural
-/// size and rows break based on actual content widths. Items are loaded
+/// The layout is identical to ``VFlow``: each item is measured at its natural
+/// size and columns break based on actual content heights. Items are loaded
 /// incrementally as the user scrolls, making this suitable for large datasets.
 ///
 /// When used without a `ScrollView` ancestor, all items are rendered eagerly,
-/// matching the behaviour of ``HFlow``.
+/// matching the behaviour of ``VFlow``.
 ///
-///     ScrollView {
-///         LazyHFlow(data: myItems, spacing: 8) { item in
+///     ScrollView(.horizontal) {
+///         LazyVFlow(data: myItems, spacing: 8) { item in
 ///             Text(item.title)
 ///                 .padding(8)
 ///                 .background(Color.accentColor.opacity(0.2))
@@ -21,11 +21,11 @@ import SwiftUI
 ///
 @available(iOS 17, macOS 14, tvOS 17, watchOS 10, *)
 @frozen
-public struct LazyHFlow<LayoutContent: View>: View {
+public struct LazyVFlow<LayoutContent: View>: View {
     @usableFromInline
     let count: Int
     @usableFromInline
-    let layout: HFlowLayout
+    let layout: VFlowLayout
     @usableFromInline
     let makeContent: (Int) -> LayoutContent
 
@@ -33,7 +33,7 @@ public struct LazyHFlow<LayoutContent: View>: View {
     @Environment(\.flexibility) var flexibility
 
     @usableFromInline
-    init(count: Int, layout: HFlowLayout, makeContent: @escaping (Int) -> LayoutContent) {
+    init(count: Int, layout: VFlowLayout, makeContent: @escaping (Int) -> LayoutContent) {
         self.count = count
         self.layout = layout
         self.makeContent = makeContent
@@ -41,33 +41,33 @@ public struct LazyHFlow<LayoutContent: View>: View {
 
     // MARK: - Data-driven initialisers
 
-    /// Creates a lazy horizontal flow with the given spacing and vertical alignment.
+    /// Creates a lazy vertical flow with the given spacing and horizontal alignment.
     ///
     /// - Parameters:
     ///   - data: The collection of identified data to display.
-    ///   - alignment: The vertical alignment of items within each row.
+    ///   - alignment: The horizontal alignment of items within each column.
     ///   - itemSpacing: The distance between adjacent items, or `nil` for the default.
-    ///   - rowSpacing: The distance between rows, or `nil` for the default.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - columnSpacing: The distance between columns, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
     @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
-        alignment: VerticalAlignment = .center,
+        alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
-        rowSpacing: CGFloat? = nil,
+        columnSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content: @escaping (Data.Element) -> ElementContent
     ) where Data.Element: Identifiable, LayoutContent == ForEach<[Data.Element], Data.Element.ID, ElementContent> {
         self.init(
             count: data.count,
-            layout: HFlowLayout(
+            layout: VFlowLayout(
                 alignment: alignment,
                 itemSpacing: itemSpacing,
-                rowSpacing: rowSpacing,
+                columnSpacing: columnSpacing,
                 justified: justified,
                 distributeItemsEvenly: distributeItemsEvenly
             ),
@@ -75,20 +75,20 @@ public struct LazyHFlow<LayoutContent: View>: View {
         )
     }
 
-    /// Creates a lazy horizontal flow with uniform spacing and a vertical alignment.
+    /// Creates a lazy vertical flow with uniform spacing and a horizontal alignment.
     ///
     /// - Parameters:
     ///   - data: The collection of identified data to display.
-    ///   - alignment: The vertical alignment of items within each row.
-    ///   - spacing: The distance between adjacent items and between rows, or `nil` for the default.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - alignment: The horizontal alignment of items within each column.
+    ///   - spacing: The distance between adjacent items and between columns, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
     @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
         data: Data,
-        alignment: VerticalAlignment = .center,
+        alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
@@ -98,24 +98,24 @@ public struct LazyHFlow<LayoutContent: View>: View {
             data: data,
             alignment: alignment,
             itemSpacing: spacing,
-            rowSpacing: spacing,
+            columnSpacing: spacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             content: content
         )
     }
 
-    /// Creates a lazy horizontal flow with independent axis alignment and spacing.
+    /// Creates a lazy vertical flow with independent axis alignment and spacing.
     ///
     /// - Parameters:
     ///   - data: The collection of identified data to display.
-    ///   - horizontalAlignment: The guide for aligning items horizontally within each row.
-    ///   - verticalAlignment: The guide for aligning items vertically within each row.
+    ///   - horizontalAlignment: The guide for aligning items horizontally within each column.
+    ///   - verticalAlignment: The guide for aligning items vertically within each column.
     ///   - horizontalSpacing: The distance between adjacent items on the horizontal axis.
-    ///   - verticalSpacing: The distance between rows on the vertical axis.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - verticalSpacing: The distance between columns on the vertical axis.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - content: A view builder that produces a view for each element.
     @inlinable
     public init<Data: RandomAccessCollection, ElementContent: View>(
@@ -130,7 +130,7 @@ public struct LazyHFlow<LayoutContent: View>: View {
     ) where Data.Element: Identifiable, LayoutContent == ForEach<[Data.Element], Data.Element.ID, ElementContent> {
         self.init(
             count: data.count,
-            layout: HFlowLayout(
+            layout: VFlowLayout(
                 horizontalAlignment: horizontalAlignment,
                 verticalAlignment: verticalAlignment,
                 horizontalSpacing: horizontalSpacing,
@@ -144,24 +144,24 @@ public struct LazyHFlow<LayoutContent: View>: View {
 
     // MARK: - ViewBuilder initialisers
 
-    /// Creates a lazy horizontal flow with free-form view-builder content.
+    /// Creates a lazy vertical flow with free-form view-builder content.
     ///
     /// Content is rendered eagerly regardless of scroll position, matching the
-    /// behaviour of ``HFlow``.
+    /// behaviour of ``VFlow``.
     ///
     /// - Parameters:
-    ///   - alignment: The vertical alignment of items within each row.
+    ///   - alignment: The horizontal alignment of items within each column.
     ///   - itemSpacing: The distance between adjacent items, or `nil` for the default.
-    ///   - rowSpacing: The distance between rows, or `nil` for the default.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - columnSpacing: The distance between columns, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
     @inlinable
     public init(
-        alignment: VerticalAlignment = .center,
+        alignment: HorizontalAlignment = .center,
         itemSpacing: CGFloat? = nil,
-        rowSpacing: CGFloat? = nil,
+        columnSpacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
         @ViewBuilder content contentBuilder: () -> LayoutContent
@@ -169,10 +169,10 @@ public struct LazyHFlow<LayoutContent: View>: View {
         let content = contentBuilder()
         self.init(
             count: 1,
-            layout: HFlowLayout(
+            layout: VFlowLayout(
                 alignment: alignment,
                 itemSpacing: itemSpacing,
-                rowSpacing: rowSpacing,
+                columnSpacing: columnSpacing,
                 justified: justified,
                 distributeItemsEvenly: distributeItemsEvenly
             ),
@@ -180,21 +180,21 @@ public struct LazyHFlow<LayoutContent: View>: View {
         )
     }
 
-    /// Creates a lazy horizontal flow with uniform spacing and free-form view-builder content.
+    /// Creates a lazy vertical flow with uniform spacing and free-form view-builder content.
     ///
     /// Content is rendered eagerly regardless of scroll position, matching the
-    /// behaviour of ``HFlow``.
+    /// behaviour of ``VFlow``.
     ///
     /// - Parameters:
-    ///   - alignment: The vertical alignment of items within each row.
-    ///   - spacing: The distance between adjacent items and between rows, or `nil` for the default.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - alignment: The horizontal alignment of items within each column.
+    ///   - spacing: The distance between adjacent items and between columns, or `nil` for the default.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
     @inlinable
     public init(
-        alignment: VerticalAlignment = .center,
+        alignment: HorizontalAlignment = .center,
         spacing: CGFloat? = nil,
         justified: Bool = false,
         distributeItemsEvenly: Bool = false,
@@ -203,26 +203,26 @@ public struct LazyHFlow<LayoutContent: View>: View {
         self.init(
             alignment: alignment,
             itemSpacing: spacing,
-            rowSpacing: spacing,
+            columnSpacing: spacing,
             justified: justified,
             distributeItemsEvenly: distributeItemsEvenly,
             content: contentBuilder
         )
     }
 
-    /// Creates a lazy horizontal flow with independent axis alignment and free-form view-builder content.
+    /// Creates a lazy vertical flow with independent axis alignment and free-form view-builder content.
     ///
     /// Content is rendered eagerly regardless of scroll position, matching the
-    /// behaviour of ``HFlow``.
+    /// behaviour of ``VFlow``.
     ///
     /// - Parameters:
-    ///   - horizontalAlignment: The guide for aligning items horizontally within each row.
-    ///   - verticalAlignment: The guide for aligning items vertically within each row.
+    ///   - horizontalAlignment: The guide for aligning items horizontally within each column.
+    ///   - verticalAlignment: The guide for aligning items vertically within each column.
     ///   - horizontalSpacing: The distance between adjacent items on the horizontal axis.
-    ///   - verticalSpacing: The distance between rows on the vertical axis.
-    ///   - justified: Whether to fill the remaining space in each row by stretching spaces.
-    ///   - distributeItemsEvenly: Whether to minimise empty space across rows rather than
-    ///     filling earlier rows first.
+    ///   - verticalSpacing: The distance between columns on the vertical axis.
+    ///   - justified: Whether to fill the remaining space in each column by stretching spaces.
+    ///   - distributeItemsEvenly: Whether to minimise empty space across columns rather than
+    ///     filling earlier columns first.
     ///   - contentBuilder: A view builder that creates the content of this flow.
     @inlinable
     public init(
@@ -237,7 +237,7 @@ public struct LazyHFlow<LayoutContent: View>: View {
         let content = contentBuilder()
         self.init(
             count: 1,
-            layout: HFlowLayout(
+            layout: VFlowLayout(
                 horizontalAlignment: horizontalAlignment,
                 verticalAlignment: verticalAlignment,
                 horizontalSpacing: horizontalSpacing,
@@ -253,9 +253,9 @@ public struct LazyHFlow<LayoutContent: View>: View {
 
     public var body: some View {
         let flexibility = flexibility
-        LazyFlowBody(
+        LazyFlowContent(
             count: count,
-            scrollAxis: .vertical,
+            scrollAxis: .horizontal,
             makeContent: { [flexibility] n in
                 layout {
                     makeContent(n)

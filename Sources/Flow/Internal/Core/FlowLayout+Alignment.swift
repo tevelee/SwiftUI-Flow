@@ -2,7 +2,8 @@ import CoreFoundation
 import SwiftUI
 
 extension FlowLayout {
-    /// Preserve SwiftUI's cached guide calculation while suppressing reports from its placement probes.
+    /// Preserve SwiftUI's cached guide calculation. Probe placements only report candidates;
+    /// the reporting module confirms rendered geometry before publishing them.
     @usableFromInline
     func explicitAlignment(
         of guide: HorizontalAlignment,
@@ -11,9 +12,6 @@ extension FlowLayout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        let alignmentDepth = cache.alignmentDepth
-        alignmentDepth?.withLock { $0 += 1 }
-        defer { alignmentDepth?.withLock { $0 -= 1 } }
         return DefaultAlignmentLayout(layout: self).explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 
@@ -25,9 +23,6 @@ extension FlowLayout {
         subviews: LayoutSubviews,
         cache: inout FlowLayoutCache
     ) -> CGFloat? {
-        let alignmentDepth = cache.alignmentDepth
-        alignmentDepth?.withLock { $0 += 1 }
-        defer { alignmentDepth?.withLock { $0 -= 1 } }
         return DefaultAlignmentLayout(layout: self).explicitAlignment(of: guide, in: bounds, proposal: proposal, subviews: subviews, cache: &cache)
     }
 }

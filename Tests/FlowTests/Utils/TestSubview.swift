@@ -350,7 +350,7 @@ func expectLayout(
 
 func testLineBreakSubview() -> TestSubview {
     let subview = TestSubview(size: .zero)
-    subview[IsLineBreakLayoutValueKey.self] = true
+    subview[FlowSubviewRoleLayoutValueKey.self] = .lineBreak
     return subview
 }
 

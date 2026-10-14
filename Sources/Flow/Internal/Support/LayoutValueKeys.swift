@@ -2,7 +2,7 @@ import SwiftUI
 
 // The internal `LayoutValueKey`/`EnvironmentKey` plumbing behind the public modifiers in
 // `LayoutModifiers.swift`. Each public knob sets one of these; the cache reads them back per subview.
-// (Separator keys live with the separator feature in `Internal/Features/Separators.swift`.)
+// Structural roles live in `FlowSubviewRole.swift`.
 
 @usableFromInline
 struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
@@ -11,27 +11,9 @@ struct ShouldStartInNewLineLayoutValueKey: LayoutValueKey {
 }
 
 @usableFromInline
-struct IsLineBreakLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue = false
-}
-
-@usableFromInline
 struct FlexibilityLayoutValueKey: LayoutValueKey {
     @usableFromInline
     static let defaultValue: FlexibilityBehavior = .natural
-}
-
-@usableFromInline
-struct IsOverflowLayoutValueKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue = false
-}
-
-@usableFromInline
-struct OverflowReporterKey: LayoutValueKey {
-    @usableFromInline
-    static let defaultValue: (@Sendable (Int) -> Void)? = nil
 }
 
 @usableFromInline

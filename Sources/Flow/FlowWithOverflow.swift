@@ -14,7 +14,7 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
     @usableFromInline
     let overflowBuilder: (Int) -> Overflow
 
-    @StateObject private var state = Reported(0)
+    @StateObject private var state = Reported(FlowLayoutReport())
 
     @inlinable
     init(layout: AnyLayout, content: Content, overflowBuilder: @escaping (Int) -> Overflow) {
@@ -24,24 +24,21 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
     }
 
     public var body: some View {
-        let reporter = state.reporter()
-        return layout {
+        state.flowLayout(layout) { value in
             content
                 .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
                 .environment(\.maxLines, nil)
                 .environment(\._flowOverflowBuilder, nil)
-            overflowBuilder(state.value)
-                .overflowIndicator(reporter: reporter)
+            overflowBuilder(value.overflowCount)
+                .overflowIndicator()
         }
     }
 }
 
 extension View {
-    /// Tags this view as the overflow indicator and wires the hidden-count reporter, so the layout
-    /// keeps it out of line breaking, places it on the last visible line, and reports how many items
-    /// the cap hid.
-    func overflowIndicator(reporter: @escaping @Sendable (Int) -> Void) -> some View {
-        layoutValue(key: IsOverflowLayoutValueKey.self, value: true)
-            .layoutValue(key: OverflowReporterKey.self, value: reporter)
+    /// Tags this view as the overflow indicator, so the layout keeps it out of line breaking
+    /// and places it on the last visible line.
+    func overflowIndicator() -> some View {
+        layoutValue(key: FlowSubviewOriginLayoutValueKey.self, value: .overflowBuilder)
     }
 }

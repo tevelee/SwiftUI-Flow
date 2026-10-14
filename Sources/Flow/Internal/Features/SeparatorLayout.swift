@@ -11,7 +11,7 @@ import SwiftUI
 ///   lines are known — item separators as ordinary in-line items, line separators as their own
 ///   single-item lines — so the core line-construction code treats them like any other subview.
 ///
-/// Created only when a subview carries a non-`content` ``SeparatorRole`` (see ``init?(cache:axis:itemSpacing:)``).
+/// Created only when a subview carries a separator role (see ``init?(cache:axis:itemSpacing:)``).
 struct SeparatorLayout {
     private let plan: SeparatorPlan
     private let axis: Axis
@@ -21,8 +21,9 @@ struct SeparatorLayout {
     init?(cache: FlowLayoutCache, axis: Axis, itemSpacing: CGFloat?) {
         guard cache.hasSeparators else { return nil }
         plan = SeparatorPlan(
-            roles: cache.subviewsCache.map(\.separatorRole),
-            isLineBreak: cache.subviewsCache.map { $0.layoutValues.isLineBreak }
+            subviews: cache.subviewsCache.map {
+                SeparatorPlan.Subview(role: $0.role, origin: $0.origin)
+            }
         )
         self.axis = axis
         self.itemSpacing = itemSpacing
@@ -86,7 +87,7 @@ struct SeparatorLayout {
         var result: WrappedLines = []
         result.reserveCapacity(lines.count * 2)
         for index in lines.indices {
-            if index > 0, let first = lines[index].first?.index, let separator = lineSeparator(startingLineAt: first) {
+            if index > 0, let first = lines[index].first?.index, let separator = plan.lineSeparator(before: first) {
                 // A line separator reuses all the existing line placement, spacing, and alignment
                 // machinery for free by being its own single-item line.
                 result.append([WrappedItem(index: separator, size: breadth, leadingSpace: 0)])
@@ -113,8 +114,8 @@ struct SeparatorLayout {
         var lineOf: [Int] = []
         var precedingLine = Self.hiddenLineSentinel
         for index in cache.subviewsCache.indices {
-            switch cache.subviewsCache[index].separatorRole {
-                case .content:
+            switch cache.subviewsCache[index].role {
+                case .content, .lineBreak:
                     precedingLine = lineBySubview[index] ?? Self.hiddenLineSentinel
                     lineOf.append(precedingLine)
                 case .itemSeparatorOverride:
@@ -129,15 +130,6 @@ struct SeparatorLayout {
     /// Sentinel stored in `lineStructure` for content items absent from the visible output (capped by
     /// maxLines). The value is negative so the view layer can check `>= 0` for visibility.
     static let hiddenLineSentinel = -1
-
-    /// The eligible line separator for the boundary before the line that begins with `contentIndex`.
-    private func lineSeparator(startingLineAt contentIndex: Int) -> Int? {
-        guard let position = plan.position(ofContentIndex: contentIndex),
-            let gap = plan.gap(before: position),
-            gap.isEligible
-        else { return nil }
-        return gap.lineSeparator
-    }
 
     /// The breadth proposed to line separators: the justified width when justifying, otherwise the
     /// widest content line, so a full-width separator (e.g. a `Divider`) spans the laid-out content.
@@ -176,35 +168,7 @@ struct SeparatorLayout {
     /// carries no in-line separator. Used by both seams — to reserve its breadth before wrapping, and
     /// to re-insert it after.
     private func itemSeparator(before contentIndex: Int, after previous: Int) -> WrappedItem? {
-        let isOverflow = contentIndex == cache.overflowSubviewIndex
-        // Only markers from the overflow builder override the inherited separator.
-        // Trailing markers in the main content remain orphaned at the flow's edge.
-        if isOverflow {
-            guard !cache.subviewsCache[previous].layoutValues.isLineBreak else { return nil }
-            for index in (0 ..< contentIndex).reversed() {
-                guard cache.subviewsCache[index].isOverflow else { break }
-                switch cache.subviewsCache[index].separatorRole {
-                    case .itemSeparatorOverride(let isEmpty):
-                        guard !isEmpty else { return nil }
-                        return WrappedItem(
-                            index: index,
-                            size: cache.subviewsCache[index].ideal.breadth,
-                            leadingSpace: spacing(from: previous, to: index)
-                        )
-                    case .content:
-                        break
-                    case .itemSeparator, .lineSeparator:
-                        continue
-                }
-                break
-            }
-        }
-        let position = isOverflow ? plan.position(ofContentIndex: previous).map { $0 + 1 } : plan.position(ofContentIndex: contentIndex)
-        guard let position,
-            let gap = plan.gap(before: position),
-            isOverflow || gap.isEligible,
-            let separator = gap.itemSeparator
-        else { return nil }
+        guard let separator = plan.itemSeparator(before: contentIndex, after: previous) else { return nil }
         return WrappedItem(
             index: separator,
             size: cache.subviewsCache[separator].ideal.breadth,

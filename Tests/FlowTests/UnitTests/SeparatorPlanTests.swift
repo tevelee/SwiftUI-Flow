@@ -6,88 +6,182 @@ import Testing
 struct SeparatorPlanTests {
     @Test(arguments: [false, true])
     func explicitSeparator_overridesAutomaticSeparator(isEmpty: Bool) {
-        let plan = SeparatorPlan(
-            roles: [.content, .itemSeparator, .lineSeparator, .itemSeparatorOverride(isEmpty: isEmpty), .itemSeparator, .lineSeparator, .content],
-            isLineBreak: Array(repeating: false, count: 7)
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .lineSeparator),
+            .init(role: .itemSeparatorOverride(isEmpty: isEmpty)),
+            .init(role: .itemSeparator),
+            .init(role: .lineSeparator),
+            .init(role: .content),
+        ])
         #expect(plan.contentIndices == [0, 6])
         #expect(plan.separatorIndices == [1, 2, 3, 4, 5])
-        #expect(plan.gap(before: 1) == .init(itemSeparator: isEmpty ? nil : 3, lineSeparator: 5, isEligible: true))
+        #expect(plan.itemSeparator(before: 6, after: 0) == (isEmpty ? nil : 3))
+        #expect(plan.lineSeparator(before: 6) == 5)
     }
 
     @Test func consecutiveExplicitSeparators_useLast_andIgnoreEdges() {
-        let plan = SeparatorPlan(
-            roles: [
-                .itemSeparatorOverride(isEmpty: false), .content, .itemSeparatorOverride(isEmpty: false),
-                .itemSeparatorOverride(isEmpty: true), .content, .itemSeparatorOverride(isEmpty: false),
-            ],
-            isLineBreak: Array(repeating: false, count: 6)
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .itemSeparatorOverride(isEmpty: false)),
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false)),
+            .init(role: .itemSeparatorOverride(isEmpty: true)),
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false)),
+        ])
         #expect(plan.contentIndices == [1, 4])
-        #expect(plan.gap(before: 0) == nil)
-        #expect(plan.gap(before: 1) == nil)
-        #expect(plan.gap(before: 2) == nil)
+        #expect(plan.itemSeparator(before: 1, after: 0) == nil)
+        #expect(plan.itemSeparator(before: 4, after: 1) == nil)
+        #expect(plan.itemSeparator(before: 5, after: 4) == nil)
     }
 
     @Test func noSeparators_yieldsAllContentNoGaps() {
-        let plan = SeparatorPlan(
-            roles: [.content, .content, .content],
-            isLineBreak: [false, false, false]
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .content),
+            .init(role: .content),
+        ])
         #expect(plan.contentIndices == [0, 1, 2])
         #expect(plan.separatorIndices.isEmpty)
-        #expect(plan.gap(before: 1) == nil)
-        #expect(plan.gap(before: 2) == nil)
+        #expect(plan.itemSeparator(before: 1, after: 0) == nil)
+        #expect(plan.itemSeparator(before: 2, after: 1) == nil)
     }
 
     @Test func bothSeparatorsInGap_arePairedToTheFollowingItem() {
-        // content, itemSep, lineSep, content
-        let plan = SeparatorPlan(
-            roles: [.content, .itemSeparator, .lineSeparator, .content],
-            isLineBreak: [false, false, false, false]
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .lineSeparator),
+            .init(role: .content),
+        ])
         #expect(plan.contentIndices == [0, 3])
         #expect(plan.separatorIndices == [1, 2])
-        #expect(plan.position(ofContentIndex: 3) == 1)
-        #expect(plan.gap(before: 1) == .init(itemSeparator: 1, lineSeparator: 2, isEligible: true))
-        // No gap before the first item — separators never appear at the leading edge.
-        #expect(plan.gap(before: 0) == nil)
+        #expect(plan.itemSeparator(before: 3, after: 0) == 1)
+        #expect(plan.lineSeparator(before: 3) == 2)
+        #expect(plan.itemSeparator(before: 0, after: 0) == nil)
+        #expect(plan.lineSeparator(before: 0) == nil)
     }
 
     @Test func onlyItemSeparators_leaveLineSeparatorNil() {
-        let plan = SeparatorPlan(
-            roles: [.content, .itemSeparator, .content, .itemSeparator, .content],
-            isLineBreak: [false, false, false, false, false]
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .content),
+        ])
         #expect(plan.contentIndices == [0, 2, 4])
         #expect(plan.separatorIndices == [1, 3])
-        #expect(plan.gap(before: 1) == .init(itemSeparator: 1, lineSeparator: nil, isEligible: true))
-        #expect(plan.gap(before: 2) == .init(itemSeparator: 3, lineSeparator: nil, isEligible: true))
+        #expect(plan.itemSeparator(before: 2, after: 0) == 1)
+        #expect(plan.itemSeparator(before: 4, after: 2) == 3)
+        #expect(plan.lineSeparator(before: 2) == nil)
+        #expect(plan.lineSeparator(before: 4) == nil)
     }
 
     @Test func gapTouchingLineBreak_isIneligible() {
-        // content, itemSep, lineSep, LineBreak(content), itemSep, lineSep, content
-        let plan = SeparatorPlan(
-            roles: [.content, .itemSeparator, .lineSeparator, .content, .itemSeparator, .lineSeparator, .content],
-            isLineBreak: [false, false, false, true, false, false, false]
-        )
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .lineSeparator),
+            .init(role: .lineBreak),
+            .init(role: .itemSeparator),
+            .init(role: .lineSeparator),
+            .init(role: .content),
+        ])
         #expect(plan.contentIndices == [0, 3, 6])
-        #expect(plan.gap(before: 1)?.isEligible == false)
-        #expect(plan.gap(before: 2)?.isEligible == false)
+        #expect(plan.itemSeparator(before: 3, after: 0) == nil)
+        #expect(plan.itemSeparator(before: 6, after: 3) == nil)
+        #expect(plan.lineSeparator(before: 3) == nil)
+        #expect(plan.lineSeparator(before: 6) == nil)
     }
 
     @Test func singleContentItem_hasNoGaps() {
-        let plan = SeparatorPlan(roles: [.content], isLineBreak: [false])
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content)
+        ])
         #expect(plan.contentIndices == [0])
         #expect(plan.separatorIndices.isEmpty)
-        #expect(plan.gap(before: 0) == nil)
+        #expect(plan.itemSeparator(before: 0, after: 0) == nil)
+        #expect(plan.lineSeparator(before: 0) == nil)
     }
 
     @Test func empty_isStable() {
-        let plan = SeparatorPlan(roles: [], isLineBreak: [])
+        let plan = SeparatorPlan(subviews: [])
         #expect(plan.contentIndices.isEmpty)
         #expect(plan.separatorIndices.isEmpty)
-        #expect(plan.position(ofContentIndex: 0) == nil)
-        #expect(plan.gap(before: 0) == nil)
+        #expect(plan.itemSeparator(before: 0, after: 0) == nil)
+        #expect(plan.lineSeparator(before: 0) == nil)
+    }
+
+    @Test(arguments: [false, true], [false, true])
+    func overflowOverride_requiresBuilderOwnership(isEmpty: Bool, inOverflowBuilder: Bool) {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: isEmpty), origin: inOverflowBuilder ? .overflowBuilder : .flowContent),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 4, after: 0) == (inOverflowBuilder ? (isEmpty ? nil : 3) : 1))
+    }
+
+    @Test func overflowInheritance_followsCurrentRetainedItem() {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false)),
+            .init(role: .content),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 5, after: 0) == 1)
+        #expect(plan.itemSeparator(before: 5, after: 2) == 3)
+    }
+
+    @Test(arguments: [false, true])
+    func consecutiveOverflowOverrides_useLast(isEmpty: Bool) {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false), origin: .overflowBuilder),
+            .init(role: .itemSeparatorOverride(isEmpty: isEmpty), origin: .overflowBuilder),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 3, after: 0) == (isEmpty ? nil : 2))
+    }
+
+    @Test func overflowAfterLineBreak_suppressesBuilderOverride() {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .lineBreak),
+            .init(role: .itemSeparatorOverride(isEmpty: false), origin: .overflowBuilder),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 4, after: 2) == nil)
+        #expect(plan.itemSeparator(before: 4, after: 0) == 3)
+    }
+
+    @Test func builderContent_stopsOverflowOverrideSearch() {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparator),
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false), origin: .overflowBuilder),
+            .init(role: .content, origin: .overflowBuilder),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 5, after: 0) == 1)
+    }
+
+    @Test func generatedSeparators_doNotHideOverflowOverride() {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: false), origin: .overflowBuilder),
+            .init(role: .itemSeparator, origin: .overflowBuilder),
+            .init(role: .lineSeparator, origin: .overflowBuilder),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.itemSeparator(before: 4, after: 0) == 1)
     }
 }

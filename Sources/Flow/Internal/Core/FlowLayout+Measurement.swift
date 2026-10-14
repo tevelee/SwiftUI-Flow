@@ -42,7 +42,7 @@ extension FlowLayout {
             spacing: leadingSpace,
             priority: subviewCache.priority,
             flexibility: subviewCache.layoutValues.flexibility,
-            isLineBreakView: subviewCache.layoutValues.isLineBreak,
+            isLineBreakView: subviewCache.role == .lineBreak,
             shouldStartInNewLine: subviewCache.layoutValues.shouldStartInNewLine
         )
     }

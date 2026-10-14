@@ -8,14 +8,62 @@ import os
 @Suite(.tags(.requirements))
 struct FlowSeparatorRequirementTests {
     @Test(.tags(.regression), arguments: [false, true], [false, true])
+    func placementCandidate_carriesOverflowAndLineStructure(vertical: Bool, evenly: Bool) {
+        let reports = OSAllocatedUnfairLock(initialState: (counts: [Int](), lines: [[Int]]()))
+        let content: [TestSubview] = (0 ..< 5).map { _ in vertical ? 10 × 30 : 30 × 10 }
+        content[0][PlacementReporterKey.self] = { report, _ in
+            reports.withLock {
+                $0.counts.append(report.overflowCount)
+                $0.lines.append(report.lineStructure)
+            }
+        }
+        let trailing: TestSubview = vertical ? 10 × 50 : 50 × 10
+        trailing[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        let marker: TestSubview = 0 × 0
+        marker[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
+        marker[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        let overflow: TestSubview = vertical ? 10 × 20 : 20 × 10
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        let subviews =
+            interleaved(
+                content: content,
+                itemSeparator: { vertical ? 10 × 5 : 5 × 10 },
+                lineSeparator: { 2 × 2 }
+            ) + [trailing, marker, overflow]
+        let layout: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 5, distributeItemsEvenly: evenly, maxLines: 2)
+            : .horizontal(horizontalSpacing: 5, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 2)
+        var cache = layout.makeCache(subviews)
+        let cases: [(breadth: CGFloat, count: Int, structure: [Int])] = [
+            (100, 1, [0, 0, 1, 1, -1, -1, -1, 1]),
+            (70, 3, [0, 1, -1, -1, -1, -1, -1, 1]),
+            (300, 0, [0, 0, 0, 0, 0, 0, 0, -1]),
+            (100, 1, [0, 0, 1, 1, -1, -1, -1, 1]),
+        ]
+        for (index, scenario) in cases.enumerated() {
+            let proposal: ProposedViewSize = vertical ? 100 × scenario.breadth : scenario.breadth × 100
+            let size = layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
+            #expect(reports.withLock { $0.counts.count } == index, "Measurement must not emit a placement candidate")
+            #expect(reports.withLock { $0.lines.count } == index, "Measurement must not emit a placement candidate")
+
+            layout.placeSubviews(in: CGRect(origin: .zero, size: size), proposal: proposal, subviews: subviews, cache: &cache)
+            #expect(reports.withLock { $0.counts } == cases.prefix(index + 1).map(\.count))
+            #expect(reports.withLock { $0.lines } == cases.prefix(index + 1).map(\.structure))
+            #expect(isParked(trailing, in: size))
+            #expect(isParked(marker, in: size))
+        }
+    }
+
+    @Test(.tags(.regression), arguments: [false, true], [false, true])
     func overflowSeparatorOwnership_controlsPlacementAndCount(vertical: Bool, inOverflowBuilder: Bool) {
         let count = OSAllocatedUnfairLock<Int?>(initialState: nil)
         let marker: TestSubview = vertical ? 10 × 2 : 2 × 10
-        marker[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
-        marker[IsOverflowLayoutValueKey.self] = inOverflowBuilder
+        marker[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        marker[FlowSubviewOriginLayoutValueKey.self] = inOverflowBuilder ? .overflowBuilder : .flowContent
         let overflow: TestSubview = vertical ? 10 × 20 : 20 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
-        overflow[OverflowReporterKey.self] = { value in count.withLock { $0 = value } }
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in count.withLock { $0 = report.overflowCount } }
         let content: [TestSubview] = vertical ? [10 × 30, 10 × 30, 10 × 30] : [30 × 10, 30 × 10, 30 × 10]
         let subviews = interleaved(content: content, itemSeparator: { vertical ? 10 × 5 : 5 × 10 }) + [marker, overflow]
         let layout: FlowLayout =
@@ -40,14 +88,13 @@ struct FlowSeparatorRequirementTests {
     }
 
     @Test func overflowBoundary_emptyOverride_preservesCountAndOrdinarySeparators() {
-        final class Counts: @unchecked Sendable { var value: Int? }
-        let counts = Counts()
+        let counts = OSAllocatedUnfairLock<Int?>(initialState: nil)
         let marker: TestSubview = 0 × 0
-        marker[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
-        marker[IsOverflowLayoutValueKey.self] = true
+        marker[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
+        marker[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let overflow: TestSubview = 20 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
-        overflow[OverflowReporterKey.self] = { counts.value = $0 }
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in counts.withLock { $0 = report.overflowCount } }
         let subviews = interleaved(content: [30 × 10, 30 × 10, 30 × 10], itemSeparator: { 5 × 10 }) + [marker, overflow]
         let result = FlowLayoutScenario(
             layout: .horizontal(horizontalSpacing: 5, verticalSpacing: 0, maxLines: 1),
@@ -58,14 +105,14 @@ struct FlowSeparatorRequirementTests {
         #expect(subviews[1].placement?.position == CGPoint(x: 35, y: 0))
         #expect(subviews[2].placement?.position == CGPoint(x: 45, y: 0))
         #expect(overflow.placement?.position == CGPoint(x: 80, y: 0))
-        #expect(counts.value == 1)
+        #expect(counts.withLock { $0 } == 1)
         #expect(isParked(marker, in: result.reportedSize))
     }
 
     @Test(arguments: [false, true])
     func explicitSeparator_yieldsToLineSeparatorWhenWrapped(evenly: Bool) {
         let separator: TestSubview = 20 × 10
-        separator[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        separator[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
         let subviews = interleaved(
             content: [30 × 10, separator, 30 × 10],
             itemSeparator: { 5 × 10 },
@@ -87,15 +134,14 @@ struct FlowSeparatorRequirementTests {
     }
 
     @Test func explicitSeparators_doNotCountAsHiddenItems() {
-        final class Counts: @unchecked Sendable { var value: Int? }
-        let counts = Counts()
+        let counts = OSAllocatedUnfairLock<Int?>(initialState: nil)
         let custom: TestSubview = 20 × 10
-        custom[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        custom[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
         let empty: TestSubview = 0 × 0
-        empty[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
+        empty[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: true)
         let overflow: TestSubview = 10 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
-        overflow[OverflowReporterKey.self] = { counts.value = $0 }
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in counts.withLock { $0 = report.overflowCount } }
         let subviews = interleaved(content: [30 × 10, custom, 30 × 10, empty, 30 × 10], itemSeparator: { 5 × 10 }) + [overflow]
         let result = FlowLayoutScenario(
             layout: .horizontal(horizontalSpacing: 2, verticalSpacing: 0, maxLines: 1),
@@ -105,7 +151,7 @@ struct FlowSeparatorRequirementTests {
         #expect(result.reportedSize == (64 × 10))
         #expect(custom.placement?.position == CGPoint(x: 32, y: 0))
         #expect(overflow.placement?.position == CGPoint(x: 54, y: 0))
-        #expect(counts.value == 2)
+        #expect(counts.withLock { $0 } == 2)
     }
 
     // MARK: - Item separators
@@ -224,19 +270,42 @@ struct FlowSeparatorRequirementTests {
         )
     }
 
+    @Test(arguments: [false, true], [false, true])
+    func justifiedFlow_lineSeparatorSpansTheProposedBreadth(vertical: Bool, evenly: Bool) throws {
+        let content: [TestSubview] = vertical ? [10 × 30, 10 × 30, 10 × 30] : [30 × 10, 30 × 10, 30 × 10]
+        let subviews = interleaved(
+            content: content,
+            itemSeparator: { 2 × 2 },
+            lineSeparator: {
+                vertical
+                    ? TestSubview(minSize: 2 × 0, idealSize: 2 × 0, maxSize: 2 × .infinity)
+                    : stretchingSeparator(depth: 2)
+            }
+        )
+        let layout: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 2, justified: true, distributeItemsEvenly: evenly)
+            : .horizontal(horizontalSpacing: 2, verticalSpacing: 0, justified: true, distributeItemsEvenly: evenly)
+        let result = FlowLayoutScenario(layout: layout, subviews: subviews, proposal: 100 × 100).layoutThatFits()
+        let divider = try #require(subviews.first { $0[FlowSubviewRoleLayoutValueKey.self] == .lineSeparator && !isParked($0, in: result.reportedSize) })
+        let placement = try #require(divider.placement)
+        #expect(placement.size == (vertical ? 2 × 100 : 100 × 2))
+        #expect(result.reportedSize == (vertical ? 22 × 100 : 100 × 22))
+    }
+
     // MARK: - maxLines interaction
 
     @Test(arguments: [false, true], [false, true])
     func overflowOverride_afterRetainedLineBreak_isSuppressed(vertical: Bool, evenly: Bool) {
         let lineBreak: TestSubview = 0 × 0
-        lineBreak[IsLineBreakLayoutValueKey.self] = true
+        lineBreak[FlowSubviewRoleLayoutValueKey.self] = .lineBreak
         let first: TestSubview = vertical ? 10 × 30 : 30 × 10
         let second: TestSubview = vertical ? 10 × 30 : 30 × 10
         let separator: TestSubview = vertical ? 10 × 5 : 5 × 10
-        separator[SeparatorRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
-        separator[IsOverflowLayoutValueKey.self] = true
+        separator[FlowSubviewRoleLayoutValueKey.self] = .itemSeparatorOverride(isEmpty: false)
+        separator[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let overflow: TestSubview = 10 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let layout: FlowLayout =
             vertical
             ? .vertical(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
@@ -260,7 +329,7 @@ struct FlowSeparatorRequirementTests {
             lineSeparator: { 2 × 2 }
         )
         let overflow: TestSubview = 10 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let sut: FlowLayout =
             vertical
             ? .vertical(horizontalSpacing: 0, verticalSpacing: 2, distributeItemsEvenly: evenly, maxLines: 1)
@@ -277,7 +346,7 @@ struct FlowSeparatorRequirementTests {
         #expect(overflow.placement?.position == CGPoint(x: vertical ? 0 : 39, y: vertical ? 39 : 0))
         #expect(content.dropFirst().allSatisfy { isHidden($0, vertical: vertical) })
         #expect(
-            subviews.dropFirst(2).filter { $0[SeparatorRoleLayoutValueKey.self].isSeparator }.allSatisfy {
+            subviews.dropFirst(2).filter { $0[FlowSubviewRoleLayoutValueKey.self].isSeparator }.allSatisfy {
                 isHidden($0, vertical: vertical)
             }
         )
@@ -286,7 +355,7 @@ struct FlowSeparatorRequirementTests {
     @Test func overflowIndicator_alone_hasNoSeparatorOrLeadingSpacing() {
         let subviews = interleaved(content: [30 × 10, 30 × 10], itemSeparator: { 5 × 10 })
         let overflow: TestSubview = 10 × 10
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let result = FlowLayoutScenario(
             layout: .horizontal(horizontalSpacing: 2, verticalSpacing: 0, maxLines: 1),
             subviews: subviews + [overflow],
@@ -365,9 +434,36 @@ struct FlowSeparatorRequirementTests {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
         let result = FlowLayoutScenario(layout: sut, subviews: subviews, proposal: 200 × 100).layoutThatFits()
         // Every injected separator (indices around the break) is parked off-screen.
-        for subview in result.subviews where subview[SeparatorRoleLayoutValueKey.self] != .content {
+        for subview in result.subviews where subview[FlowSubviewRoleLayoutValueKey.self].isSeparator {
             #expect(isParked(subview, in: result.reportedSize))
         }
+    }
+
+    @Test(arguments: [false, true], [(false, false), (false, true), (true, false), (true, true)])
+    func hiddenBreakMarker_isExcludedButForcedContentIsCounted(vertical: Bool, variant: (evenly: Bool, separators: Bool)) {
+        let (evenly, separators) = variant
+        let counts = OSAllocatedUnfairLock(initialState: [Int]())
+        let first: TestSubview = vertical ? 10 × 30 : 30 × 10
+        let forced: TestSubview = vertical ? 10 × 30 : 30 × 10
+        forced[ShouldStartInNewLineLayoutValueKey.self] = true
+        let last: TestSubview = vertical ? 10 × 30 : 30 × 10
+        let content = [first, testLineBreakSubview(), forced, last]
+        let overflow: TestSubview = 10 × 10
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in counts.withLock { $0.append(report.overflowCount) } }
+        let subviews =
+            separators
+            ? interleaved(content: content, itemSeparator: { 2 × 2 }, lineSeparator: { 2 × 2 }) + [overflow]
+            : content + [overflow]
+        let layout: FlowLayout =
+            vertical
+            ? .vertical(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
+            : .horizontal(horizontalSpacing: 0, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 1)
+        #expect(layout.makeCache(subviews).hasSeparators == separators, "A break marker must not activate separator handling")
+        let result = FlowLayoutScenario(layout: layout, subviews: subviews, proposal: vertical ? 100 × 70 : 70 × 100).layoutThatFits()
+        #expect(counts.withLock { $0 } == [2])
+        #expect(isParked(forced, in: result.reportedSize))
+        #expect(!isParked(first, in: result.reportedSize))
     }
 
     // MARK: - Helpers
@@ -385,12 +481,12 @@ struct FlowSeparatorRequirementTests {
             guard offset < content.count - 1 else { continue }
             if let itemSeparator {
                 let separator = itemSeparator()
-                separator[SeparatorRoleLayoutValueKey.self] = .itemSeparator
+                separator[FlowSubviewRoleLayoutValueKey.self] = .itemSeparator
                 result.append(separator)
             }
             if let lineSeparator {
                 let separator = lineSeparator()
-                separator[SeparatorRoleLayoutValueKey.self] = .lineSeparator
+                separator[FlowSubviewRoleLayoutValueKey.self] = .lineSeparator
                 result.append(separator)
             }
         }

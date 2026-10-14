@@ -23,7 +23,7 @@ public struct ItemSeparator<Content: View>: View {
 
     /// The separator content, tagged for the flow's layout and subview enumeration.
     public var body: some View {
-        let role = SeparatorRole.itemSeparatorOverride(isEmpty: Content.self == EmptyView.self)
+        let role = FlowSubviewRole.itemSeparatorOverride(isEmpty: Content.self == EmptyView.self)
         Group {
             if Content.self == EmptyView.self {
                 // EmptyView contributes no layout child, so retain a zero-size boundary marker.
@@ -32,7 +32,7 @@ public struct ItemSeparator<Content: View>: View {
                 ZStack { content }
             }
         }
-        ._trait(SeparatorRoleLayoutValueKey.self, role)
-        .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: role)
+        ._trait(FlowSubviewRoleLayoutValueKey.self, role)
+        .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: role)
     }
 }

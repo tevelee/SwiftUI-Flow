@@ -1538,7 +1538,7 @@ private func transposedSubview(_ subview: TestSubview) -> TestSubview {
     transposed.priority = subview.priority
     transposed.spacing = subview.spacing
     transposed[FlexibilityLayoutValueKey.self] = subview[FlexibilityLayoutValueKey.self]
-    transposed[IsLineBreakLayoutValueKey.self] = subview[IsLineBreakLayoutValueKey.self]
+    transposed[FlowSubviewRoleLayoutValueKey.self] = subview[FlowSubviewRoleLayoutValueKey.self]
     transposed[ShouldStartInNewLineLayoutValueKey.self] = subview[ShouldStartInNewLineLayoutValueKey.self]
     return transposed
 }

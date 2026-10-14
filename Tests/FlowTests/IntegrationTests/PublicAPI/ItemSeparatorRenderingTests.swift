@@ -227,6 +227,36 @@
             #expect(size(view, breadth: 90, vertical: false) == CGSize(width: 90, height: 10))
         }
 
+        @Test(arguments: [false, true], [false, true])
+        func lineBreak_survivesSeparatorEnumeration(vertical: Bool, legacy: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                LineBreak()
+                box(30, vertical: vertical)
+            }
+            let view = flow(vertical: vertical, legacy: legacy, content: content)
+            #expect(size(view, breadth: 200, vertical: vertical) == dimensions(30, 20, vertical: vertical))
+        }
+
+        @Test(arguments: [false, true], [false, true])
+        func forcedContentStart_keepsLineSeparatorUnlikeBreakMarker(vertical: Bool, marker: Bool) {
+            let content = Group {
+                box(30, vertical: vertical)
+                if marker { LineBreak() }
+                box(30, vertical: vertical).startInNewLine(!marker)
+            }
+            let view = Group {
+                if vertical {
+                    VFlow(itemSpacing: 5, columnSpacing: 0) { content }
+                } else {
+                    HFlow(itemSpacing: 5, rowSpacing: 0) { content }
+                }
+            }
+            .itemSeparator { box(5, vertical: vertical) }
+            .lineSeparator { Color.clear.frame(width: vertical ? 2 : nil, height: vertical ? nil : 2) }
+            #expect(size(view, breadth: 200, vertical: vertical) == dimensions(30, marker ? 20 : 22, vertical: vertical))
+        }
+
         @ViewBuilder
         private func flow(vertical: Bool, legacy: Bool, content: some View) -> some View {
             if legacy {

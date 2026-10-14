@@ -9,7 +9,7 @@ struct SeparatorSnapshots {
     @Test func itemSeparator_onOneLine() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
         let separator = TestSubview(size: 1 × 1)
-        separator[SeparatorRoleLayoutValueKey.self] = .itemSeparator
+        separator[FlowSubviewRoleLayoutValueKey.self] = .itemSeparator
         let result = sut.layout([3 × 1, separator, 3 × 1], in: 10 × 2)
         assertLayoutRendering(result) {
             """
@@ -25,7 +25,7 @@ struct SeparatorSnapshots {
     @Test func lineSeparator_betweenRows() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
         let separator = (0 × 1) ... (inf × 1)
-        separator[SeparatorRoleLayoutValueKey.self] = .lineSeparator
+        separator[FlowSubviewRoleLayoutValueKey.self] = .lineSeparator
         let result = sut.layout([3 × 1, separator, 3 × 1], in: 3 × 3)
         assertLayoutRendering(result) {
             """
@@ -43,9 +43,9 @@ struct SeparatorSnapshots {
     @Test func itemSeparatorWins_whenItemsShareALine() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
         let itemSeparator = TestSubview(size: 1 × 1)
-        itemSeparator[SeparatorRoleLayoutValueKey.self] = .itemSeparator
+        itemSeparator[FlowSubviewRoleLayoutValueKey.self] = .itemSeparator
         let lineSep = (0 × 1) ... (inf × 1)
-        lineSep[SeparatorRoleLayoutValueKey.self] = .lineSeparator
+        lineSep[FlowSubviewRoleLayoutValueKey.self] = .lineSeparator
         let result = sut.layout([3 × 1, itemSeparator, lineSep, 3 × 1], in: 8 × 2)
         assertLayoutRendering(result) {
             """

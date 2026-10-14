@@ -141,18 +141,14 @@ public struct VFlow<Content: View>: View {
 
     @inlinable
     public var body: some View {
-        if _itemSeparator != nil || _lineSeparator != nil {
-            _FlowFeatureComposition(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content)
-        } else if let overflowBuilder = _overflowBuilder {
-            _FlowWithOverflow(layout: AnyLayout(layout.withMaxLines(_maxLinesCap)), content: content, overflowBuilder: overflowBuilder)
-        } else {
-            let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
-            effectiveLayout {
-                content
-                    .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-                    .environment(\.maxLines, nil)
-            }
-        }
+        let effectiveLayout = _maxLinesCap.map { layout.withMaxLines($0) } ?? layout
+        return flowContent(
+            layout: effectiveLayout,
+            content: content,
+            flexibility: flexibility,
+            hasSeparators: _itemSeparator != nil || _lineSeparator != nil,
+            overflowBuilder: _overflowBuilder
+        )
     }
 }
 

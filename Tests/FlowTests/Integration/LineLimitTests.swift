@@ -1,5 +1,6 @@
 import SwiftUI
 import Testing
+import os
 
 @testable import Flow
 
@@ -86,7 +87,7 @@ struct LineLimitTests {
         #expect(isOffscreen(subviews[2], in: 5 × 5))
     }
 
-    // MARK: - withMaxLines / withOverflowReporter coverage
+    // MARK: - withMaxLines / placement reporting coverage
 
     @Test func FlowLayout_withMaxLines_appliesLimit() {
         let base: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0)
@@ -97,31 +98,29 @@ struct LineLimitTests {
         #expect(capped.sizeThatFits(proposal: 5 × 5, subviews: subviews).height == 1)
     }
 
-    @Test func overflowReporter_doesNotAffectLayoutSize() {
+    @Test func placementReporter_doesNotAffectLayoutSize() {
         // A reporter on the overflow indicator must not change the measured size.
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 1, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
-        overflow[OverflowReporterKey.self] = { _ in }
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { _, _ in }
         let size = sut.sizeThatFits(proposal: 5 × 5, subviews: items + [overflow])
         #expect(size.height == 1)
     }
 
-    @Test func overflowReporter_calledSynchronously_withCorrectCount() {
-        // Reporter must be invoked synchronously from placeSubviews so that multiple
-        // resize passes in the same run-loop iteration don't interleave stale 0-counts.
-        final class Counts: @unchecked Sendable { var values: [Int] = [] }
-        let counts = Counts()
+    @Test func placementCandidate_isDeliveredSynchronously_withCorrectCount() {
+        // The engine delivers a placement candidate synchronously; the view confirms
+        // its geometry before publishing it outside the layout pass.
+        let counts = OSAllocatedUnfairLock(initialState: [Int]())
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 1, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
-        overflow[OverflowReporterKey.self] = { count in counts.values.append(count) }
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
+        overflow[PlacementReporterKey.self] = { report, _ in counts.withLock { $0.append(report.overflowCount) } }
         _ = sut.layout(items + [overflow], in: 5 × 5)
-        // After layout returns, reporter must already have been called (not deferred).
-        #expect(counts.values.count >= 1)
-        #expect(counts.values[0] == 2)
+        // Candidate delivery happens before layout returns; publication is separate.
+        #expect(counts.withLock { $0 } == [2])
     }
 
     // MARK: - Overflow indicator subview path
@@ -132,7 +131,7 @@ struct LineLimitTests {
         // Plus a 1-wide overflow indicator. Row1 used width = 4; overflow(1) fits without trimming.
         let items: [TestSubview] = [2 × 1, 2 × 1, 2 × 1]
         let overflow = TestSubview(size: CGSize(width: 1, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let subviews = items + [overflow]
         _ = sut.layout(subviews, in: 5 × 5)
         // Both items on row 1 remain visible; overflow indicator joins at x=4.
@@ -147,7 +146,7 @@ struct LineLimitTests {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 5)
         let items: [TestSubview] = [4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 2, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let subviews = items + [overflow]
         _ = sut.layout(subviews, in: 5 × 5)
         // All items fit — overflow indicator must be placed off-screen.
@@ -178,7 +177,7 @@ struct LineLimitTests {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 0)
         let items: [TestSubview] = [4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 2, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         _ = sut.layout(items + [overflow], in: 5 × 5)
         // maxLines=0 → all lines hidden; overflow indicator hidden too
         #expect(isOffscreen(items[0], in: 5 × 5))
@@ -192,7 +191,7 @@ struct LineLimitTests {
         // trimLastLine removes item0, leaving an empty row, then places overflow at x=0.
         let items: [TestSubview] = [4 × 1, 4 × 1, 4 × 1]
         let overflow = TestSubview(size: CGSize(width: 2, height: 1))
-        overflow[IsOverflowLayoutValueKey.self] = true
+        overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         _ = sut.layout(items + [overflow], in: 5 × 5)
         #expect(overflow.placement?.position == CGPoint(x: 0, y: 0))
         #expect(isOffscreen(items[0], in: 5 × 5))

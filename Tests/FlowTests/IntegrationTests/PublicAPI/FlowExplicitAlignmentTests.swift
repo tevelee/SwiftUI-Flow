@@ -42,13 +42,65 @@
             }
         }
 
+        enum LayoutAdapter: CaseIterable, Sendable {
+            case layout, view, engine
+        }
+
+        @Test(arguments: [false, true], LayoutAdapter.allCases)
+        func reusedLayout_refreshesCacheAfterContentChanges(vertical: Bool, adapter: LayoutAdapter) {
+            let engine: FlowLayout =
+                vertical
+                ? .vertical(horizontalSpacing: 0, verticalSpacing: 5)
+                : .horizontal(horizontalSpacing: 5, verticalSpacing: 0)
+            let layout: AnyLayout
+            switch adapter {
+                case .engine: layout = AnyLayout(engine)
+                case .layout:
+                    layout =
+                        vertical
+                        ? AnyLayout(VFlowLayout(itemSpacing: 5, columnSpacing: 0))
+                        : AnyLayout(HFlowLayout(itemSpacing: 5, rowSpacing: 0))
+                case .view:
+                    layout =
+                        vertical
+                        ? AnyLayout(VFlow(itemSpacing: 5, columnSpacing: 0))
+                        : AnyLayout(HFlow(itemSpacing: 5, rowSpacing: 0))
+            }
+            let host = NSHostingView(rootView: CacheRefreshScene(layout: layout, vertical: vertical, sizes: []))
+            host.frame = CGRect(x: 0, y: 0, width: vertical ? 100 : 70, height: vertical ? 70 : 100)
+            let cases: [(sizes: [CGFloat], depth: CGFloat)] = [
+                ([30, 30], 10), ([50, 50], 20), ([20], 10), ([30, 30, 30], 20), ([], 0), ([30, 30], 10),
+            ]
+            for scenario in cases {
+                host.rootView = CacheRefreshScene(layout: layout, vertical: vertical, sizes: scenario.sizes)
+                host.layoutSubtreeIfNeeded()
+                let expected = CGSize(width: vertical ? scenario.depth : 70, height: vertical ? 70 : scenario.depth)
+                #expect(host.fittingSize == expected, "Updated dimensions and child identities must replace the previous cache")
+            }
+        }
+
+        private struct CacheRefreshScene: View {
+            let layout: AnyLayout
+            let vertical: Bool
+            let sizes: [CGFloat]
+
+            var body: some View {
+                layout {
+                    ForEach(Array(sizes.enumerated()), id: \.offset) { item in
+                        Color.clear.frame(width: vertical ? 10 : item.element, height: vertical ? item.element : 10)
+                    }
+                }
+                .frame(width: vertical ? nil : 70, height: vertical ? 70 : nil)
+            }
+        }
+
         private func guides(in layout: AnyLayout, direction: LayoutDirection) -> [CGFloat?] {
             let capture = Capture()
             let host = NSHostingView(
                 rootView: GuideReader(capture: capture) {
                     layout {
                         Color.red.frame(width: 40, height: 20)
-                            .layoutValue(key: LineStructureReporterKey.self, value: { _ in })
+                            .layoutValue(key: PlacementReporterKey.self, value: { _, _ in })
                             .alignmentGuide(.flowTestHorizontal) { $0.width / 3 }
                             .alignmentGuide(.flowTestVertical) { $0.height / 4 }
                         Text("A\nB").font(.system(size: 16)).frame(width: 50)

@@ -8,7 +8,7 @@ struct LineBreakSnapshots {
     @Test func lineBreakView_mid() {
         let sut: FlowLayout = .horizontal(horizontalSpacing: 1, verticalSpacing: 0)
         let lb = TestSubview(size: .zero)
-        lb[IsLineBreakLayoutValueKey.self] = true
+        lb[FlowSubviewRoleLayoutValueKey.self] = .lineBreak
         let result = sut.layout([3 × 1, lb, 3 × 1], in: 10 × 2)
         assertLayoutRendering(result) {
             """

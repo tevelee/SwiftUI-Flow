@@ -16,7 +16,7 @@ extension FlowLayout {
         for (lineIndex, line) in lines.enumerated() {
             let items = line.items
             // Zero-size line-break markers get no share; justify across visible items.
-            let visibleIndices = items.indices.filter { !items[$0].cache.layoutValues.isLineBreak }
+            let visibleIndices = items.indices.filter { items[$0].cache.role != .lineBreak }
             guard visibleIndices.count > 1 else { continue }
             let usedSpace = items.sum { $0.size.breadth + $0.leadingSpace }
             // Justification only ever stretches the gaps to fill leftover room. When a line's
@@ -47,7 +47,7 @@ extension FlowLayout {
     }
 
     private func isLineBreakLine(_ line: LayoutLine) -> Bool {
-        line.items.count == 1 && line.items[0].cache.layoutValues.isLineBreak
+        line.items.count == 1 && line.items[0].cache.role == .lineBreak
     }
 
     func applyCrossAxisAlignment(in lines: inout [LayoutLine]) {

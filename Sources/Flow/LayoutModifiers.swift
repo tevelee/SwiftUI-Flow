@@ -20,7 +20,8 @@ public struct LineBreak: View {
     public var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
-            .layoutValue(key: IsLineBreakLayoutValueKey.self, value: true)
+            ._trait(FlowSubviewRoleLayoutValueKey.self, .lineBreak)
+            .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .lineBreak)
     }
 }
 

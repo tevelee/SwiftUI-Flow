@@ -21,8 +21,7 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     @Environment(\._flowItemSeparator) private var itemSeparator
     @Environment(\._flowLineSeparator) private var lineSeparator
     @Environment(\._flowOverflowBuilder) private var overflowBuilder
-    @StateObject private var lineStructure = Reported<[Int]>([])
-    @StateObject private var overflowCount = Reported(0)
+    @StateObject private var report = Reported(FlowLayoutReport())
 
     @usableFromInline
     init(layout: AnyLayout, content: Content) {
@@ -32,22 +31,17 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
 
     @usableFromInline
     var body: some View {
-        // Line separators need to know the line structure; item separators do not, so only pay for the
-        // reporter when line separators are configured.
-        let reporter: (@Sendable ([Int]) -> Void)? = lineSeparator == nil ? nil : lineStructure.reporter()
-        return layout {
-            interleaved()
-                // Attach after enumeration: legacy child proxies can drop source layout values.
-                .layoutValue(key: LineStructureReporterKey.self, value: reporter)
+        report.flowLayout(layout, reportLineStructure: lineSeparator != nil) { value in
+            interleaved(lineOf: value.lineStructure)
             if let overflowBuilder {
-                overflowBuilder(overflowCount.value)
-                    .overflowIndicator(reporter: overflowCount.reporter())
+                overflowBuilder(value.overflowCount)
+                    .overflowIndicator()
             }
         }
     }
 
     @ViewBuilder
-    private func interleaved() -> some View {
+    private func interleaved(lineOf: [Int]) -> some View {
         // Capture env values into locals so they're stable for the view-update scope and can be
         // referenced safely inside @ViewBuilder and Group(subviews:) closures.
         let itemSep = itemSeparator
@@ -69,14 +63,14 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
                             subviews,
                             itemSeparator: itemSep,
                             lineSeparator: lineSep,
-                            lineOf: lineStructure.value
+                            lineOf: lineOf
                         )
                     }
                 } else {
-                    variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
+                    variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep, lineOf: lineOf)
                 }
             #else
-                variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
+                variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep, lineOf: lineOf)
             #endif
         } else {
             tagged
@@ -86,10 +80,11 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     private func variadicInterleaved(
         _ tagged: some View,
         itemSeparator: (() -> AnyView)?,
-        lineSeparator: (() -> AnyView)?
+        lineSeparator: (() -> AnyView)?,
+        lineOf: [Int]
     ) -> some View {
         _VariadicView.Tree(
-            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineStructure.value)
+            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineOf)
         ) {
             tagged
         }
@@ -108,14 +103,14 @@ private func interleavedContent<Elements: RandomAccessCollection>(
     itemSeparator: (() -> AnyView)?,
     lineSeparator: (() -> AnyView)?,
     lineOf: [Int],
-    separatorRole: ((Elements.Element) -> SeparatorRole)? = nil
+    subviewRole: ((Elements.Element) -> FlowSubviewRole)? = nil
 ) -> some View where Elements.Element: View & Identifiable {
     let last = elements.count - 1
     let positionsInLine = linePositions(for: lineOf)
     ForEach(Array(elements.enumerated()), id: \.element.id) { item in
-        if let separatorRole {
+        if let subviewRole {
             // Legacy subview proxies preserve traits but need their layout role restored.
-            item.element.layoutValue(key: SeparatorRoleLayoutValueKey.self, value: separatorRole(item.element))
+            item.element.layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: subviewRole(item.element))
         } else {
             item.element
         }
@@ -149,12 +144,12 @@ private func separators(
         // tracks its row frame-to-frame during a live resize.
         itemSeparator()
             .id(itemSeparatorIdentity(afterPosition: index, lineOf: lineOf, positionsInLine: positionsInLine))
-            .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .itemSeparator)
+            .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .itemSeparator)
     }
     if let lineSeparator {
         lineSeparator()
             .id(lineSeparatorIdentity(afterPosition: index, lineOf: lineOf))
-            .layoutValue(key: SeparatorRoleLayoutValueKey.self, value: .lineSeparator)
+            .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .lineSeparator)
     }
 }
 
@@ -225,7 +220,7 @@ struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
             itemSeparator: itemSeparator,
             lineSeparator: lineSeparator,
             lineOf: lineOf,
-            separatorRole: { $0[SeparatorRoleLayoutValueKey.self] }
+            subviewRole: { $0[FlowSubviewRoleLayoutValueKey.self] }
         )
     }
 }

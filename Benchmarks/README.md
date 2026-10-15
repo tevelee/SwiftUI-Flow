@@ -13,7 +13,7 @@ Lazy workloads require macOS 14 or later.
 
 ## Workloads
 
-Eighteen hosted workloads exercise the public interface with ordinary `import Flow`:
+Twenty-six hosted workloads exercise the public interface with ordinary `import Flow`:
 
 - **HFlow and VFlow, initial text layout:** create and attach an `NSHostingView` containing 128
   text tags, then complete layout. Window and model creation happen outside measurement.
@@ -28,8 +28,12 @@ Eighteen hosted workloads exercise the public interface with ordinary `import Fl
   128 tags, item separators and a two-line cap. Measurement ends when the rendered overflow indicator
   reports the expected hidden count and has a nonempty frame. Initial layout includes creating
   the full visibility hierarchy, so a resize improvement cannot conceal a slower first layout.
-- **HFlow and VFlow, uncapped separators:** resize 128 tags with item separators and check the
-  last tag's new placement. This covers separator visibility without a truncated tail to skip.
+- **HFlow and VFlow, uncapped separators:** initially lay out or resize 128 tags with item
+  separators and check the last tag's placement. This covers separator visibility without a truncated tail to skip.
+- **HFlow and VFlow, eight-item separators:** resize a small retained flow to distinguish fixed
+  composition overhead from work that scales with child count.
+- **HFlow and VFlow, overflow without separators:** initially lay out or resize the same 128
+  fixed-size tags and two-line cap without separator injection. This isolates the overflow route.
 - **LazyHFlow and LazyVFlow, data growth:** grow from one item to 128 in a retained `ScrollView`.
   Measurement includes revealing and laying out enough 48pt cells to fill its 192 × 96pt viewport
   (transposed for LazyVFlow). It checks that the flow does not eagerly reveal all 128 items.

@@ -25,9 +25,13 @@ struct LineSizer {
         return SizedLine(items: result, remainingSpace: remaining)
     }
 
-    /// Scores the same sequential allocations used for placement, avoiding a wrapped-item buffer
-    /// when equal priorities and growth limits already determine the allocation order.
-    func metrics(of items: ArraySlice<MeasuredItem>, remainingSpace: CGFloat) -> (remainingSpace: CGFloat, squaredGrowth: CGFloat) {
+    /// Scores the same sequential allocations used for placement. Uniform candidates need no order;
+    /// mixed candidates reuse their allocation order and scalar storage across growing prefixes.
+    func metrics(
+        of items: ArraySlice<MeasuredItem>,
+        remainingSpace: CGFloat,
+        workspace: inout LineSizingWorkspace
+    ) -> (remainingSpace: CGFloat, squaredGrowth: CGFloat) {
         if remainingSpace > 0, let growth = uniformGrowth(in: items) {
             var distribution = UniformGrowth(growth: growth, count: items.count, remainingSpace: remainingSpace)
             var squaredGrowth: CGFloat = 0
@@ -38,6 +42,16 @@ struct LineSizer {
                 squaredGrowth += deviation * deviation
             }
             return (distribution.remainingSpace, squaredGrowth)
+        }
+        if remainingSpace > 0, workspace.prepare(items) {
+            var remaining = remainingSpace
+            workspace.resetGrowth(count: items.count)
+            forEachAllocation(in: items, order: workspace.order, remainingSpace: &remaining) { index, allocation in
+                let minimum = items[index].size.lowerBound
+                let deviation = (minimum + allocation) - minimum
+                workspace.squaredGrowth[index - items.startIndex] = deviation * deviation
+            }
+            return (remaining, workspace.squaredGrowth.reduce(0, +))
         }
         let line = sizeFittedLine(items, remainingSpace: remainingSpace)
         let squaredGrowth: CGFloat = zip(items, line.items).sum { input, output in
@@ -98,6 +112,18 @@ struct LineSizer {
             }
             return items[left].priority > items[right].priority
         }
+        forEachAllocation(in: items, order: order, remainingSpace: &remainingSpace) { index, allocation in
+            result[index - items.startIndex].size += allocation
+        }
+        return result
+    }
+
+    private func forEachAllocation(
+        in items: ArraySlice<MeasuredItem>,
+        order: [Int],
+        remainingSpace: inout CGFloat,
+        allocate: (Int, CGFloat) -> Void
+    ) {
         var start = 0
         while start < order.count, remainingSpace > 0 {
             let priority = items[order[start]].priority
@@ -107,13 +133,12 @@ struct LineSizer {
             for position in start ..< end {
                 let index = order[position]
                 let allocation = min(items[index].growingPotential, remainingSpace / CGFloat(remainingItemCount))
-                result[index - items.startIndex].size += allocation
+                allocate(index, allocation)
                 remainingSpace -= allocation
                 remainingItemCount -= 1
             }
             start = end
         }
-        return result
     }
 
     private func distributeUnorderedItems(_ items: ArraySlice<MeasuredItem>, into result: inout WrappedLine, remainingSpace: inout CGFloat) {
@@ -148,3 +173,43 @@ struct LineSizer {
 
 @usableFromInline
 typealias SizedLine = (items: WrappedLine, remainingSpace: CGFloat)
+
+/// Reuses candidate allocation order and scalar scratch storage for one balanced start position.
+/// Extending a candidate inserts only its new indices, rather than sorting every prefix again.
+struct LineSizingWorkspace {
+    private(set) var order: [Int] = []
+    var squaredGrowth: [CGFloat] = []
+    private var preparedEnd: Int?
+    private var canReuseOrder = true
+
+    mutating func prepare(_ items: ArraySlice<MeasuredItem>) -> Bool {
+        guard canReuseOrder else { return false }
+        let firstNewIndex = preparedEnd ?? items.startIndex
+        for index in firstNewIndex ..< items.endIndex {
+            let item = items[index]
+            guard !item.priority.isNaN, !item.growingPotential.isNaN, item.size.lowerBound.isFinite else {
+                canReuseOrder = false
+                return false
+            }
+            var lower = 0
+            var upper = order.count
+            while lower < upper {
+                let middle = (lower + upper) / 2
+                let other = items[order[middle]]
+                let precedes =
+                    item.priority == other.priority
+                    ? item.growingPotential < other.growingPotential
+                    : item.priority > other.priority
+                if precedes { upper = middle } else { lower = middle + 1 }
+            }
+            order.insert(index, at: lower)
+        }
+        preparedEnd = items.endIndex
+        return true
+    }
+
+    mutating func resetGrowth(count: Int) {
+        squaredGrowth.removeAll(keepingCapacity: true)
+        squaredGrowth.append(contentsOf: repeatElement(0, count: count))
+    }
+}

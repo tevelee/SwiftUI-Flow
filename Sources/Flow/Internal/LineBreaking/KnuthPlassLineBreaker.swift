@@ -67,6 +67,7 @@ struct KnuthPlassSolver {
         // its candidates. Extend each candidate in encounter order to preserve fit arithmetic.
         var fitter = LineFitter(availableSpace: availableSpace)
         var canScoreWithoutSizing = true
+        var workspace = LineSizingWorkspace()
         for end in (start + 1) ... items.count {
             let range = start ..< end
             let item = items[end - 1]
@@ -74,7 +75,14 @@ struct KnuthPlassSolver {
             if range.count > 1, item.isLineBreakView || item.shouldStartInNewLine { break }
             fitter.append(item)
             canScoreWithoutSizing = canScoreWithoutSizing && item.growingPotential == 0 && item.size.lowerBound.isFinite
-            guard let penalties = penalties(for: range, remainingSpace: fitter.remainingSpace, canScoreWithoutSizing: canScoreWithoutSizing) else {
+            guard
+                let penalties = penalties(
+                    for: range,
+                    remainingSpace: fitter.remainingSpace,
+                    canScoreWithoutSizing: canScoreWithoutSizing,
+                    workspace: &workspace
+                )
+            else {
                 if range.count > 1, mayStopAtFirstOverflow { break }
                 continue
             }
@@ -88,10 +96,15 @@ struct KnuthPlassSolver {
         }
     }
 
-    private func penalties(for range: Range<Int>, remainingSpace: CGFloat?, canScoreWithoutSizing: Bool) -> (space: CGFloat, stretch: CGFloat)? {
+    private func penalties(
+        for range: Range<Int>,
+        remainingSpace: CGFloat?,
+        canScoreWithoutSizing: Bool,
+        workspace: inout LineSizingWorkspace
+    ) -> (space: CGFloat, stretch: CGFloat)? {
         if let remainingSpace {
             if canScoreWithoutSizing { return (space: remainingSpace * remainingSpace, stretch: 0) }
-            let calculation = LineSizer(availableSpace: availableSpace).metrics(of: items[range], remainingSpace: remainingSpace)
+            let calculation = LineSizer(availableSpace: availableSpace).metrics(of: items[range], remainingSpace: remainingSpace, workspace: &workspace)
             let remaining = calculation.remainingSpace
             return (
                 space: remaining * remaining,

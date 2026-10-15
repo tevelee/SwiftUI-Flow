@@ -14,8 +14,19 @@ func registerPublicFlowBenchmarks() {
         Benchmark("public/\(axis)/balanced-flexible-128/resize") { benchmark in
             try await measurePublicFlow(benchmark, vertical: vertical, kind: .resizeBalanced)
         }
+        for initial in [true, false] {
+            Benchmark("public/\(axis)/balanced-priorities-128/\(initial ? "initial-layout" : "resize")") { benchmark in
+                try await measurePublicFlow(benchmark, vertical: vertical, kind: initial ? .initialPriorityBalanced : .resizePriorityBalanced)
+            }
+        }
         Benchmark("public/\(axis)/separators-and-overflow/resize") { benchmark in
             try await measurePublicFlow(benchmark, vertical: vertical, kind: .featured)
+        }
+        Benchmark("public/\(axis)/separators-and-overflow/initial-layout") { benchmark in
+            try await measurePublicFlow(benchmark, vertical: vertical, kind: .initialFeatured)
+        }
+        Benchmark("public/\(axis)/separators/resize") { benchmark in
+            try await measurePublicFlow(benchmark, vertical: vertical, kind: .resizeSeparators)
         }
         if #available(macOS 14, *) {
             Benchmark("public/Lazy\(axis)/data-growth") { benchmark in
@@ -91,7 +102,7 @@ private enum LayoutFailure: Error {
 }
 
 private enum WorkloadKind: Sendable {
-    case initialText, resizeText, resizeBalanced, featured, lazy
+    case initialText, resizeText, resizeBalanced, initialPriorityBalanced, resizePriorityBalanced, featured, initialFeatured, resizeSeparators, lazy
 }
 
 // Benchmark remains in the calling task; only the UI-owned workload crosses to the main actor.
@@ -122,25 +133,33 @@ private final class HostedWorkload {
     init(vertical: Bool, kind: WorkloadKind) {
         self.vertical = vertical
         self.kind = kind
-        if kind == .resizeBalanced { input.breadth = 960 }
+        if kind == .resizeBalanced || kind == .initialPriorityBalanced || kind == .resizePriorityBalanced { input.breadth = 960 }
     }
 
     func prepare() async throws {
         switch kind {
-            case .initialText:
+            case .initialText, .initialFeatured, .initialPriorityBalanced:
                 break
             case .resizeText:
                 host.attach(TextScene(vertical: vertical, input: input, activity: activity))
                 try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
                 oldFrame = activity.lastItem?.frame
-            case .resizeBalanced:
-                host.attach(FlexibleScene(vertical: vertical, input: input, activity: activity))
+            case .resizeBalanced, .resizePriorityBalanced:
+                if kind == .resizePriorityBalanced {
+                    host.attach(PriorityScene(vertical: vertical, input: input, activity: activity))
+                } else {
+                    host.attach(FlexibleScene(vertical: vertical, input: input, activity: activity))
+                }
                 try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
                 oldFrame = activity.lastItem?.frame
             case .featured:
                 host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity))
                 // Four cells per line at 320pt; the last slot belongs to the overflow indicator.
                 try await host.settle { overflowIsPlaced(count: 121, breadth: 320) }
+            case .resizeSeparators:
+                host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, capped: false))
+                try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
+                oldFrame = activity.lastItem?.frame
             case .lazy:
                 guard #available(macOS 14, *) else { throw LayoutFailure.didNotComplete }
                 host.attach(LazyScene(vertical: vertical, input: input, activity: activity))
@@ -150,15 +169,21 @@ private final class HostedWorkload {
 
     func run() async throws {
         switch kind {
-            case .initialText, .resizeText, .resizeBalanced:
-                if kind == .initialText {
+            case .initialText, .initialPriorityBalanced, .resizeText, .resizeBalanced, .resizePriorityBalanced, .resizeSeparators:
+                if kind == .initialPriorityBalanced {
+                    host.attach(PriorityScene(vertical: vertical, input: input, activity: activity))
+                } else if kind == .initialText {
                     host.attach(TextScene(vertical: vertical, input: input, activity: activity))
                 } else {
-                    input.breadth = kind == .resizeBalanced ? 480 : 180
+                    input.breadth = kind == .resizeBalanced || kind == .resizePriorityBalanced ? 480 : 180
                 }
                 try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
                 if let oldFrame, oldFrame == activity.lastItem?.frame { throw LayoutFailure.unchangedPlacement }
                 blackHole(activity.lastItem)
+            case .initialFeatured:
+                host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity))
+                try await host.settle { overflowIsPlaced(count: 121, breadth: 320) }
+                blackHole(activity.overflow)
             case .featured:
                 input.breadth = 180
                 // Two cells per line now, including the overflow indicator on the second line.
@@ -270,23 +295,82 @@ private struct FlexibleScene: View {
 }
 
 @MainActor
-private struct FeaturedScene: View {
+private struct PriorityScene: View {
     let vertical: Bool
     @ObservedObject var input: Input
     let activity: Activity
 
     var body: some View {
-        flow.itemSeparator { Text("·").frame(width: vertical ? 24 : 8, height: vertical ? 8 : 24) }
-            .maxLines(2) { count in
-                Text("+\(count)").frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
-                    .onGeometryChange(for: OverflowSample.self) { [breadth = input.breadth] proxy in
-                        OverflowSample(count: count, sample: Sample(breadth: breadth, frame: proxy.frame(in: .global)))
-                    } action: { sample in
-                        activity.overflow = sample
-                    }
-            }
-            .frame(width: vertical ? nil : input.breadth, height: vertical ? input.breadth : nil)
+        flow.frame(width: vertical ? nil : input.breadth, height: vertical ? input.breadth : nil)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder private var flow: some View {
+        if vertical {
+            VFlow(alignment: .leading, spacing: 4, distributeItemsEvenly: true) { cells }
+        } else {
+            HFlow(alignment: .top, spacing: 4, distributeItemsEvenly: true) { cells }
+        }
+    }
+
+    private var cells: some View {
+        ForEach(0 ..< 128, id: \.self) { index in
+            if index == 127 {
+                cell(index).onGeometryChange(for: Sample.self) { [breadth = input.breadth] proxy in
+                    Sample(breadth: breadth, frame: proxy.frame(in: .global))
+                } action: {
+                    activity.lastItem = $0
+                }
+            } else {
+                cell(index)
+            }
+        }
+    }
+
+    private func cell(_ index: Int) -> some View {
+        let ideal: CGFloat = CGFloat(24 + (index % 7) * 8)
+        return Text(["A", "B", "C"][index % 3]).font(.system(size: 14))
+            .frame(width: vertical ? 24 : nil, height: vertical ? nil : 24)
+            .frame(
+                minWidth: vertical ? nil : 24,
+                idealWidth: vertical ? nil : ideal,
+                maxWidth: vertical ? nil : ideal * 2,
+                minHeight: vertical ? 24 : nil,
+                idealHeight: vertical ? ideal : nil,
+                maxHeight: vertical ? ideal * 2 : nil
+            )
+            .layoutPriority(Double(index % 3))
+    }
+}
+
+@MainActor
+private struct FeaturedScene: View {
+    let vertical: Bool
+    @ObservedObject var input: Input
+    let activity: Activity
+    var capped = true
+
+    var body: some View {
+        Group {
+            if capped {
+                separated.maxLines(2) { count in
+                    Text("+\(count)").frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
+                        .onGeometryChange(for: OverflowSample.self) { [breadth = input.breadth] proxy in
+                            OverflowSample(count: count, sample: Sample(breadth: breadth, frame: proxy.frame(in: .global)))
+                        } action: { sample in
+                            activity.overflow = sample
+                        }
+                }
+            } else {
+                separated
+            }
+        }
+        .frame(width: vertical ? nil : input.breadth, height: vertical ? input.breadth : nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var separated: some View {
+        flow.itemSeparator { Text("·").frame(width: vertical ? 24 : 8, height: vertical ? 8 : 24) }
     }
 
     @ViewBuilder private var flow: some View {
@@ -299,8 +383,20 @@ private struct FeaturedScene: View {
 
     private var cells: some View {
         ForEach(0 ..< 128, id: \.self) { index in
-            Text("Tag \(index)").font(.system(size: 12)).frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
+            if !capped, index == 127 {
+                cell(index).onGeometryChange(for: Sample.self) { [breadth = input.breadth] proxy in
+                    Sample(breadth: breadth, frame: proxy.frame(in: .global))
+                } action: {
+                    activity.lastItem = $0
+                }
+            } else {
+                cell(index)
+            }
         }
+    }
+
+    private func cell(_ index: Int) -> some View {
+        Text("Tag \(index)").font(.system(size: 12)).frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
     }
 }
 

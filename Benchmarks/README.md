@@ -13,7 +13,7 @@ Lazy workloads require macOS 14 or later.
 
 ## Workloads
 
-Ten hosted workloads exercise the public interface with ordinary `import Flow`:
+Eighteen hosted workloads exercise the public interface with ordinary `import Flow`:
 
 - **HFlow and VFlow, initial text layout:** create and attach an `NSHostingView` containing 128
   text tags, then complete layout. Window and model creation happen outside measurement.
@@ -21,9 +21,15 @@ Ten hosted workloads exercise the public interface with ordinary `import Flow`:
   from 320pt to 180pt. Priming happens outside measurement; the timed update must change placement.
 - **HFlow and VFlow, balanced flexible resizing:** resize 128 flexible tags from 960pt to 480pt
   with `distributeItemsEvenly`. This exercises candidate sizing as well as choosing line breaks.
-- **HFlow and VFlow, separators and overflow:** resize a retained flow with 128 tags, item
-  separators and a two-line cap. Measurement ends when the rendered overflow indicator reports
-  the expected new hidden count and has a nonempty frame.
+- **HFlow and VFlow, balanced mixed priorities:** initially lay out or resize 128 flexible tags
+  with varied growth limits and three layout priorities. This covers priority allocation and sorting
+  while scoring candidate lines, including first layout.
+- **HFlow and VFlow, separators and overflow:** initially lay out or resize a retained flow with
+  128 tags, item separators and a two-line cap. Measurement ends when the rendered overflow indicator
+  reports the expected hidden count and has a nonempty frame. Initial layout includes creating
+  the full visibility hierarchy, so a resize improvement cannot conceal a slower first layout.
+- **HFlow and VFlow, uncapped separators:** resize 128 tags with item separators and check the
+  last tag's new placement. This covers separator visibility without a truncated tail to skip.
 - **LazyHFlow and LazyVFlow, data growth:** grow from one item to 128 in a retained `ScrollView`.
   Measurement includes revealing and laying out enough 48pt cells to fill its 192 × 96pt viewport
   (transposed for LazyVFlow). It checks that the flow does not eagerly reveal all 128 items.

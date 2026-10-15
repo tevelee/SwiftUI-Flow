@@ -8,22 +8,27 @@
     @Suite(.tags(.requirements, .regression))
     @MainActor
     struct FlowLegacyVisibilityTests {
-        @Test func legacyEnumeration_preservesLayoutMetadata() {
+        @Test(arguments: [false, true], [false, true])
+        func visibilityEnumeration_preservesMetadataAndSingleReportRoute(legacy: Bool, hideFirst: Bool) {
             let metadata = Metadata()
+            let hidden: Set<Int> = hideFirst ? [0, 1] : [1]
             let host = NSHostingView(
                 rootView: MetadataLayout(metadata: metadata) {
-                    legacyReportedFlowContent(
-                        Group {
-                            Color.clear.frame(width: 10, height: 10).flexibility(.maximum).startInNewLine()
-                            ItemSeparator { Text("|") }
-                            LineBreak()
-                            Color.clear.frame(width: 5, height: 5).overflowIndicator()
-                        },
-                        hidden: [1]
-                    )
+                    let content = Group {
+                        Color.clear.frame(width: 10, height: 10).flexibility(.maximum).startInNewLine()
+                        ItemSeparator { Text("|") }
+                        LineBreak()
+                        Color.clear.frame(width: 5, height: 5).overflowIndicator()
+                    }
+                    if legacy {
+                        legacyReportedFlowContent(content, hidden: hidden, reporter: { _, _ in })
+                    } else {
+                        reportedFlowContent(content, hidden: hidden, reporter: { _, _ in })
+                    }
                 }
             )
             _ = host.fittingSize
+            #expect(metadata.reporterIndices == [0], "The route belongs to one resolved leaf, including on the legacy path")
             #expect(metadata.roles == [.content, .itemSeparatorOverride(isEmpty: false), .lineBreak, .content])
             #expect(metadata.overflow == [false, false, false, true])
             #expect(metadata.starts == [true, false, false, false])
@@ -32,6 +37,7 @@
     }
 
     private final class Metadata {
+        var reporterIndices: [Int] = []
         var roles: [FlowSubviewRole] = []
         var overflow: [Bool] = []
         var starts: [Bool] = []
@@ -42,6 +48,7 @@
         let metadata: Metadata
 
         func sizeThatFits(proposal: ProposedViewSize, subviews: LayoutSubviews, cache: inout ()) -> CGSize {
+            metadata.reporterIndices = subviews.indices.filter { subviews[$0][PlacementReporterKey.self] != nil }
             metadata.roles = subviews.map { $0[FlowSubviewRoleLayoutValueKey.self] }
             metadata.overflow = subviews.map { $0[FlowSubviewOriginLayoutValueKey.self] == .overflowBuilder }
             metadata.starts = subviews.map { $0[ShouldStartInNewLineLayoutValueKey.self] }

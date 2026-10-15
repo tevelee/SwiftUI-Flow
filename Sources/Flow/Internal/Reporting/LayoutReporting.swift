@@ -113,8 +113,7 @@ extension LayoutReportState where Value == FlowLayoutReport {
         }
         return layout {
             // Attach after enumeration: legacy child proxies can drop source layout values.
-            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews))
-                .layoutValue(key: PlacementReporterKey.self, value: reporter)
+            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews), reporter: reporter)
         }
         .observeLayoutGeometry(using: registration)
     }

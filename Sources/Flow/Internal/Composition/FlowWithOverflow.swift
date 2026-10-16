@@ -27,7 +27,6 @@ public struct _FlowWithOverflow<Content: View, Overflow: View>: View {  // swift
         state.flowLayout(layout) { value in
             content
                 .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-                ._trait(FlexibilityLayoutValueKey.self, flexibility)
                 .environment(\.maxLines, nil)
                 .environment(\._flowOverflowBuilder, nil)
             overflowBuilder(value.overflowCount)
@@ -41,6 +40,5 @@ extension View {
     /// and places it on the last visible line.
     func overflowIndicator() -> some View {
         layoutValue(key: FlowSubviewOriginLayoutValueKey.self, value: .overflowBuilder)
-            ._trait(FlowSubviewOriginLayoutValueKey.self, .overflowBuilder)
     }
 }

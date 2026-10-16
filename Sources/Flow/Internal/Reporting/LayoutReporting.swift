@@ -101,8 +101,8 @@ extension LayoutReportState where Value == FlowLayoutReport {
     ) -> some View {
         let registration = register()
         return layout {
-            // Attach after enumeration: legacy child proxies can drop source layout values.
-            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews), reporter: registration.report)
+            // Layout selects one reporter even when the tag is inherited by several children.
+            content(value).layoutValue(key: PlacementReporterKey.self, value: registration.report)
         }
         .observeLayoutGeometry(using: registration)
     }
@@ -117,11 +117,10 @@ struct LayoutReportRegistration<Value: Sendable>: Sendable {
     let confirm: @Sendable (CGSize) -> Void
 }
 
-/// Overflow count and hidden membership describe the same placement and must be published together.
+/// The hidden content count consumed by an overflow builder.
 @usableFromInline
 struct FlowLayoutReport: Equatable, Sendable {
     var overflowCount = 0
-    var hiddenSubviews: [Int] = []
 }
 
 @usableFromInline

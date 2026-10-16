@@ -30,7 +30,6 @@ extension View {
     @inlinable
     public func startInNewLine(_ enabled: Bool = true) -> some View {
         layoutValue(key: ShouldStartInNewLineLayoutValueKey.self, value: enabled)
-            ._trait(ShouldStartInNewLineLayoutValueKey.self, enabled)
     }
 
     /// Allows modifying the flexibility behavior of views so that flow can layout them accordingly.
@@ -39,7 +38,6 @@ extension View {
     @inlinable
     public func flexibility(_ behavior: FlexibilityBehavior) -> some View {
         layoutValue(key: FlexibilityLayoutValueKey.self, value: behavior)
-            ._trait(FlexibilityLayoutValueKey.self, behavior)
             .environment(\.flexibility, behavior)
     }
 
@@ -47,7 +45,8 @@ extension View {
     ///
     /// Items beyond the limit are hidden from view but still participate in
     /// line-breaking so the layout remains consistent.  Pass `nil` to remove
-    /// any previously set limit.
+    /// any previously set limit. The cap changes visual placement; it does not
+    /// remove truncated controls from accessibility or keyboard navigation.
     ///
     /// - Parameter limit: Maximum number of lines (rows for `HFlow`, columns
     ///   for `VFlow`). `nil` keeps every line.

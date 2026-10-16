@@ -49,7 +49,6 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
         let tagged =
             content
             .layoutValue(key: FlexibilityLayoutValueKey.self, value: flexibility)
-            ._trait(FlexibilityLayoutValueKey.self, flexibility)
             .environment(\.maxLines, nil)
             .environment(\._flowItemSeparator, nil)
             .environment(\._flowLineSeparator, nil)

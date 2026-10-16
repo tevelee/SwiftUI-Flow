@@ -54,10 +54,7 @@ struct VisibleLineComposition {
         return Result(
             lines: materialized?.lines ?? capped.lines,
             hidden: hidden,
-            report: FlowLayoutReport(
-                overflowCount: overflowCount(hidden: capped.hidden),
-                hiddenSubviews: hidden
-            )
+            report: FlowLayoutReport(overflowCount: overflowCount(hidden: capped.hidden))
         )
     }
 

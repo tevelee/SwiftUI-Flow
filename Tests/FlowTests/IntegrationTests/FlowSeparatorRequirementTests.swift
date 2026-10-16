@@ -28,17 +28,15 @@ struct FlowSeparatorRequirementTests {
         #expect(subviews.allSatisfy { isParked($0, in: result.reportedSize) })
         let report = reports.withLock { $0 }
         #expect(report.overflowCount == 2)
-        #expect(Set(report.hiddenSubviews) == Set(subviews.indices))
     }
 
     @Test(.tags(.regression), arguments: [false, true], [false, true])
-    func placementCandidate_carriesOverflowAndHiddenMembership(vertical: Bool, evenly: Bool) {
-        let reports = OSAllocatedUnfairLock(initialState: (counts: [Int](), hidden: [Set<Int>]()))
+    func placementCandidate_reportsOverflowOnlyAfterPlacement(vertical: Bool, evenly: Bool) {
+        let reports = OSAllocatedUnfairLock(initialState: [Int]())
         let content: [TestSubview] = (0 ..< 5).map { _ in vertical ? 10 × 30 : 30 × 10 }
         content[0][PlacementReporterKey.self] = { report, _ in
             reports.withLock {
-                $0.counts.append(report.overflowCount)
-                $0.hidden.append(Set(report.hiddenSubviews))
+                $0.append(report.overflowCount)
             }
         }
         let trailing: TestSubview = vertical ? 10 × 50 : 50 × 10
@@ -63,12 +61,10 @@ struct FlowSeparatorRequirementTests {
         for (index, scenario) in cases.enumerated() {
             let proposal: ProposedViewSize = vertical ? 100 × scenario.breadth : scenario.breadth × 100
             let size = layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
-            #expect(reports.withLock { $0.counts.count } == index, "Measurement must not emit a placement candidate")
-            #expect(reports.withLock { $0.hidden.count } == index, "Measurement must not emit a placement candidate")
+            #expect(reports.withLock { $0.count } == index, "Measurement must not emit a placement candidate")
 
             layout.placeSubviews(in: CGRect(origin: .zero, size: size), proposal: proposal, subviews: subviews, cache: &cache)
-            #expect(reports.withLock { $0.counts } == cases.prefix(index + 1).map(\.count))
-            #expect(reports.withLock { $0.hidden.last } == Set(subviews.indices.filter { isParked(subviews[$0], in: size) }))
+            #expect(reports.withLock { $0 } == cases.prefix(index + 1).map(\.count))
             #expect(isParked(trailing, in: size))
             #expect(isParked(marker, in: size))
         }

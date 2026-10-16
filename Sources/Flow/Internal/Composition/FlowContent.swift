@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Shared feature routing for the horizontal and vertical adapters. Plain content keeps its
-/// concrete layout; capped content, separators and overflow use reported compositions.
+/// concrete layout; separators and overflow use reported compositions.
 @MainActor
 @usableFromInline
 @ViewBuilder
@@ -10,10 +10,9 @@ func flowContent<FlowLayoutType: Layout, Content: View>(
     content: Content,
     flexibility: FlexibilityBehavior,
     hasSeparators: Bool,
-    isCapped: Bool,
     overflowBuilder: ((Int) -> AnyView)?
 ) -> some View {
-    if hasSeparators || (isCapped && overflowBuilder == nil) {
+    if hasSeparators {
         _FlowFeatureComposition(layout: AnyLayout(layout), content: content)
     } else if let overflowBuilder {
         _FlowWithOverflow(layout: AnyLayout(layout), content: content, overflowBuilder: overflowBuilder)

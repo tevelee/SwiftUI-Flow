@@ -13,7 +13,6 @@
 		A00000000000000000000027 /* FlowExampleModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000026 /* FlowExampleModel.swift */; };
 		A00000000000000000000029 /* FlowExampleViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000028 /* FlowExampleViews.swift */; };
 		A00000000000000000000042 /* Flow in Frameworks */ = {isa = PBXBuildFile; productRef = A00000000000000000000041 /* Flow */; };
-		B00000000000000000000021 = {isa = PBXBuildFile; fileRef = B00000000000000000000020; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -23,8 +22,6 @@
 		A00000000000000000000024 /* FlowExampleControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowExampleControls.swift; sourceTree = "<group>"; };
 		A00000000000000000000026 /* FlowExampleModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowExampleModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000028 /* FlowExampleViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowExampleViews.swift; sourceTree = "<group>"; };
-		B00000000000000000000020 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowAccessibilityUITests.swift; sourceTree = "<group>"; };
-		B00000000000000000000011 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = FlowExampleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -36,7 +33,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B00000000000000000000031 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -44,7 +40,6 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000004 /* FlowExample */,
-				B00000000000000000000004 /* FlowExampleUITests */,
 				A00000000000000000000005 /* Frameworks */,
 				A00000000000000000000003 /* Products */,
 			);
@@ -54,7 +49,6 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000011 /* FlowExample.app */,
-				B00000000000000000000011 /* FlowExampleUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,7 +72,6 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		B00000000000000000000004 = {isa = PBXGroup; children = (B00000000000000000000020,); path = FlowExampleUITests; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -102,25 +95,8 @@
 			productReference = A00000000000000000000011 /* FlowExample.app */;
 			productType = "com.apple.product-type.application";
 		};
-		B00000000000000000000010 = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = B00000000000000000000052;
-			buildPhases = (B00000000000000000000030, B00000000000000000000031, B00000000000000000000032,);
-			buildRules = ();
-			dependencies = (B00000000000000000000060,);
-			name = FlowExampleUITests;
-			productName = FlowExampleUITests;
-			productReference = B00000000000000000000011;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
-/* Begin PBXContainerItemProxy section */
-		B00000000000000000000061 = {isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = A00000000000000000000010; remoteInfo = FlowExample; };
-/* End PBXContainerItemProxy section */
-/* Begin PBXTargetDependency section */
-		B00000000000000000000060 = {isa = PBXTargetDependency; target = A00000000000000000000010; targetProxy = B00000000000000000000061; };
-/* End PBXTargetDependency section */
 /* Begin PBXProject section */
 		A00000000000000000000001 /* Project object */ = {
 			isa = PBXProject;
@@ -129,7 +105,6 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					B00000000000000000000010 = { CreatedOnToolsVersion = 26.0; TestTargetID = A00000000000000000000010; };
 					A00000000000000000000010 = {
 						CreatedOnToolsVersion = 26.0;
 					};
@@ -152,7 +127,6 @@
 			projectRoot = "";
 			targets = (
 				A00000000000000000000010 /* FlowExample */,
-				B00000000000000000000010 /* FlowExampleUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -165,7 +139,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B00000000000000000000032 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -181,7 +154,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		B00000000000000000000030 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B00000000000000000000021,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -345,34 +317,6 @@
 			};
 			name = Release;
 		};
-		B00000000000000000000050 = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.codex.FlowExampleUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = FlowExample;
-			};
-			name = Debug;
-		};
-		B00000000000000000000051 = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				PRODUCT_BUNDLE_IDENTIFIER = dev.codex.FlowExampleUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 6.0;
-				TEST_TARGET_NAME = FlowExample;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -394,7 +338,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		B00000000000000000000052 = {isa = XCConfigurationList; buildConfigurations = (B00000000000000000000050, B00000000000000000000051,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug; };
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */

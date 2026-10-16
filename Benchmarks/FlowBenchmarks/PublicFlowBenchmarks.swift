@@ -39,6 +39,11 @@ func registerPublicFlowBenchmarks() {
                 try await measurePublicFlow(benchmark, vertical: vertical, kind: initial ? .initialOverflowOnly : .resizeOverflowOnly)
             }
         }
+        for initial in [true, false] {
+            Benchmark("public/\(axis)/cap-only/\(initial ? "initial-layout" : "resize")") { benchmark in
+                try await measurePublicFlow(benchmark, vertical: vertical, kind: initial ? .initialCapOnly : .resizeCapOnly)
+            }
+        }
         for items in [false, true] {
             Benchmark("public/\(axis)/\(items ? "item-and-line-separators" : "line-separators")/resize") { benchmark in
                 try await measurePublicFlow(benchmark, vertical: vertical, kind: items ? .resizeBothSeparators : .resizeLineSeparators)
@@ -76,6 +81,9 @@ private final class Activity {
     var overflow: OverflowSample?
     var firstItem: Sample?
     var lazyFrames: [Int: CGRect] = [:]
+    var cappedBounds: Sample?
+    var cappedWitness: Sample?
+    var cappedTail: Sample?
 }
 
 @MainActor
@@ -144,7 +152,8 @@ private enum LayoutFailure: Error {
 
 private enum WorkloadKind: Sendable {
     case initialText, resizeText, resizeBalanced, initialPriorityBalanced, resizePriorityBalanced, featured, initialFeatured, resizeSeparators,
-        initialSeparators, resizeSmallSeparators, initialOverflowOnly, resizeOverflowOnly, resizeLineSeparators, resizeBothSeparators, lazy
+        initialSeparators, resizeSmallSeparators, initialOverflowOnly, resizeOverflowOnly, resizeLineSeparators, resizeBothSeparators, initialCapOnly,
+        resizeCapOnly, lazy
 }
 
 // Benchmark remains in the calling task; only the UI-owned workload crosses to the main actor.
@@ -180,7 +189,7 @@ private final class HostedWorkload {
 
     func prepare() async throws {
         switch kind {
-            case .initialText, .initialFeatured, .initialPriorityBalanced, .initialSeparators, .initialOverflowOnly:
+            case .initialText, .initialFeatured, .initialPriorityBalanced, .initialSeparators, .initialOverflowOnly, .initialCapOnly:
                 break
             case .resizeText:
                 host.attach(TextScene(vertical: vertical, input: input, activity: activity))
@@ -198,6 +207,10 @@ private final class HostedWorkload {
                 host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, itemSeparators: kind != .resizeOverflowOnly))
                 // Four cells per line at 320pt; the last slot belongs to the overflow indicator.
                 try await host.settle { overflowIsPlaced(count: 121, breadth: 320) }
+            case .resizeCapOnly:
+                host.attach(CappedScene(vertical: vertical, input: input, activity: activity))
+                try await host.settle { capOnlyLayoutIsComplete() }
+                oldFrame = activity.cappedWitness?.frame
             case .resizeLineSeparators, .resizeBothSeparators:
                 host.attach(LineSeparatorScene(vertical: vertical, input: input, activity: activity, itemSeparators: kind == .resizeBothSeparators))
                 try await host.settle { lineSeparatorLayoutIsComplete() }
@@ -234,6 +247,15 @@ private final class HostedWorkload {
                 }
                 if let oldFrame, oldFrame == activity.lastItem?.frame { throw LayoutFailure.unchangedPlacement }
                 blackHole(activity.lastItem)
+            case .initialCapOnly, .resizeCapOnly:
+                if kind == .initialCapOnly {
+                    host.attach(CappedScene(vertical: vertical, input: input, activity: activity))
+                } else {
+                    input.breadth = 180
+                }
+                try await host.settle { capOnlyLayoutIsComplete() }
+                if let oldFrame, oldFrame == activity.cappedWitness?.frame { throw LayoutFailure.unchangedPlacement }
+                blackHole(activity.cappedWitness)
             case .initialFeatured, .initialOverflowOnly:
                 host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, itemSeparators: kind != .initialOverflowOnly))
                 try await host.settle { overflowIsPlaced(count: 121, breadth: 320) }
@@ -255,6 +277,18 @@ private final class HostedWorkload {
     }
 
     func close() { host.close() }
+
+    private func capOnlyLayoutIsComplete() -> Bool {
+        guard let bounds = activity.cappedBounds, let witness = activity.cappedWitness, let tail = activity.cappedTail,
+            bounds.breadth == input.breadth, witness.breadth == input.breadth, tail.breadth == input.breadth,
+            bounds.isPlaced, witness.isPlaced
+        else { return false }
+        // Four tags per line at 320pt, two at 180pt; both layouts must stop after two lines.
+        let depth = vertical ? bounds.frame.width : bounds.frame.height
+        let witnessDepth = vertical ? witness.frame.minX - bounds.frame.minX : witness.frame.minY - bounds.frame.minY
+        return abs(depth - 52) < 0.01 && abs(witnessDepth - (input.breadth == 320 ? 0 : 28)) < 0.01
+            && tail.frame.minY - bounds.frame.maxY > 100_000
+    }
 
     private func lineSeparatorLayoutIsComplete() -> Bool {
         guard let first = activity.firstItem, let last = activity.lastItem,
@@ -406,6 +440,50 @@ private struct PriorityScene: View {
                 maxHeight: vertical ? ideal * 2 : nil
             )
             .layoutPriority(Double(index % 3))
+    }
+}
+
+@MainActor
+private struct CappedScene: View {
+    let vertical: Bool
+    @ObservedObject var input: Input
+    let activity: Activity
+
+    var body: some View {
+        flow.maxLines(2)
+            .onGeometryChange(for: Sample.self) { [breadth = input.breadth] proxy in
+                Sample(breadth: breadth, frame: proxy.frame(in: .global))
+            } action: {
+                activity.cappedBounds = $0
+            }
+            .frame(width: vertical ? nil : input.breadth, height: vertical ? input.breadth : nil)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder private var flow: some View {
+        if vertical {
+            VFlow(spacing: 4) { cells }
+        } else {
+            HFlow(spacing: 4) { cells }
+        }
+    }
+
+    private var cells: some View {
+        ForEach(0 ..< 128, id: \.self) { index in
+            if index == 3 || index == 127 {
+                cell(index).onGeometryChange(for: Sample.self) { [breadth = input.breadth] proxy in
+                    Sample(breadth: breadth, frame: proxy.frame(in: .global))
+                } action: {
+                    if index == 3 { activity.cappedWitness = $0 } else { activity.cappedTail = $0 }
+                }
+            } else {
+                cell(index)
+            }
+        }
+    }
+
+    private func cell(_ index: Int) -> some View {
+        Text("Tag \(index)").font(.system(size: 12)).frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
     }
 }
 

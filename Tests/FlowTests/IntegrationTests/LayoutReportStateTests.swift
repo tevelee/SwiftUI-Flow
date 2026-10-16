@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import SwiftUI
 import Testing
+import os
 
 @testable import Flow
 
@@ -82,26 +83,37 @@ struct LayoutReportStateTests {
         #expect(reported.value == 2)
     }
 
-    @Test func placement_usesCurrentRegistrationWhenLayoutCacheIsReused() async {
+    @Test(arguments: [false, true])
+    func placement_usesOneCurrentRegistrationWhenLayoutCacheIsReused(inheritedByEverySubview: Bool) async {
         let reported = LayoutReportState(0)
         let previous = reported.register()
         let layout = FlowLayout.horizontal(horizontalSpacing: 0, verticalSpacing: 0, maxLines: 1)
         let overflow: TestSubview = 1 × 1
         overflow[FlowSubviewOriginLayoutValueKey.self] = .overflowBuilder
         let subviews: [TestSubview] = [4 × 1, 4 × 1, 4 × 1, overflow]
-        subviews[0][PlacementReporterKey.self] = { report, size in previous.report(report.overflowCount, size) }
+        let reporters = inheritedByEverySubview ? subviews : [subviews[0]]
+        for subview in reporters {
+            subview[PlacementReporterKey.self] = { report, size in previous.report(report.overflowCount, size) }
+        }
         var cache = layout.makeCache(subviews)
         let proposal: ProposedViewSize = 5 × 5
         let size = layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
 
         // A body update replaces the registration even when SwiftUI reuses its alignment cache.
         let registration = reported.register()
-        subviews[0][PlacementReporterKey.self] = { report, size in registration.report(report.overflowCount, size) }
+        let calls = OSAllocatedUnfairLock(initialState: 0)
+        for subview in reporters {
+            subview[PlacementReporterKey.self] = { report, size in
+                calls.withLock { $0 += 1 }
+                registration.report(report.overflowCount, size)
+            }
+        }
         let firstPublished = await firstPublication(from: reported) {
             registration.confirm(size)
             layout.placeSubviews(in: CGRect(origin: .zero, size: size), proposal: proposal, subviews: subviews, cache: &cache)
         }
         #expect(firstPublished == 2)
+        #expect(calls.withLock { $0 } == 1, "Inherited report tags must not multiply placement callbacks")
     }
 
     #if os(macOS)

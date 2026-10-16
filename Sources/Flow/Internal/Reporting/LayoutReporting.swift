@@ -47,14 +47,8 @@ final class LayoutReportState<Value: Equatable & Sendable>: ObservableObject {
     /// Starts one content generation and pairs its candidate reports with geometry confirmation.
     /// Callers cannot accidentally confirm a report using a different registration's generation.
     func register() -> LayoutReportRegistration<Value> {
+        let generation = resetGeneration()
         let pending = pending
-        let generation = pending.withLock { state in
-            state.generation &+= 1
-            state.candidates.removeAll(keepingCapacity: true)
-            state.value = nil
-            state.geometry = nil
-            return state.generation
-        }
         let report: @Sendable (Value, CGSize) -> Void = { value, size in
             let shouldSchedule = pending.withLock { state in
                 guard state.generation == generation else { return false }
@@ -78,6 +72,17 @@ final class LayoutReportState<Value: Equatable & Sendable>: ObservableObject {
         return LayoutReportRegistration(id: ObjectIdentifier(self), generation: generation, report: report, confirm: confirm)
     }
 
+    /// Invalidate pending and late callbacks before another generation, including disabled reporting.
+    private func resetGeneration() -> Int {
+        pending.withLock { state in
+            state.generation &+= 1
+            state.candidates.removeAll(keepingCapacity: true)
+            state.value = nil
+            state.geometry = nil
+            return state.generation
+        }
+    }
+
     private nonisolated func schedulePublication(_ shouldSchedule: Bool) {
         guard shouldSchedule else { return }
         Task { @MainActor in
@@ -97,12 +102,14 @@ extension LayoutReportState where Value == FlowLayoutReport {
     /// State ownership stays with the caller; content only needs the latest confirmed report.
     func flowLayout<Content: View>(
         _ layout: AnyLayout,
+        reportsOverflow: Bool = true,
         @ViewBuilder content: (FlowLayoutReport) -> Content
     ) -> some View {
-        let registration = register()
+        let registration = reportsOverflow ? register() : nil
+        if !reportsOverflow { _ = resetGeneration() }
         return layout {
             // Layout selects one reporter even when the tag is inherited by several children.
-            content(value).layoutValue(key: PlacementReporterKey.self, value: registration.report)
+            content(reportsOverflow ? value : FlowLayoutReport()).layoutValue(key: PlacementReporterKey.self, value: registration?.report)
         }
         .observeLayoutGeometry(using: registration)
     }
@@ -146,25 +153,30 @@ extension View {
     /// Confirms this layout's rendered bounds independently of nested preference propagation.
     @MainActor
     @ViewBuilder
-    func observeLayoutGeometry<Value>(using registration: LayoutReportRegistration<Value>) -> some View {
+    func observeLayoutGeometry<Value>(using registration: LayoutReportRegistration<Value>?) -> some View {
         // Xcode 16 SDKs expose direct geometry observation back to the minimum deployment targets.
         #if swift(>=6.0)
-            onGeometryChange(for: ReportedGeometryKey.Sample.self) { proxy in
-                ReportedGeometryKey.Sample(generation: registration.generation, size: proxy.size)
+            onGeometryChange(for: ReportedGeometryKey.Sample?.self) { proxy in
+                guard let registration else { return nil }
+                return ReportedGeometryKey.Sample(generation: registration.generation, size: proxy.size)
             } action: { sample in
-                if sample.generation == registration.generation { registration.confirm(sample.size) }
+                if let registration, let sample, sample.generation == registration.generation { registration.confirm(sample.size) }
             }
         #else
-            let id = registration.id
             background {
-                GeometryReader { proxy in
-                    Color.clear.preference(key: ReportedGeometryKey.self, value: [id: .init(generation: registration.generation, size: proxy.size)])
+                if let registration {
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: ReportedGeometryKey.self,
+                            value: [registration.id: .init(generation: registration.generation, size: proxy.size)]
+                        )
+                    }
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 }
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
             }
             .onPreferenceChange(ReportedGeometryKey.self) { sizes in
-                if let sample = sizes[id], sample.generation == registration.generation { registration.confirm(sample.size) }
+                if let registration, let sample = sizes[registration.id], sample.generation == registration.generation { registration.confirm(sample.size) }
             }
         #endif
     }

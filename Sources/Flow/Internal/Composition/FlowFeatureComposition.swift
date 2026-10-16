@@ -31,7 +31,8 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
 
     @usableFromInline
     var body: some View {
-        report.flowLayout(layout) { value in
+        // Keep one layout identity while skipping report registration and geometry reads when unused.
+        report.flowLayout(layout, reportsOverflow: overflowBuilder != nil) { value in
             interleaved()
             if let overflowBuilder {
                 overflowBuilder(value.overflowCount)

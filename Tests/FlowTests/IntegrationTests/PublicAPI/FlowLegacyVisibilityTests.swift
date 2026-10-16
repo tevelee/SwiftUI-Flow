@@ -18,6 +18,8 @@
                         Color.clear.frame(width: 10, height: 10).flexibility(.maximum).startInNewLine()
                         ItemSeparator { Text("|") }
                         LineBreak()
+                        Color.clear.layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .pooledLineSeparator(3))
+                            ._trait(FlowSubviewRoleLayoutValueKey.self, .pooledLineSeparator(3))
                         Color.clear.frame(width: 5, height: 5).overflowIndicator()
                     }
                     if legacy {
@@ -29,10 +31,10 @@
             )
             _ = host.fittingSize
             #expect(metadata.reporterIndices == [0], "The route belongs to one resolved leaf, including on the legacy path")
-            #expect(metadata.roles == [.content, .itemSeparatorOverride(isEmpty: false), .lineBreak, .content])
-            #expect(metadata.overflow == [false, false, false, true])
-            #expect(metadata.starts == [true, false, false, false])
-            #expect(metadata.flexibility == [.maximum, .natural, .natural, .natural])
+            #expect(metadata.roles == [.content, .itemSeparatorOverride(isEmpty: false), .lineBreak, .pooledLineSeparator(3), .content])
+            #expect(metadata.overflow == [false, false, false, false, true])
+            #expect(metadata.starts == [true, false, false, false, false])
+            #expect(metadata.flexibility == [.maximum, .natural, .natural, .natural, .natural])
         }
     }
 

@@ -1,7 +1,8 @@
 /// A pure description of how separators relate to content items, derived once per cache refresh from
 /// the subviews' ``FlowSubviewRole`` tags.
 ///
-/// Each gap between adjacent content items selects one item separator and one line separator.
+/// Each eligible content gap selects an item separator. Line separators come from visual-boundary
+/// slots or an attached gap separator.
 /// An explicit ``ItemSeparator`` replaces the automatic item separator; the last override wins,
 /// and an empty override selects no item separator. At most one separator is drawn: the item separator when the two
 /// items share a line, the line separator when the layout breaks between them. Edges have no gap, so
@@ -29,6 +30,8 @@ struct SeparatorPlan {
     let contentIndices: [Int]
     /// Subview indices of every separator, including explicit overrides, used to hide the ones left unused.
     let separatorIndices: [Int]
+    /// Visual-boundary slots, independent of the content gap where a line wraps.
+    private let pooledLineSeparators: [Int: Int]
     /// `gaps[p]` describes the gap *before* content position `p`. `gaps[0]` (if present) is `nil`.
     private let gaps: [Gap?]
     private let positionByContentIndex: [Int: Int]
@@ -39,7 +42,11 @@ struct SeparatorPlan {
     init(subviews: [Subview]) {
         var contentIndices: [Int] = []
         var separatorIndices: [Int] = []
+        var pooled: [Int: Int] = [:]
         for index in subviews.indices {
+            if case .pooledLineSeparator(let boundary) = subviews[index].role {
+                pooled[boundary] = pooled[boundary] ?? index
+            }
             if !subviews[index].role.isSeparator {
                 contentIndices.append(index)
             } else {
@@ -62,7 +69,7 @@ struct SeparatorPlan {
                     case .itemSeparator: gap.itemSeparator = gap.itemSeparator ?? between
                     case .itemSeparatorOverride: overrideIndex = between
                     case .lineSeparator: gap.lineSeparator = gap.lineSeparator ?? between
-                    case .content, .lineBreak: break
+                    case .content, .lineBreak, .pooledLineSeparator: break
                 }
             }
             if let overrideIndex, case .itemSeparatorOverride(let isEmpty) = subviews[overrideIndex].role {
@@ -70,12 +77,13 @@ struct SeparatorPlan {
                 // Anchor the line boundary after the override so the interleaver can identify it.
                 gap.lineSeparator = ((overrideIndex + 1) ..< current).first { subviews[$0].role == .lineSeparator } ?? gap.lineSeparator
             }
-            gaps.append(gap.itemSeparator != nil || gap.lineSeparator != nil ? gap : nil)
+            gaps.append(gap.itemSeparator != nil || gap.lineSeparator != nil || !pooled.isEmpty ? gap : nil)
         }
 
         self.contentIndices = contentIndices
         self.separatorIndices = separatorIndices
         self.gaps = gaps
+        pooledLineSeparators = pooled
         positionByContentIndex = Dictionary(
             uniqueKeysWithValues: contentIndices.enumerated().map { ($1, $0) }
         )
@@ -92,7 +100,7 @@ struct SeparatorPlan {
                         overflowOverride = (index, isEmpty)
                     case .content, .lineBreak:
                         break
-                    case .itemSeparator, .lineSeparator:
+                    case .itemSeparator, .lineSeparator, .pooledLineSeparator:
                         continue
                 }
                 break
@@ -117,11 +125,13 @@ struct SeparatorPlan {
         return gap.itemSeparator
     }
 
-    /// Selects the eligible line separator before the line starting with this content item.
-    func lineSeparator(before contentIndex: Int) -> Int? {
+    /// Selects a visual-boundary slot or a separator attached directly to the eligible source gap.
+    func lineSeparator(before contentIndex: Int, atBoundary boundary: Int? = nil) -> Int? {
         guard let position = positionByContentIndex[contentIndex],
             let gap = gap(before: position), gap.isEligible
         else { return nil }
+        // Overflow is appended outside the separator builder, so it has no automatic line gap.
+        if contentIndex != overflowIndex, let boundary, let separator = pooledLineSeparators[boundary] { return separator }
         return gap.lineSeparator
     }
 

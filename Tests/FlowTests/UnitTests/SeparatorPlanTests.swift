@@ -35,6 +35,26 @@ struct SeparatorPlanTests {
         #expect(plan.itemSeparator(before: 5, after: 4) == nil)
     }
 
+    @Test func pooledLineSeparators_respectManualBreaksOverridesAndOverflow() {
+        let plan = SeparatorPlan(subviews: [
+            .init(role: .content),
+            .init(role: .itemSeparatorOverride(isEmpty: true)),
+            .init(role: .content),
+            .init(role: .lineBreak),
+            .init(role: .content),
+            .init(role: .content),
+            .init(role: .pooledLineSeparator(0)),
+            .init(role: .pooledLineSeparator(1)),
+            .init(role: .content, origin: .overflowBuilder),
+        ])
+        #expect(plan.lineSeparator(before: 2, atBoundary: 0) == 6)
+        #expect(plan.itemSeparator(before: 2, after: 0) == nil, "An empty item override does not suppress a line boundary")
+        #expect(plan.lineSeparator(before: 3, atBoundary: 0) == nil)
+        #expect(plan.lineSeparator(before: 4, atBoundary: 0) == nil)
+        #expect(plan.lineSeparator(before: 5, atBoundary: 1) == 7)
+        #expect(plan.lineSeparator(before: 8, atBoundary: 1) == nil, "Overflow has no automatic line-separator builder gap")
+    }
+
     @Test func noSeparators_yieldsAllContentNoGaps() {
         let plan = SeparatorPlan(subviews: [
             .init(role: .content),

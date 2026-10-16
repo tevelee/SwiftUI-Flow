@@ -5,13 +5,44 @@ import SwiftUI
 struct FlowExampleApp: App {
     var body: some Scene {
         Window("Flow Example", id: "main") {
-            if CommandLine.arguments.contains("--flow-accessibility-fixture") {
+            if CommandLine.arguments.contains("--line-separator-accessibility-fixture") {
+                FlowLineSeparatorAccessibilityFixture()
+            } else if CommandLine.arguments.contains("--flow-accessibility-fixture") {
                 FlowAccessibilityFixture()
             } else {
                 ContentView()
             }
         }
         .defaultSize(width: 1180, height: 760)
+    }
+}
+
+private struct FlowLineSeparatorAccessibilityFixture: View {
+    @State private var wide = false
+    @State private var lastActivation = "none"
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Button("Resize") { wide.toggle() }.accessibilityIdentifier("resize")
+            HFlow(spacing: 4) {
+                ForEach(0 ..< 8) { index in
+                    Button("Tile \(index)") { lastActivation = String(index) }
+                        .buttonStyle(.plain)
+                        .frame(width: 64, height: 24)
+                        .accessibilityIdentifier("tile-\(index)")
+                }
+            }
+            .lineSeparator {
+                Button("Boundary") { lastActivation = "boundary" }
+                    .buttonStyle(.plain)
+                    .frame(height: 20)
+                    .accessibilityIdentifier("line-separator")
+            }
+            .frame(width: wide ? 320 : 140)
+            Text(lastActivation).accessibilityIdentifier("last-activation")
+        }
+        .padding(30)
+        .frame(width: 400, height: 480, alignment: .topLeading)
     }
 }
 

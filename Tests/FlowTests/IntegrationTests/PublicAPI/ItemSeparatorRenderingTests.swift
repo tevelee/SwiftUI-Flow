@@ -66,8 +66,7 @@
             let interleaved = _VariadicView.Tree(
                 SeparatorInterleaver(
                     itemSeparator: { AnyView(box(5, vertical: vertical)) },
-                    lineSeparator: nil,
-                    lineOf: []
+                    lineSeparator: nil
                 )
             ) { content }
             let layout =
@@ -265,8 +264,7 @@
                     _VariadicView.Tree(
                         SeparatorInterleaver(
                             itemSeparator: { AnyView(box(5, vertical: vertical)) },
-                            lineSeparator: nil,
-                            lineOf: []
+                            lineSeparator: nil
                         )
                     ) { content }
                 }

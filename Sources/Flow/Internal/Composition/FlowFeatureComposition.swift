@@ -5,9 +5,9 @@ import SwiftUI
 /// (Internal.) Composes flow content with feature-generated subviews that must be siblings in one layout pass.
 /// Created by `HFlow.body` / `VFlow.body` when separator injection is configured.
 ///
-/// Item separators are anchored to the content pair they sit between; line separators are anchored to
-/// the *visual* line boundary they fill (reported back by the layout), so a divider stays the same view
-/// as content rewraps through it instead of jumping. Enumeration uses `Group(subviews:)` where available
+/// Item separators live in content gaps. Line separators use a pool keyed by visual boundary,
+/// so a divider keeps its state when resizing moves that boundary to another content gap.
+/// Enumeration uses `Group(subviews:)` where available
 /// and falls back to `_VariadicView` on earlier systems. If line capping also supplies an overflow
 /// indicator, it is appended here so the layout can measure and place all generated children together.
 @usableFromInline
@@ -31,8 +31,8 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
 
     @usableFromInline
     var body: some View {
-        report.flowLayout(layout, reportLineStructure: lineSeparator != nil) { value in
-            interleaved(lineOf: value.lineStructure)
+        report.flowLayout(layout) { value in
+            interleaved()
             if let overflowBuilder {
                 overflowBuilder(value.overflowCount)
                     .overflowIndicator()
@@ -41,7 +41,7 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     }
 
     @ViewBuilder
-    private func interleaved(lineOf: [Int]) -> some View {
+    private func interleaved() -> some View {
         // Capture env values into locals so they're stable for the view-update scope and can be
         // referenced safely inside @ViewBuilder and Group(subviews:) closures.
         let itemSep = itemSeparator
@@ -63,15 +63,14 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
                         interleavedContent(
                             subviews,
                             itemSeparator: itemSep,
-                            lineSeparator: lineSep,
-                            lineOf: lineOf
+                            lineSeparator: lineSep
                         )
                     }
                 } else {
-                    variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep, lineOf: lineOf)
+                    variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
                 }
             #else
-                variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep, lineOf: lineOf)
+                variadicInterleaved(tagged, itemSeparator: itemSep, lineSeparator: lineSep)
             #endif
         } else {
             tagged
@@ -81,11 +80,10 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
     private func variadicInterleaved(
         _ tagged: some View,
         itemSeparator: (() -> AnyView)?,
-        lineSeparator: (() -> AnyView)?,
-        lineOf: [Int]
+        lineSeparator: (() -> AnyView)?
     ) -> some View {
         _VariadicView.Tree(
-            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator, lineOf: lineOf)
+            SeparatorInterleaver(itemSeparator: itemSeparator, lineSeparator: lineSeparator)
         ) {
             tagged
         }
@@ -96,18 +94,15 @@ struct _FlowFeatureComposition<Content: View>: View {  // swiftlint:disable:this
 
 /// The shared body of both interleaving paths (``Group(subviews:)`` and the ``_VariadicView``
 /// fallback): emit each element followed by the separators for the gap after it, except after the last.
-/// `lineOf` follows caller subview order, including explicit separator overrides, and gives
-/// each injected separator a stable visual identity.
+/// Item separators belong to source pairs; the separate line-separator pool belongs to visual boundaries.
 @ViewBuilder
 private func interleavedContent<Elements: RandomAccessCollection>(
     _ elements: Elements,
     itemSeparator: (() -> AnyView)?,
     lineSeparator: (() -> AnyView)?,
-    lineOf: [Int],
     subviewRole: ((Elements.Element) -> FlowSubviewRole)? = nil
 ) -> some View where Elements.Element: View & Identifiable {
     let last = elements.count - 1
-    let positionsInLine = linePositions(for: lineOf)
     ForEach(Array(elements.enumerated()), id: \.element.id) { item in
         if let subviewRole {
             // Legacy subview proxies preserve traits but need their layout role restored.
@@ -115,106 +110,27 @@ private func interleavedContent<Elements: RandomAccessCollection>(
         } else {
             item.element
         }
-        if item.offset < last {
-            separators(
-                afterIndex: item.offset,
-                itemSeparator: itemSeparator,
-                lineSeparator: lineSeparator,
-                lineOf: lineOf,
-                positionsInLine: positionsInLine
-            )
+        if item.offset < last, let itemSeparator {
+            // The parent ForEach keeps this gap with its preceding content item.
+            itemSeparator()
+                .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .itemSeparator)
+                ._trait(FlowSubviewRoleLayoutValueKey.self, .itemSeparator)
         }
     }
-}
-
-/// Emits the separators that follow the content item at `index`: item and line separators live in
-/// every configured gap so the layout can decide which one is visible after line breaking.
-@ViewBuilder
-private func separators(
-    afterIndex index: Int,
-    itemSeparator: (() -> AnyView)?,
-    lineSeparator: (() -> AnyView)?,
-    lineOf: [Int],
-    positionsInLine: [Int]
-) -> some View {
-    if let itemSeparator {
-        // An item separator lives in every gap so its breadth always factors into line breaking, and the
-        // layout shows or parks it as content rewraps. Identity is the (line, positionInLine) of the item
-        // before the gap — positional, so it survives rewraps. Disabling animation makes it snap to its
-        // place (or out of view) instead of sliding to/from the off-screen park position, while it still
-        // tracks its row frame-to-frame during a live resize.
-        itemSeparator()
-            .id(itemSeparatorIdentity(afterPosition: index, lineOf: lineOf, positionsInLine: positionsInLine))
-            .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .itemSeparator)
-            ._trait(FlowSubviewRoleLayoutValueKey.self, .itemSeparator)
-    }
+    // Reserve enough slots for any wrapping without creating new separators on resize.
     if let lineSeparator {
-        lineSeparator()
-            .id(lineSeparatorIdentity(afterPosition: index, lineOf: lineOf))
-            .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .lineSeparator)
-            ._trait(FlowSubviewRoleLayoutValueKey.self, .lineSeparator)
+        ForEach(0 ..< max(0, last), id: \.self) { boundary in
+            lineSeparator()
+                .layoutValue(key: FlowSubviewRoleLayoutValueKey.self, value: .pooledLineSeparator(boundary))
+                ._trait(FlowSubviewRoleLayoutValueKey.self, .pooledLineSeparator(boundary))
+        }
     }
-}
-
-/// Whether the content wraps onto a new line between item `index` and the next, per the reported
-/// structure. Items absent from the visible output carry `SeparatorLayout.hiddenLineSentinel` (< 0);
-/// they are never a boundary so that no spurious separator is injected before a hidden item.
-private func isLineBoundary(after index: Int, lineOf: [Int]) -> Bool {
-    guard lineOf.indices.contains(index + 1) else { return false }
-    let current = lineOf[index]
-    let next = lineOf[index + 1]
-    return current >= 0 && next >= 0 && current != next
-}
-
-/// Pre-computes the position-within-line for every item in O(n), so identity lookups are O(1).
-/// Items with a negative line (hidden sentinel) get position 0 — they're parked anyway.
-private func linePositions(for lineOf: [Int]) -> [Int] {
-    var result = [Int](repeating: 0, count: lineOf.count)
-    var countPerLine = [Int: Int]()
-    for i in lineOf.indices {
-        let line = lineOf[i]
-        result[i] = countPerLine[line, default: 0]
-        countPerLine[line, default: 0] += 1
-    }
-    return result
-}
-
-/// Positional identity for the item separator after content position `index`.
-/// Uses (line, positionInLine) derived from the reported line structure so the separator's SwiftUI
-/// identity matches its visual slot — not the element it follows — and survives rewraps stably.
-/// Falls back to (0, index) on the bootstrap frame before the layout has reported anything.
-private func itemSeparatorIdentity(afterPosition index: Int, lineOf: [Int], positionsInLine: [Int]) -> ItemSeparatorIdentity {
-    if lineOf.indices.contains(index), lineOf[index] >= 0 {
-        return ItemSeparatorIdentity(line: lineOf[index], positionInLine: positionsInLine[index])
-    }
-    return ItemSeparatorIdentity(line: 0, positionInLine: index)
-}
-
-/// Positional identity for the line separator after content position `index`.
-/// Visible line separators use their visual boundary once line structure is known; hidden/bootstrap
-/// placeholders use the gap position so every gap contributes a distinct separator subview.
-private func lineSeparatorIdentity(afterPosition index: Int, lineOf: [Int]) -> LineSeparatorIdentity {
-    if isLineBoundary(after: index, lineOf: lineOf) {
-        return LineSeparatorIdentity(boundary: lineOf[index + 1], gap: nil)
-    }
-    return LineSeparatorIdentity(boundary: nil, gap: index)
-}
-
-private struct ItemSeparatorIdentity: Hashable {
-    let line: Int
-    let positionInLine: Int
-}
-
-private struct LineSeparatorIdentity: Hashable {
-    let boundary: Int?
-    let gap: Int?
 }
 
 /// `_VariadicView` fallback used before `Group(subviews:)` is available.
 struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
     var itemSeparator: (() -> AnyView)?
     var lineSeparator: (() -> AnyView)?
-    var lineOf: [Int]
 
     @ViewBuilder
     func body(children: _VariadicView.Children) -> some View {
@@ -222,7 +138,6 @@ struct SeparatorInterleaver: _VariadicView.MultiViewRoot {
             children,
             itemSeparator: itemSeparator,
             lineSeparator: lineSeparator,
-            lineOf: lineOf,
             subviewRole: { $0[FlowSubviewRoleLayoutValueKey.self] }
         )
     }

@@ -97,23 +97,12 @@ extension LayoutReportState where Value == FlowLayoutReport {
     /// State ownership stays with the caller; content only needs the latest confirmed report.
     func flowLayout<Content: View>(
         _ layout: AnyLayout,
-        reportLineStructure: Bool = true,
         @ViewBuilder content: (FlowLayoutReport) -> Content
     ) -> some View {
         let registration = register()
-        let reporter: @Sendable (FlowLayoutReport, CGSize) -> Void = { value, size in
-            registration.report(
-                FlowLayoutReport(
-                    overflowCount: value.overflowCount,
-                    lineStructure: reportLineStructure ? value.lineStructure : [],
-                    hiddenSubviews: value.hiddenSubviews
-                ),
-                size
-            )
-        }
         return layout {
             // Attach after enumeration: legacy child proxies can drop source layout values.
-            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews), reporter: reporter)
+            reportedFlowContent(content(value), hidden: Set(value.hiddenSubviews), reporter: registration.report)
         }
         .observeLayoutGeometry(using: registration)
     }
@@ -128,11 +117,10 @@ struct LayoutReportRegistration<Value: Sendable>: Sendable {
     let confirm: @Sendable (CGSize) -> Void
 }
 
-/// Overflow and line structure describe the same placement and must be published together.
+/// Overflow count and hidden membership describe the same placement and must be published together.
 @usableFromInline
 struct FlowLayoutReport: Equatable, Sendable {
     var overflowCount = 0
-    var lineStructure: [Int] = []
     var hiddenSubviews: [Int] = []
 }
 

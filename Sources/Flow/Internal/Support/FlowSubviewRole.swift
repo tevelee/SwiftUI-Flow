@@ -15,6 +15,8 @@ enum FlowSubviewRole: Sendable, Hashable {
     case itemSeparatorOverride(isEmpty: Bool)
     /// A separator drawn between two lines.
     case lineSeparator
+    /// A line separator anchored to a visual boundary, independently of content gaps.
+    case pooledLineSeparator(Int)
 
     /// Whether this role participates in separator handling. Used from `@inlinable` cache code,
     /// so it avoids relying on the synthesized `Equatable` conformance there.
@@ -22,7 +24,7 @@ enum FlowSubviewRole: Sendable, Hashable {
     var isSeparator: Bool {
         switch self {
             case .content, .lineBreak: false
-            case .itemSeparator, .itemSeparatorOverride, .lineSeparator: true
+            case .itemSeparator, .itemSeparatorOverride, .lineSeparator, .pooledLineSeparator: true
         }
     }
 }

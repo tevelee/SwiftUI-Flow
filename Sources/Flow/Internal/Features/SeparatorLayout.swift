@@ -69,19 +69,18 @@ struct SeparatorLayout {
 
     /// Re-materializes separators into the wrapped content lines: an item separator before each
     /// eligible non-first item on a line, and a line separator as its own single-item line at each
-    /// break boundary. Records the content line structure and hides any separators left unused.
+    /// break boundary. Hides any separators left unused.
     func materialize(
         in lines: WrappedLines,
         justified: Bool,
         proposal: ProposedViewSize
     ) -> LineAdaptation {
-        let structure = lineStructure(of: lines)
         let breadth = lineSeparatorBreadth(for: lines, justified: justified, proposal: proposal)
 
         var result: WrappedLines = []
         result.reserveCapacity(lines.count * 2)
         for index in lines.indices {
-            if index > 0, let first = lines[index].first?.index, let separator = plan.lineSeparator(before: first) {
+            if index > 0, let first = lines[index].first?.index, let separator = plan.lineSeparator(before: first, atBoundary: index - 1) {
                 // A line separator reuses all the existing line placement, spacing, and alignment
                 // machinery for free by being its own single-item line.
                 result.append([WrappedItem(index: separator, size: breadth, leadingSpace: 0)])
@@ -93,40 +92,8 @@ struct SeparatorLayout {
         for line in result {
             for item in line { placed[item.index] = true }
         }
-        return LineAdaptation(lines: result, hidden: unusedSeparators(placed: placed), lineStructure: structure)
+        return LineAdaptation(lines: result, hidden: unusedSeparators(placed: placed))
     }
-
-    /// Line indices in caller subview order, including explicit separator overrides assigned the
-    /// preceding content item's line. This matches the interleaver's source positions so line
-    /// separators retain their visual identity when boundaries include overrides.
-    /// Hidden items (capped by maxLines) are assigned `hiddenLineSentinel` so the view layer can
-    /// distinguish them from visible items on line 0 and avoid injecting spurious separators.
-    func lineStructure(of visible: WrappedLines) -> [Int] {
-        var lineBySubview = [Int](repeating: Self.hiddenLineSentinel, count: cache.subviewsCache.count)
-        for lineIndex in visible.indices {
-            for item in visible[lineIndex] {
-                lineBySubview[item.index] = lineIndex
-            }
-        }
-        var lineOf: [Int] = []
-        var precedingLine = Self.hiddenLineSentinel
-        for index in cache.subviewsCache.indices {
-            switch cache.subviewsCache[index].role {
-                case .content, .lineBreak:
-                    precedingLine = lineBySubview[index]
-                    lineOf.append(precedingLine)
-                case .itemSeparatorOverride:
-                    lineOf.append(precedingLine)
-                case .itemSeparator, .lineSeparator:
-                    break
-            }
-        }
-        return lineOf
-    }
-
-    /// Sentinel stored in `lineStructure` for content items absent from the visible output (capped by
-    /// maxLines). The value is negative so the view layer can check `>= 0` for visibility.
-    static let hiddenLineSentinel = -1
 
     /// The breadth proposed to line separators: the justified width when justifying, otherwise the
     /// widest content line, so a full-width separator (e.g. a `Divider`) spans the laid-out content.

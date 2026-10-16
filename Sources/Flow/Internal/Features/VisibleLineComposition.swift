@@ -40,7 +40,7 @@ struct VisibleLineComposition {
     }
 
     /// Cap content lines before inserting separator lines, so separators never consume the limit.
-    /// Hidden membership, overflow count and line structure all describe this same composition.
+    /// Hidden membership and overflow count describe this same composition.
     func compose(_ wrapped: WrappedLines, in proposal: ProposedViewSize, justified: Bool) -> Result {
         let capped =
             lineCap?.truncate(
@@ -56,7 +56,6 @@ struct VisibleLineComposition {
             hidden: hidden,
             report: FlowLayoutReport(
                 overflowCount: overflowCount(hidden: capped.hidden),
-                lineStructure: materialized?.lineStructure ?? [],
                 hiddenSubviews: hidden
             )
         )
@@ -75,9 +74,8 @@ struct VisibleLineComposition {
     }
 }
 
-/// One feature's adapted lines and hidden subviews. Only separator materialization adds structure.
+/// One feature's adapted lines and hidden subviews.
 struct LineAdaptation {
     var lines: WrappedLines
     var hidden: [Int] = []
-    var lineStructure: [Int]?
 }

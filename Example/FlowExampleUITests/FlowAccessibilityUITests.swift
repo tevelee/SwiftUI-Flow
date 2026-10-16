@@ -2,6 +2,29 @@ import XCTest
 
 final class FlowAccessibilityUITests: XCTestCase {
     @MainActor
+    func testUnusedLineSeparatorSlotsStayHiddenWhenWrappingChanges() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--line-separator-accessibility-fixture"]
+        app.launch()
+        let separators = app.buttons.matching(identifier: "line-separator")
+        let expectedCount = NSPredicate(format: "count == %d", 3)
+        expectation(for: expectedCount, evaluatedWith: separators)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(separators.firstMatch.isHittable)
+        separators.firstMatch.click()
+        XCTAssertEqual(app.staticTexts["last-activation"].value as? String, "boundary")
+
+        app.buttons["resize"].click()
+        expectation(for: NSPredicate(format: "count == %d", 1), evaluatedWith: separators)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(separators.firstMatch.isEnabled)
+        app.buttons["resize"].click()
+        expectation(for: expectedCount, evaluatedWith: separators)
+        waitForExpectations(timeout: 5)
+        XCTAssertTrue(separators.firstMatch.isHittable)
+    }
+
+    @MainActor
     func testCappedRoutesWithoutSeparatorsHideTruncatedControls() {
         for option in ["--cap-only", "--no-separators"] {
             let app = XCUIApplication()

@@ -28,18 +28,17 @@ struct FlowSeparatorRequirementTests {
         #expect(subviews.allSatisfy { isParked($0, in: result.reportedSize) })
         let report = reports.withLock { $0 }
         #expect(report.overflowCount == 2)
-        #expect(report.lineStructure == [-1, -1, -1, -1])
         #expect(Set(report.hiddenSubviews) == Set(subviews.indices))
     }
 
     @Test(.tags(.regression), arguments: [false, true], [false, true])
-    func placementCandidate_carriesOverflowAndLineStructure(vertical: Bool, evenly: Bool) {
-        let reports = OSAllocatedUnfairLock(initialState: (counts: [Int](), lines: [[Int]]()))
+    func placementCandidate_carriesOverflowAndHiddenMembership(vertical: Bool, evenly: Bool) {
+        let reports = OSAllocatedUnfairLock(initialState: (counts: [Int](), hidden: [Set<Int>]()))
         let content: [TestSubview] = (0 ..< 5).map { _ in vertical ? 10 × 30 : 30 × 10 }
         content[0][PlacementReporterKey.self] = { report, _ in
             reports.withLock {
                 $0.counts.append(report.overflowCount)
-                $0.lines.append(report.lineStructure)
+                $0.hidden.append(Set(report.hiddenSubviews))
             }
         }
         let trailing: TestSubview = vertical ? 10 × 50 : 50 × 10
@@ -60,21 +59,16 @@ struct FlowSeparatorRequirementTests {
             ? .vertical(horizontalSpacing: 0, verticalSpacing: 5, distributeItemsEvenly: evenly, maxLines: 2)
             : .horizontal(horizontalSpacing: 5, verticalSpacing: 0, distributeItemsEvenly: evenly, maxLines: 2)
         var cache = layout.makeCache(subviews)
-        let cases: [(breadth: CGFloat, count: Int, structure: [Int])] = [
-            (100, 1, [0, 0, 1, 1, -1, -1, -1, 1]),
-            (70, 3, [0, 1, -1, -1, -1, -1, -1, 1]),
-            (300, 0, [0, 0, 0, 0, 0, 0, 0, -1]),
-            (100, 1, [0, 0, 1, 1, -1, -1, -1, 1]),
-        ]
+        let cases: [(breadth: CGFloat, count: Int)] = [(100, 1), (70, 3), (300, 0), (100, 1)]
         for (index, scenario) in cases.enumerated() {
             let proposal: ProposedViewSize = vertical ? 100 × scenario.breadth : scenario.breadth × 100
             let size = layout.sizeThatFits(proposal: proposal, subviews: subviews, cache: &cache)
             #expect(reports.withLock { $0.counts.count } == index, "Measurement must not emit a placement candidate")
-            #expect(reports.withLock { $0.lines.count } == index, "Measurement must not emit a placement candidate")
+            #expect(reports.withLock { $0.hidden.count } == index, "Measurement must not emit a placement candidate")
 
             layout.placeSubviews(in: CGRect(origin: .zero, size: size), proposal: proposal, subviews: subviews, cache: &cache)
             #expect(reports.withLock { $0.counts } == cases.prefix(index + 1).map(\.count))
-            #expect(reports.withLock { $0.lines } == cases.prefix(index + 1).map(\.structure))
+            #expect(reports.withLock { $0.hidden.last } == Set(subviews.indices.filter { isParked(subviews[$0], in: size) }))
             #expect(isParked(trailing, in: size))
             #expect(isParked(marker, in: size))
         }
@@ -153,9 +147,6 @@ struct FlowSeparatorRequirementTests {
         #expect(subviews[5].placement?.position == CGPoint(x: 0, y: 10))
         #expect(subviews[6].placement?.position == CGPoint(x: 0, y: 12))
         #expect([1, 2, 3, 4].allSatisfy { isParked(subviews[$0], in: result.reportedSize) })
-        let cache = FlowLayoutCache(subviews, axis: .horizontal)
-        let separators = SeparatorLayout(cache: cache, axis: .horizontal, itemSpacing: 5)!
-        #expect(separators.lineStructure(of: [[.init(index: 0, size: 30, leadingSpace: 0)], [.init(index: 6, size: 30, leadingSpace: 0)]]) == [0, 0, 1])
     }
 
     @Test func explicitSeparators_doNotCountAsHiddenItems() {
@@ -394,28 +385,6 @@ struct FlowSeparatorRequirementTests {
     private func isHidden(_ subview: TestSubview, vertical: Bool) -> Bool {
         guard let position = subview.placement?.position else { return false }
         return position.y > 1000
-    }
-
-    @Test func lineStructure_assignsSentinelToHiddenItems() {
-        // 3 content items with line separators. Only the first two are "visible" — the third is capped.
-        // lineStructure must return hiddenLineSentinel for the capped item so the view layer does not
-        // inject a spurious separator at that boundary.
-        let subviews = interleaved(
-            content: [10 × 10, 10 × 10, 10 × 10],
-            lineSeparator: { stretchingSeparator(depth: 1) }
-        )
-        // subview order: c0(0), lineSep(1), c1(2), lineSep(3), c2(4)  →  contentIndices = [0, 2, 4]
-        let cache = FlowLayoutCache(subviews, axis: .horizontal)
-        let separators = SeparatorLayout(cache: cache, axis: .horizontal, itemSpacing: 0)!
-
-        let visible: WrappedLines = [
-            [WrappedItem(index: 0, size: 10, leadingSpace: 0)],
-            [WrappedItem(index: 2, size: 10, leadingSpace: 0)],
-            // subview index 4 (c2) is absent — capped
-        ]
-        let lineOf = separators.lineStructure(of: visible)
-
-        #expect(lineOf == [0, 1, SeparatorLayout.hiddenLineSentinel])
     }
 
     // MARK: - Edges & invariants

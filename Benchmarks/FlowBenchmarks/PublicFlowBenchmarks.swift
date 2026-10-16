@@ -39,7 +39,13 @@ func registerPublicFlowBenchmarks() {
                 try await measurePublicFlow(benchmark, vertical: vertical, kind: initial ? .initialOverflowOnly : .resizeOverflowOnly)
             }
         }
+        for items in [false, true] {
+            Benchmark("public/\(axis)/\(items ? "item-and-line-separators" : "line-separators")/resize") { benchmark in
+                try await measurePublicFlow(benchmark, vertical: vertical, kind: items ? .resizeBothSeparators : .resizeLineSeparators)
+            }
+        }
         if #available(macOS 14, *) {
+
             Benchmark("public/Lazy\(axis)/data-growth") { benchmark in
                 try await measurePublicFlow(benchmark, vertical: vertical, kind: .lazy)
             }
@@ -68,6 +74,7 @@ private struct OverflowSample: Equatable {
 private final class Activity {
     var lastItem: Sample?
     var overflow: OverflowSample?
+    var firstItem: Sample?
     var lazyFrames: [Int: CGRect] = [:]
 }
 
@@ -75,7 +82,7 @@ private final class Activity {
 private final class Host {
     // Window creation is outside every measurement; initial-layout includes creating and attaching the hosting view.
     let window: NSWindow
-    var view: NSHostingView<AnyView>?
+    var view: LayoutHostingView?
 
     init() {
         _ = NSApplication.shared
@@ -84,7 +91,7 @@ private final class Host {
     }
 
     func attach(_ root: some View) {
-        let view = NSHostingView(rootView: AnyView(root))
+        let view = LayoutHostingView(rootView: AnyView(root))
         self.view = view
         window.contentView = view
     }
@@ -93,6 +100,19 @@ private final class Host {
         window.contentView = nil
         view = nil
         window.close()
+    }
+
+    func finishPriming() async throws {
+        guard let view else { return }
+        let deadline = ContinuousClock.now + .seconds(2)
+        repeat {
+            let passes = view.layoutPasses
+            // Outside measurement: drain deferred reports from the initial retained layout.
+            try await Task.sleep(for: .milliseconds(100))
+            view.layoutSubtreeIfNeeded()
+            if view.layoutPasses == passes { return }
+        } while ContinuousClock.now < deadline
+        throw LayoutFailure.didNotComplete
     }
 
     func settle(until completed: () -> Bool) async throws {
@@ -107,6 +127,16 @@ private final class Host {
     }
 }
 
+@MainActor
+private final class LayoutHostingView: NSHostingView<AnyView> {
+    var layoutPasses = 0
+
+    override func layout() {
+        super.layout()
+        layoutPasses += 1
+    }
+}
+
 private enum LayoutFailure: Error {
     case didNotComplete
     case unchangedPlacement
@@ -114,7 +144,7 @@ private enum LayoutFailure: Error {
 
 private enum WorkloadKind: Sendable {
     case initialText, resizeText, resizeBalanced, initialPriorityBalanced, resizePriorityBalanced, featured, initialFeatured, resizeSeparators,
-        initialSeparators, resizeSmallSeparators, initialOverflowOnly, resizeOverflowOnly, lazy
+        initialSeparators, resizeSmallSeparators, initialOverflowOnly, resizeOverflowOnly, resizeLineSeparators, resizeBothSeparators, lazy
 }
 
 // Benchmark remains in the calling task; only the UI-owned workload crosses to the main actor.
@@ -168,7 +198,12 @@ private final class HostedWorkload {
                 host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, itemSeparators: kind != .resizeOverflowOnly))
                 // Four cells per line at 320pt; the last slot belongs to the overflow indicator.
                 try await host.settle { overflowIsPlaced(count: 121, breadth: 320) }
+            case .resizeLineSeparators, .resizeBothSeparators:
+                host.attach(LineSeparatorScene(vertical: vertical, input: input, activity: activity, itemSeparators: kind == .resizeBothSeparators))
+                try await host.settle { lineSeparatorLayoutIsComplete() }
+                oldFrame = activity.lastItem?.frame
             case .resizeSeparators, .resizeSmallSeparators:
+
                 host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, capped: false, count: kind == .resizeSmallSeparators ? 8 : 128))
                 try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
                 oldFrame = activity.lastItem?.frame
@@ -177,12 +212,13 @@ private final class HostedWorkload {
                 host.attach(LazyScene(vertical: vertical, input: input, activity: activity))
                 try await host.settle { activity.lazyFrames[0]?.size == CGSize(width: 48, height: 48) }
         }
+        try await host.finishPriming()
     }
 
     func run() async throws {
         switch kind {
             case .initialText, .initialPriorityBalanced, .initialSeparators, .resizeText, .resizeBalanced, .resizePriorityBalanced, .resizeSeparators,
-                .resizeSmallSeparators:
+                .resizeSmallSeparators, .resizeLineSeparators, .resizeBothSeparators:
                 if kind == .initialSeparators {
                     host.attach(FeaturedScene(vertical: vertical, input: input, activity: activity, capped: false))
                 } else if kind == .initialPriorityBalanced {
@@ -193,6 +229,9 @@ private final class HostedWorkload {
                     input.breadth = kind == .resizeBalanced || kind == .resizePriorityBalanced ? 480 : 180
                 }
                 try await host.settle { activity.lastItem?.breadth == input.breadth && activity.lastItem?.isPlaced == true }
+                if kind == .resizeLineSeparators || kind == .resizeBothSeparators {
+                    try await host.settle { lineSeparatorLayoutIsComplete() }
+                }
                 if let oldFrame, oldFrame == activity.lastItem?.frame { throw LayoutFailure.unchangedPlacement }
                 blackHole(activity.lastItem)
             case .initialFeatured, .initialOverflowOnly:
@@ -217,6 +256,18 @@ private final class HostedWorkload {
 
     func close() { host.close() }
 
+    private func lineSeparatorLayoutIsComplete() -> Bool {
+        guard let first = activity.firstItem, let last = activity.lastItem,
+            first.breadth == input.breadth, last.breadth == input.breadth,
+            first.isPlaced, last.isPlaced
+        else { return false }
+        // Four tags per line at 320pt, two at 180pt. Each boundary adds a 2pt divider
+        // and two 4pt gaps. The complete first-to-last depth includes every rendered divider.
+        let lines = input.breadth == 320 ? 32 : 64
+        let expected = CGFloat(lines * 34 - 10)
+        let depth = vertical ? last.frame.maxX - first.frame.minX : last.frame.maxY - first.frame.minY
+        return abs(depth - expected) < 0.01
+    }
     private func overflowIsPlaced(count: Int, breadth: CGFloat) -> Bool {
         activity.overflow?.count == count && activity.overflow?.sample.breadth == breadth && activity.overflow?.sample.isPlaced == true
     }
@@ -366,6 +417,7 @@ private struct FeaturedScene: View {
     var capped = true
     var count = 128
     var itemSeparators = true
+    var observeFirst = false
 
     var body: some View {
         Group {
@@ -404,11 +456,12 @@ private struct FeaturedScene: View {
 
     private var cells: some View {
         ForEach(0 ..< count, id: \.self) { index in
-            if !capped, index == count - 1 {
+            if !capped, index == count - 1 || (observeFirst && index == 0) {
                 cell(index).onGeometryChange(for: Sample.self) { [breadth = input.breadth] proxy in
                     Sample(breadth: breadth, frame: proxy.frame(in: .global))
                 } action: {
-                    activity.lastItem = $0
+                    if observeFirst, index == 0 { activity.firstItem = $0 }
+                    if index == count - 1 { activity.lastItem = $0 }
                 }
             } else {
                 cell(index)
@@ -453,5 +506,17 @@ private struct LazyScene: View {
             } action: {
                 activity.lazyFrames[item.id] = $0
             }
+    }
+}
+
+private struct LineSeparatorScene: View {
+    let vertical: Bool
+    @ObservedObject var input: Input
+    let activity: Activity
+    let itemSeparators: Bool
+
+    var body: some View {
+        FeaturedScene(vertical: vertical, input: input, activity: activity, capped: false, itemSeparators: itemSeparators, observeFirst: true)
+            .lineSeparator { Color.gray.frame(width: vertical ? 2 : nil, height: vertical ? nil : 2) }
     }
 }

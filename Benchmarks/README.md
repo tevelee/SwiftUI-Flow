@@ -13,7 +13,7 @@ Lazy workloads require macOS 14 or later.
 
 ## Workloads
 
-Twenty-six hosted workloads exercise the public interface with ordinary `import Flow`:
+Thirty hosted workloads exercise the public interface with ordinary `import Flow`:
 
 - **HFlow and VFlow, initial text layout:** create and attach an `NSHostingView` containing 128
   text tags, then complete layout. Window and model creation happen outside measurement.
@@ -34,6 +34,9 @@ Twenty-six hosted workloads exercise the public interface with ordinary `import 
   composition overhead from work that scales with child count.
 - **HFlow and VFlow, overflow without separators:** initially lay out or resize the same 128
   fixed-size tags and two-line cap without separator injection. This isolates the overflow route.
+- **HFlow and VFlow, line separators:** resize with line separators alone or combined with item
+  separators. First-to-last tag geometry must include every 2pt divider and its spacing; an
+  intermediate layout with missing dividers cannot complete the workload.
 - **LazyHFlow and LazyVFlow, data growth:** grow from one item to 128 in a retained `ScrollView`.
   Measurement includes revealing and laying out enough 48pt cells to fill its 192 × 96pt viewport
   (transposed for LazyVFlow). It checks that the flow does not eagerly reveal all 128 items.
@@ -41,6 +44,9 @@ Twenty-six hosted workloads exercise the public interface with ordinary `import 
 Hosted measurements use one operation per sample. They include SwiftUI updates, geometry
 observations and deferred Flow reporting. Completion is checked through placed child geometry;
 there is no fixed sleep in the timing. A two-second deadline fails an incomplete workload.
+Retained hosts also finish priming outside measurement: the harness requires a quiet 100ms interval
+without another hosting-view layout pass, then rechecks layout. This prevents deferred initial reports
+from spilling into a resize sample. There is no fixed delay inside the measured update.
 Hosts are detached and closed outside measurement. The windows remain offscreen; these are
 layout measurements, not GPU rendering or scroll frame-rate measurements.
 
@@ -57,8 +63,9 @@ FLOW_BENCHMARKS=1 swift package --disable-sandbox benchmark list --target FlowBe
 ```
 
 Filters are regular expressions matched against the entire workload name; use `.*` for a suffix.
-All workloads report wall-clock time, CPU time, throughput and allocations using the framework's
-warmup and percentile reporting. Store a local baseline and compare after a change:
+All workloads report wall-clock time, CPU time, throughput, allocations and executed instructions
+using the framework's warmup and percentile reporting. Instruction counts help distinguish changes
+in work from timing variability. Store a local baseline and compare after a change:
 
 ```sh
 FLOW_BENCHMARKS=1 swift package --disable-sandbox --allow-writing-to-package-directory benchmark baseline update before --target FlowBenchmarks
@@ -71,9 +78,9 @@ Export results with the framework's native formats, for example:
 FLOW_BENCHMARKS=1 swift package --disable-sandbox benchmark run --target FlowBenchmarks --no-progress --format jmh --path stdout > /tmp/flow-benchmarks.jmh
 ```
 
-Benchmark 1.38's JMH export leaves time and allocation values unnormalized. The
+Benchmark 1.38's JMH export leaves time, allocation and instruction values unnormalized. The
 `engine/greedy/128` and `engine/balanced/128` workloads run 1,000 wrapping operations per
-sample; divide their exported time and allocation values by 1,000 for per-operation results.
+sample; divide their exported time, allocation and instruction values by 1,000 for per-operation results.
 Public workloads and `engine/balanced-flexible/128` already measure one operation per sample.
 
 Compare runs on the same host and toolchain. No performance thresholds or benchmark CI gates are

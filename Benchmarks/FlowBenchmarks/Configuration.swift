@@ -8,6 +8,7 @@ func flowBenchmarkConfiguration() -> Benchmark.Configuration {
     let metrics: [BenchmarkMetric]
     switch profile {
         case "timing": metrics = [.wallClock, .cpuTotal, .throughput, .instructions]
+        case "latency": metrics = [.wallClock, .cpuTotal, .throughput]
         case "allocations": metrics = [.wallClock, .throughput, .mallocCountTotal]
         case "all": metrics = [.wallClock, .cpuTotal, .throughput, .mallocCountTotal, .instructions]
         default: preconditionFailure("Unknown FLOW_BENCHMARK_PROFILE: \(profile)")

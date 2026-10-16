@@ -103,6 +103,12 @@ fix; an incomplete layout is not a faster result.
 FLOW_BENCHMARKS=1 FLOW_BENCHMARK_PROFILE=allocations swift package --disable-sandbox benchmark run --target FlowBenchmarks
 ```
 
+Use `FLOW_BENCHMARK_PROFILE=latency` when the host cannot provide instruction counts. It reports
+CPU/wall time and throughput without requesting instructions or allocation hooks. The `timing`
+profile remains strict: missing instruction results fail comparison validation. Hosted CI explicitly
+uses `--profile latency,allocations` because its runner omits instruction results; its report makes
+no instruction-count claim.
+
 The allocation profile enables the allocation interposer and reports counts; its exported wall time
 is instrumented and should not be used as a latency measurement. `FLOW_BENCHMARK_PROFILE=all` retains
 the old combined metrics for diagnostics. `FLOW_BENCHMARK_COMPARISON=1` increases sampling from the

@@ -29,7 +29,7 @@ struct Options {
                 print(
                     """
                     swift Benchmarks/compare.swift [--baseline REF] [--candidate REF|working-tree]
-                        [--profile timing|allocations|all|both] [--filter FULL-NAME-REGEX]
+                        [--profile timing|latency|allocations|all|both] [--filter FULL-NAME-REGEX]
                         [--repeat N] [--output NEW-DIRECTORY] [--quick]
                     swift Benchmarks/compare.swift --summarize RESULT-DIRECTORY
                     Default: 3.5.4 versus working tree, eager public workloads, two mirrored repeats,
@@ -49,7 +49,7 @@ struct Options {
                     guard let number = Int(value), number >= 2 else { throw ComparisonError("--repeat must be at least two") }
                     repeats = number
                 case "--profile":
-                    guard value == "both" || value.split(separator: ",").allSatisfy({ ["timing", "allocations", "all"].contains(String($0)) }) else {
+                    guard value == "both" || value.split(separator: ",").allSatisfy({ ["timing", "latency", "allocations", "all"].contains(String($0)) }) else {
                         throw ComparisonError("Unknown profile \(value)")
                     }
                     profiles = value == "both" ? ["timing", "allocations"] : value.split(separator: ",").map(String.init)
@@ -147,6 +147,7 @@ struct Result: Decodable {
 func metrics(for profile: String) -> [String] {
     switch profile {
         case "timing": ["Time (wall clock)", "Time (total CPU)", "Instructions"]
+        case "latency": ["Time (wall clock)", "Time (total CPU)"]
         case "allocations": ["Malloc (total)"]
         default: ["Time (wall clock)", "Time (total CPU)", "Instructions", "Malloc (total)"]
     }
@@ -165,9 +166,15 @@ func validatedResults(_ run: Run, manifest: Manifest, at output: URL) throws -> 
         for metric in metrics(for: run.profile) {
             guard let value = row.secondaryMetrics[metric], value.score.isFinite, value.score > 0,
                 let median = value.scorePercentiles["50.0"], median.isFinite, median > 0
-            else { throw ComparisonError("Missing/invalid \(metric) for \(name) in \(run.prefix)") }
+            else {
+                throw ComparisonError(
+                    "Missing/invalid \(metric) for \(name) in \(run.prefix)"
+                        + (metric == "Instructions"
+                            ? ". If the host cannot supply counters, explicitly select the latency profile; no instruction comparison will be made." : "")
+                )
+            }
         }
-        if run.profile == "timing", row.secondaryMetrics["Malloc (total)"] != nil {
+        if ["timing", "latency"].contains(run.profile), row.secondaryMetrics["Malloc (total)"] != nil {
             throw ComparisonError("Timing pass unexpectedly enabled allocation instrumentation")
         }
     }
@@ -251,6 +258,9 @@ func summarize(at output: URL) throws {
     var markdown = "# Public Flow benchmark comparison\n\nBaseline: `\(manifest.baseline)`. Candidate: `\(manifest.candidate)`.\n\n"
     markdown +=
         "\(manifest.expected.count) completed workloads per run. Values are medians of run medians. Positive deltas mean more time/work; repeat spread is max/min minus one. Timing excludes allocation hooks; allocation-pass wall time is not a latency result. No regression threshold is enforced.\n\n"
+    if manifest.profiles.contains("latency") {
+        markdown += "Instruction counts were not requested by the latency profile. This report makes no instruction-count comparison for that profile.\n\n"
+    }
     markdown += "| Workload | Profile / metric | Baseline | Candidate | Change | Repeat spread, base / candidate |\n|---|---|---:|---:|---:|---:|\n"
     for row in summaries {
         markdown +=

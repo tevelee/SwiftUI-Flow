@@ -40,12 +40,13 @@ jobs:
       - uses: ./.github/actions/swift-build-env
         with:
           xcode-version: "26.4"
+      # This hosted runner omits retired-instruction results; keep physical-Mac timing strict.
       - name: Compare repeated timing and allocation passes
         env:
           BASELINE: ${{ inputs.baseline || '3.5.4' }}
         run: >-
           xcrun --sdk macosx swift Benchmarks/compare.swift
-          --baseline "$BASELINE" --candidate HEAD
+          --baseline "$BASELINE" --candidate HEAD --profile latency,allocations
           --output "$RUNNER_TEMP/flow-benchmarks"
       - name: Publish report
         if: success()

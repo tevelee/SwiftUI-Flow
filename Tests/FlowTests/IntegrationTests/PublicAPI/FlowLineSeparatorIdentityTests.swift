@@ -3,7 +3,7 @@
     import SwiftUI
     import Testing
 
-    import Flow
+    @testable import Flow
 
     @Suite(.serialized, .tags(.requirements, .regression))
     @MainActor
@@ -45,11 +45,33 @@
             #expect(records.separator(after: 4, before: 5, vertical: vertical) == gap, "The same content pair keeps its separator state on another line")
         }
 
-        private func settle(_ host: NSView, records: Records, vertical: Bool, breadth: CGFloat, boundaries: Int) async throws {
+        @Test(arguments: [false, true])
+        func separators_keepStateWhenOverflowReportingIsEnabledAndDisabled(vertical: Bool) async throws {
+            _ = NSApplication.shared
+            let input = Input()
+            input.breadth = 180
+            let records = Records()
+            let host = NSHostingView(rootView: Scene(vertical: vertical, input: input, records: records, itemSeparators: true, capped: true))
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 500, height: 500), styleMask: .borderless, backing: .buffered, defer: true)
+            window.contentView = host
+            defer { window.contentView = nil }
+
+            try await settle(host, records: records, vertical: vertical, breadth: 180, boundaries: 1)
+            let boundary = try #require(records.visible(vertical: vertical).first?.id)
+            let gap = try #require(records.separator(after: 0, before: 1, vertical: vertical))
+            for enabled in [true, false, true] {
+                input.overflowEnabled = enabled
+                try await settle(host, records: records, vertical: vertical, breadth: 180, boundaries: 1, overflow: enabled ? 5 : nil)
+                #expect(records.visible(vertical: vertical).first?.id == boundary, "Changing report ownership must preserve separator state")
+                #expect(records.separator(after: 0, before: 1, vertical: vertical) == gap)
+            }
+        }
+
+        private func settle(_ host: NSView, records: Records, vertical: Bool, breadth: CGFloat, boundaries: Int, overflow: Int? = nil) async throws {
             let deadline = ContinuousClock.now + .seconds(5)
             repeat {
                 host.layoutSubtreeIfNeeded()
-                if records.breadth == breadth, records.visible(vertical: vertical).count == boundaries {
+                if records.breadth == breadth, records.visible(vertical: vertical).count == boundaries, records.overflowCount == overflow {
                     // A geometry callback can precede the deferred report that updates separator IDs.
                     let revision = records.revision
                     try await Task.sleep(for: .milliseconds(150))
@@ -65,9 +87,11 @@
 
         private final class Input: ObservableObject {
             @Published var breadth: CGFloat = 320
+            @Published var overflowEnabled = false
         }
 
         private final class Records {
+            var overflowCount: Int?
             var breadth: CGFloat?
             var frames: [UUID: CGRect] = [:] { didSet { revision += 1 } }
             var itemFrames: [UUID: CGRect] = [:] { didSet { revision += 1 } }
@@ -122,11 +146,29 @@
             let records: Records
 
             var itemSeparators = false
+            var capped = false
 
             var body: some View {
                 separated.lineSeparator { Separator(vertical: vertical, records: records, item: false) }
+                    .maxLines(capped ? 2 : nil)
+                    .environment(\._flowOverflowBuilder, overflowBuilder)
                     .frame(width: vertical ? nil : input.breadth, height: vertical ? input.breadth : nil)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+
+            private var overflowBuilder: ((Int) -> AnyView)? {
+                guard input.overflowEnabled else { return nil }
+                return { count in
+                    AnyView(
+                        Text("+\(count)").frame(width: vertical ? 24 : 64, height: vertical ? 64 : 24)
+                            .onGeometryChange(for: Int.self) { _ in
+                                count
+                            } action: {
+                                records.overflowCount = $0
+                            }
+                            .onDisappear { records.overflowCount = nil }
+                    )
+                }
             }
 
             @ViewBuilder private var separated: some View {

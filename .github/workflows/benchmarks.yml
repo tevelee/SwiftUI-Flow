@@ -1,0 +1,64 @@
+name: Benchmark report
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Git revision to compare against
+        default: "3.5.4"
+        required: true
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Benchmarks/**"
+      - ".github/workflows/benchmarks.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "Sources/**"
+      - "Benchmarks/**"
+      - ".github/workflows/benchmarks.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmarks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compare:
+    name: Public API benchmark report
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/swift-build-env
+        with:
+          xcode-version: "26.4"
+      - name: Compare repeated timing and allocation passes
+        env:
+          BASELINE: ${{ inputs.baseline || '3.5.4' }}
+        run: >-
+          xcrun --sdk macosx swift Benchmarks/compare.swift
+          --baseline "$BASELINE" --candidate HEAD
+          --output "$RUNNER_TEMP/flow-benchmarks"
+      - name: Publish report
+        if: success()
+        run: cat "$RUNNER_TEMP/flow-benchmarks/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve complete and failed measurements
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-benchmark-report
+          path: |
+            ${{ runner.temp }}/flow-benchmarks/report.*
+            ${{ runner.temp }}/flow-benchmarks/manifest.json
+            ${{ runner.temp }}/flow-benchmarks/raw/
+            ${{ runner.temp }}/flow-benchmarks/packages/*/list.*
+            ${{ runner.temp }}/flow-benchmarks/packages/*/Package.*
+          retention-days: 14

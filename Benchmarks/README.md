@@ -66,8 +66,8 @@ FLOW_BENCHMARKS=1 swift package --disable-sandbox benchmark list --target FlowBe
 ```
 
 Filters are regular expressions matched against the entire workload name; use `.*` for a suffix.
-All workloads report wall-clock time, CPU time, throughput, allocations and executed instructions
-using the framework's warmup and percentile reporting. Instruction counts help distinguish changes
+The default `timing` profile reports wall-clock time, CPU time, throughput and executed instructions
+without enabling allocation hooks. Instruction counts help distinguish changes
 in work from timing variability. Store a local baseline and compare after a change:
 
 ```sh
@@ -86,8 +86,9 @@ Benchmark 1.38's JMH export leaves time, allocation and instruction values unnor
 sample; divide their exported time, allocation and instruction values by 1,000 for per-operation results.
 Public workloads and `engine/balanced-flexible/128` already measure one operation per sample.
 
-Compare runs on the same host and toolchain. No performance thresholds or benchmark CI gates are
-configured. These workload names replace the earlier internal matrix; record a fresh baseline.
+Compare runs on the same host and toolchain, using the same profile. Record a fresh baseline when
+changing profiles: allocation instrumentation changes execution cost. Benchmark CI publishes a report
+without enforcing regression thresholds; failed or incomplete measurements still fail the reporting job.
 When automating a run, check for failed workloads and missing result entries: benchmark 1.38 can
 return exit status zero even when a workload reports an error.
 
@@ -95,3 +96,48 @@ For a 3.5.4 comparison, filter eager workloads with `public/(HFlow|VFlow)/.*`. T
 not complete the one-to-many lazy data-growth workload because revealing does not resume when the
 rendered prefix keeps the same size. Compare that workload with a version containing the lifecycle
 fix; an incomplete layout is not a faster result.
+
+## Separate timing and allocation passes
+
+```sh
+FLOW_BENCHMARKS=1 FLOW_BENCHMARK_PROFILE=allocations swift package --disable-sandbox benchmark run --target FlowBenchmarks
+```
+
+The allocation profile enables the allocation interposer and reports counts; its exported wall time
+is instrumented and should not be used as a latency measurement. `FLOW_BENCHMARK_PROFILE=all` retains
+the old combined metrics for diagnostics. `FLOW_BENCHMARK_COMPARISON=1` increases sampling from the
+development budget (two warmups, 20 samples / one second) to five warmups, 100 samples / three seconds.
+
+## Reproduce a release comparison
+
+Run from the repository root with a Swift 6 Xcode toolchain selected:
+
+```sh
+xcrun --sdk macosx swift Benchmarks/compare.swift --baseline 3.5.4
+```
+
+The Swift runner freezes the baseline and working-tree library sources in a new temporary directory.
+It copies the same current public harness and configuration into both packages, pins benchmark 1.38.0
+and its dependencies with `Comparison.resolved`, and builds the measured library without `-enable-testing`.
+It does not change the checkout. It runs separate timing/allocation profiles in mirrored
+baseline/candidate/candidate/baseline order. No tests or other benchmarks should run concurrently.
+
+The default filter covers all 32 eager public workloads. Options include `--candidate REF` instead of
+the working tree, `--filter 'public/HFlow/separators/.*'`, `--profile timing` (or a comma-separated list),
+`--repeat 3`, and `--output NEW-DIRECTORY`. `--quick` uses the development sampling budget for smoke checks.
+A nonempty result directory is never overwritten. Use `--help` for the complete command syntax.
+
+Each result directory contains frozen packages, source hashes, compiler/SDK/OS information, the exact
+expected workload names, thermal states, raw JMH output and logs. Every run must have exactly the
+expected workload set, unique names, finite positive metrics and medians, and unchanged dependency pins.
+The runner rejects malformed exports even when benchmark exits zero. It never combines partial runs.
+A failed comparison retains its raw evidence and produces no valid report; rerun into a new directory.
+
+`report.md`, `report.csv` and `report.json` show medians across run medians, baseline/candidate deltas,
+and each version's repeat spread (maximum run median divided by minimum, minus one). A large spread
+limits duration claims even when instruction counts are stable. Revalidate and regenerate a saved
+report with `swift Benchmarks/compare.swift --summarize RESULT-DIRECTORY`.
+
+The independent **Benchmark report** workflow runs the same command on macOS and preserves results
+as artifacts. It reports differences without a performance pass/fail threshold. The normal CI workflow
+remains responsible for correctness and toolchain/platform compatibility.
